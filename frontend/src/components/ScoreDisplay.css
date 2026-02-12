@@ -1,6 +1,6 @@
 .score-display {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .score-circle {
@@ -8,124 +8,119 @@
   width: 200px;
   height: 200px;
   margin: 0 auto 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+/* Hide the SVG, use solid colored circle instead */
 .score-circle svg {
-  transform: scaleX(-1);
-}
-
-.progress-ring {
-  transition: stroke-dasharray 0.5s ease;
+  display: none;
 }
 
 .score-content {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   text-align: center;
 }
 
 .score-number {
-  font-size: 3.5rem;
-  font-weight: bold;
+  font-size: 4rem;
+  font-weight: 900;
   line-height: 1;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+  color: white;
 }
 
 .score-rating {
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
+  color: white;
 }
 
-/* Color classes */
-.score-display.epic .score-number,
-.score-display.epic .score-rating,
-.score-display.epic .progress-ring {
-  color: #4caf50;
+/* Color classes with solid backgrounds - Surfline style */
+.score-display.epic .score-circle {
+  background: #10b981;
 }
 
-.score-display.good .score-number,
-.score-display.good .score-rating,
-.score-display.good .progress-ring {
-  color: #8bc34a;
+.score-display.good .score-circle {
+  background: #22c55e;
 }
 
-.score-display.fair .score-number,
-.score-display.fair .score-rating,
-.score-display.fair .progress-ring {
-  color: #ffc107;
+.score-display.fair .score-circle {
+  background: #f59e0b;
 }
 
-.score-display.poor .score-number,
-.score-display.poor .score-rating,
-.score-display.poor .progress-ring {
-  color: #ff9800;
+.score-display.poor .score-circle {
+  background: #f97316;
 }
 
-.score-display.flat .score-number,
-.score-display.flat .score-rating,
-.score-display.flat .progress-ring {
-  color: #f44336;
+.score-display.flat .score-circle {
+  background: #ef4444;
 }
 
 .score-info {
-  color: #666;
-  font-size: 0.95rem;
-  margin-bottom: 20px;
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-bottom: 24px;
 }
 
 .cache-badge {
-  background: #e3f2fd;
-  color: #1976d2;
-  padding: 3px 8px;
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 4px 10px;
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   margin-right: 8px;
 }
 
 .score-breakdown {
-  margin-top: 30px;
-  padding: 20px;
-  background: #f8f9fa;
+  margin-top: 32px;
+  padding: 24px;
+  background: #f8fafc;
   border-radius: 12px;
+  border: 1px solid #e2e8f0;
 }
 
 .score-breakdown h3 {
-  font-size: 1.1rem;
-  margin-bottom: 15px;
-  color: #333;
+  font-size: 0.95rem;
+  margin-bottom: 16px;
+  color: #1a2332;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .breakdown-bars {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .breakdown-item {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .breakdown-label {
   display: flex;
   justify-content: space-between;
   font-size: 0.9rem;
-  color: #666;
+  color: #475569;
+  font-weight: 600;
 }
 
 .breakdown-value {
-  font-weight: bold;
-  color: #333;
+  font-weight: 700;
+  color: #1a2332;
 }
 
 .breakdown-bar-bg {
   height: 8px;
-  background: #e0e0e0;
+  background: #e2e8f0;
   border-radius: 4px;
   overflow: hidden;
 }
@@ -133,20 +128,24 @@
 .breakdown-bar-fill {
   height: 100%;
   border-radius: 4px;
-  transition: width 0.5s ease;
+  transition: width 0.3s ease;
 }
 
 @media (max-width: 768px) {
   .score-circle {
-    width: 150px;
-    height: 150px;
+    width: 160px;
+    height: 160px;
   }
 
   .score-number {
-    font-size: 2.5rem;
+    font-size: 3rem;
   }
 
   .score-rating {
-    font-size: 1rem;
+    font-size: 0.95rem;
+  }
+
+  .score-breakdown {
+    padding: 20px;
   }
 }
