@@ -23,15 +23,14 @@ async function scrapeAsMarkdown(url) {
     const escapedUrl = url.replace(/"/g, '\\"');
     const prompt = `Scrape the webpage at ${escapedUrl} using the scrape_as_markdown tool and return only the markdown content, no additional commentary.`;
 
-    const cmd = `claude --allowedTools "mcp__bright-data__scrape_as_markdown" --print -- "${prompt}"`;
+    // Use full path to claude command to avoid PATH issues
+    const claudePath = 'C:\\Users\\user\\AppData\\Roaming\\npm\\claude.cmd';
+    const cmd = `"${claudePath}" --allowedTools "mcp__bright-data__scrape_as_markdown" --print -- "${prompt}"`;
 
     const { stdout, stderr } = await execPromise(cmd, {
       timeout: 30000, // 30 second timeout
       maxBuffer: 1024 * 1024 * 5, // 5MB buffer
-      env: {
-        ...process.env,
-        PATH: process.env.PATH + ';C:\\Users\\user\\AppData\\Roaming\\npm'
-      }
+      shell: true // Use shell to execute .cmd file
     });
 
     if (stderr) {
@@ -65,15 +64,14 @@ async function searchEngine(query, engine = 'google') {
     const escapedQuery = query.replace(/"/g, '\\"');
     const prompt = `Search ${engine} for "${escapedQuery}" using the search_engine tool and return the top 5 results in a structured format.`;
 
-    const cmd = `claude --allowedTools "mcp__bright-data__search_engine" --print -- "${prompt}"`;
+    // Use full path to claude command to avoid PATH issues
+    const claudePath = 'C:\\Users\\user\\AppData\\Roaming\\npm\\claude.cmd';
+    const cmd = `"${claudePath}" --allowedTools "mcp__bright-data__search_engine" --print -- "${prompt}"`;
 
     const { stdout, stderr } = await execPromise(cmd, {
       timeout: 30000,
       maxBuffer: 1024 * 1024 * 5,
-      env: {
-        ...process.env,
-        PATH: process.env.PATH + ';C:\\Users\\user\\AppData\\Roaming\\npm'
-      }
+      shell: true // Use shell to execute .cmd file
     });
 
     if (stderr) {
