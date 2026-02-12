@@ -1,5 +1,9 @@
 const brightData = require('../integrations/brightData');
 const { parseBeachCam, getBeachCamURL } = require('../parsers/beachcam');
+const { scrapeSurfForecast } = require('../scrapers/surfForecast');
+const { scrapeWindFinder } = require('../scrapers/windFinder');
+const { scrapeMagicseaweed } = require('../scrapers/magicseaweed');
+const { scrapeMockData } = require('../scrapers/mockData');
 const logger = require('../utils/logger');
 
 /**
@@ -12,27 +16,38 @@ const logger = require('../utils/logger');
 async function fetchSurfData(spotId) {
   logger.info(`[Scraper] Fetching surf data for ${spotId}`);
 
+  // Run all scrapers in parallel - use all available data even if partial
   const scrapers = [
-    scrapeBeachCam(spotId),
-    // Add more scrapers here later:
-    // scrapeSurfForecast(spotId),
-    // scrapeIMS(spotId),
+    // Use mock data for now while we fix real scraper URLs
+    scrapeMockDataWrapper(spotId),
+    // TODO: Fix these URLs and re-enable
+    // scrapeSurfForecastWrapper(spotId),
+    // scrapeWindFinderWrapper(spotId),
+    // scrapeMagicseaweedWrapper(spotId),
+    // BeachCam hangs due to Claude CLI issues
+    // scrapeBeachCamWrapper(spotId)
   ];
 
   // Execute all scrapers in parallel
   const results = await Promise.allSettled(scrapers);
 
-  // Filter successful results
+  // Filter successful results (fulfilled and not null)
   const successfulData = results
-    .filter(r => r.status === 'fulfilled')
+    .filter(r => r.status === 'fulfilled' && r.value !== null)
     .map(r => r.value);
 
   // Log failures
   const failures = results.filter(r => r.status === 'rejected');
+  const nullResults = results.filter(r => r.status === 'fulfilled' && r.value === null);
+
   if (failures.length > 0) {
-    logger.warn(`[Scraper] ${failures.length} source(s) failed:`,
+    logger.warn(`[Scraper] ${failures.length} source(s) threw errors:`,
       failures.map((r, i) => `${i}: ${r.reason}`)
     );
+  }
+
+  if (nullResults.length > 0) {
+    logger.warn(`[Scraper] ${nullResults.length} source(s) returned no data`);
   }
 
   if (successfulData.length === 0) {
@@ -45,12 +60,67 @@ async function fetchSurfData(spotId) {
 }
 
 /**
- * Scrape BeachCam.co.il
+ * Wrapper functions for each scraper - return null on failure instead of throwing
+ * This allows us to use partial data from successful sources
  */
-async function scrapeBeachCam(spotId) {
+
+async function scrapeSurfForecastWrapper(spotId) {
+  try {
+    logger.info(`[Scraper] Scraping Surf-forecast for ${spotId}`);
+    const data = await scrapeSurfForecast(spotId);
+
+    if (!data) return null;
+
+    return {
+      source: 'surf-forecast',
+      data: data,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    logger.error(`[Scraper] Surf-forecast failed:`, error.message);
+    return null;
+  }
+}
+
+async function scrapeWindFinderWrapper(spotId) {
+  try {
+    logger.info(`[Scraper] Scraping WindFinder for ${spotId}`);
+    const data = await scrapeWindFinder(spotId);
+
+    if (!data) return null;
+
+    return {
+      source: 'windfinder',
+      data: data,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    logger.error(`[Scraper] WindFinder failed:`, error.message);
+    return null;
+  }
+}
+
+async function scrapeMagicseaweedWrapper(spotId) {
+  try {
+    logger.info(`[Scraper] Scraping Magicseaweed for ${spotId}`);
+    const data = await scrapeMagicseaweed(spotId);
+
+    if (!data) return null;
+
+    return {
+      source: 'magicseaweed',
+      data: data,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    logger.error(`[Scraper] Magicseaweed failed:`, error.message);
+    return null;
+  }
+}
+
+async function scrapeBeachCamWrapper(spotId) {
   try {
     logger.info(`[Scraper] Scraping BeachCam for ${spotId}`);
-
     const url = getBeachCamURL(spotId);
     const markdown = await brightData.scrapeAsMarkdown(url);
     const parsed = parseBeachCam(markdown, spotId);
@@ -62,8 +132,26 @@ async function scrapeBeachCam(spotId) {
       url: url
     };
   } catch (error) {
-    logger.error(`[Scraper] BeachCam scraping failed:`, error.message);
-    throw new Error(`BeachCam: ${error.message}`);
+    logger.error(`[Scraper] BeachCam failed:`, error.message);
+    return null;
+  }
+}
+
+async function scrapeMockDataWrapper(spotId) {
+  try {
+    logger.info(`[Scraper] Getting mock data for ${spotId}`);
+    const data = await scrapeMockData(spotId);
+
+    if (!data) return null;
+
+    return {
+      source: 'mock-data',
+      data: data,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    logger.error(`[Scraper] Mock data failed:`, error.message);
+    return null;
   }
 }
 
@@ -107,6 +195,7 @@ function aggregateData(sources) {
     waveHeightAvg: [],
     wavePeriod: [],
     windSpeed: [],
+    windGusts: [],
     airTemp: [],
     waterTemp: []
   };
@@ -115,7 +204,7 @@ function aggregateData(sources) {
   const windDirections = [];
   const waveDirections = [];
 
-  // Extract values from each source
+  // Extract values from each source - use ALL available data
   for (const source of sources) {
     const data = source.data;
 
@@ -126,6 +215,7 @@ function aggregateData(sources) {
     if (data.waves?.direction) waveDirections.push(data.waves.direction);
 
     if (data.wind?.speed) values.windSpeed.push(data.wind.speed);
+    if (data.wind?.gusts) values.windGusts.push(data.wind.gusts);
     if (data.wind?.direction) windDirections.push(data.wind.direction);
 
     if (data.weather?.airTemp) values.airTemp.push(data.weather.airTemp);
@@ -148,6 +238,9 @@ function aggregateData(sources) {
   if (values.windSpeed.length > 0) {
     aggregated.wind.speed = Math.round(average(values.windSpeed));
   }
+  if (values.windGusts.length > 0) {
+    aggregated.wind.gusts = Math.round(average(values.windGusts));
+  }
   if (values.airTemp.length > 0) {
     aggregated.weather.airTemp = Math.round(average(values.airTemp));
   }
@@ -158,6 +251,10 @@ function aggregateData(sources) {
   // Use most common direction
   aggregated.waves.direction = mostCommon(waveDirections);
   aggregated.wind.direction = mostCommon(windDirections);
+
+  logger.debug(`[Scraper] Aggregated from ${sources.length} sources: ` +
+    `waves=${aggregated.waves.height.avg}m @ ${aggregated.waves.period}s, ` +
+    `wind=${aggregated.wind.speed}km/h ${aggregated.wind.direction}`);
 
   logger.info(`[Scraper] Aggregation complete`);
   return aggregated;
@@ -193,6 +290,5 @@ function mostCommon(arr) {
 
 module.exports = {
   fetchSurfData,
-  aggregateData,
-  scrapeBeachCam
+  aggregateData
 };
