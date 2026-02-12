@@ -27,7 +27,11 @@ async function scrapeAsMarkdown(url) {
 
     const { stdout, stderr } = await execPromise(cmd, {
       timeout: 30000, // 30 second timeout
-      maxBuffer: 1024 * 1024 * 5 // 5MB buffer
+      maxBuffer: 1024 * 1024 * 5, // 5MB buffer
+      env: {
+        ...process.env,
+        PATH: process.env.PATH + ';C:\\Users\\user\\AppData\\Roaming\\npm'
+      }
     });
 
     if (stderr) {
@@ -65,7 +69,11 @@ async function searchEngine(query, engine = 'google') {
 
     const { stdout, stderr } = await execPromise(cmd, {
       timeout: 30000,
-      maxBuffer: 1024 * 1024 * 5
+      maxBuffer: 1024 * 1024 * 5,
+      env: {
+        ...process.env,
+        PATH: process.env.PATH + ';C:\\Users\\user\\AppData\\Roaming\\npm'
+      }
     });
 
     if (stderr) {
