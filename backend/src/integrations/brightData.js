@@ -21,16 +21,15 @@ async function scrapeAsMarkdown(url) {
     logger.info(`[Bright Data] Scraping URL: ${url}`);
 
     const escapedUrl = url.replace(/"/g, '\\"');
-    const prompt = `Scrape the webpage at ${escapedUrl} using the scrape_as_markdown tool and return only the markdown content, no additional commentary.`;
+    const prompt = `Scrape ${escapedUrl} including all JavaScript-rendered surf forecast data (waves, wind, temps, tables). Return complete markdown.`;
 
-    // Use full path to claude command to avoid PATH issues
+    // Use PowerShell to execute claude command with proper stdin handling
     const claudePath = 'C:\\Users\\user\\AppData\\Roaming\\npm\\claude.cmd';
-    const cmd = `echo. | "${claudePath}" --allowedTools "mcp__bright-data__scrape_as_markdown" --dangerously-skip-permissions --print -- "${prompt}"`;
+    const cmd = `powershell.exe -Command "& { '' | & '${claudePath}' --allowedTools 'mcp__bright-data__scrape_as_markdown' --dangerously-skip-permissions --print -- '${prompt.replace(/'/g, "''")}' }"`
 
     const { stdout, stderr } = await execPromise(cmd, {
-      timeout: 60000, // 60 second timeout
+      timeout: 120000, // 120 second timeout
       maxBuffer: 1024 * 1024 * 5, // 5MB buffer
-      shell: true, // Use shell to execute .cmd file
       windowsHide: true // Hide console window on Windows
     });
 
@@ -73,10 +72,10 @@ async function searchEngine(query, engine = 'google') {
 
     // Use full path to claude command to avoid PATH issues
     const claudePath = 'C:\\Users\\user\\AppData\\Roaming\\npm\\claude.cmd';
-    const cmd = `echo. | "${claudePath}" --allowedTools "mcp__bright-data__search_engine" --dangerously-skip-permissions --print -- "${prompt}"`;
+    const cmd = `echo "" | "${claudePath}" --allowedTools "mcp__bright-data__search_engine" --dangerously-skip-permissions --print -- "${prompt}"`;
 
     const { stdout, stderr } = await execPromise(cmd, {
-      timeout: 60000, // 60 second timeout
+      timeout: 120000, // 120 second timeout
       maxBuffer: 1024 * 1024 * 5,
       shell: true, // Use shell to execute .cmd file
       windowsHide: true // Hide console window on Windows
