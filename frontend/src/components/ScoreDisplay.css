@@ -1,0 +1,152 @@
+.score-display {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.score-circle {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 20px;
+}
+
+.score-circle svg {
+  transform: scaleX(-1);
+}
+
+.progress-ring {
+  transition: stroke-dasharray 0.5s ease;
+}
+
+.score-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.score-number {
+  font-size: 3.5rem;
+  font-weight: bold;
+  line-height: 1;
+  margin-bottom: 5px;
+}
+
+.score-rating {
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Color classes */
+.score-display.epic .score-number,
+.score-display.epic .score-rating,
+.score-display.epic .progress-ring {
+  color: #4caf50;
+}
+
+.score-display.good .score-number,
+.score-display.good .score-rating,
+.score-display.good .progress-ring {
+  color: #8bc34a;
+}
+
+.score-display.fair .score-number,
+.score-display.fair .score-rating,
+.score-display.fair .progress-ring {
+  color: #ffc107;
+}
+
+.score-display.poor .score-number,
+.score-display.poor .score-rating,
+.score-display.poor .progress-ring {
+  color: #ff9800;
+}
+
+.score-display.flat .score-number,
+.score-display.flat .score-rating,
+.score-display.flat .progress-ring {
+  color: #f44336;
+}
+
+.score-info {
+  color: #666;
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+}
+
+.cache-badge {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  margin-right: 8px;
+}
+
+.score-breakdown {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.score-breakdown h3 {
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.breakdown-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.breakdown-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.breakdown-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.breakdown-value {
+  font-weight: bold;
+  color: #333;
+}
+
+.breakdown-bar-bg {
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.breakdown-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+@media (max-width: 768px) {
+  .score-circle {
+    width: 150px;
+    height: 150px;
+  }
+
+  .score-number {
+    font-size: 2.5rem;
+  }
+
+  .score-rating {
+    font-size: 1rem;
+  }
+}
