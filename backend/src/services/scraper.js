@@ -4,6 +4,8 @@ const { scrapeSurfForecast } = require('../scrapers/surfForecast');
 const { scrapeWindFinder } = require('../scrapers/windFinder');
 const { scrapeMagicseaweed } = require('../scrapers/magicseaweed');
 const { scrapeMockData } = require('../scrapers/mockData');
+const { scrapeOpenMeteo } = require('../scrapers/openMeteo');
+const { scrapeMetNo } = require('../scrapers/metNo');
 const logger = require('../utils/logger');
 
 /**
@@ -18,14 +20,11 @@ async function fetchSurfData(spotId) {
 
   // Run all scrapers in parallel - use all available data even if partial
   const scrapers = [
-    // Use mock data for now while we fix real scraper URLs
-    scrapeMockDataWrapper(spotId),
-    // TODO: Fix these URLs and re-enable
-    // scrapeSurfForecastWrapper(spotId),
-    // scrapeWindFinderWrapper(spotId),
-    // scrapeMagicseaweedWrapper(spotId),
-    // BeachCam hangs due to Claude CLI issues
-    // scrapeBeachCamWrapper(spotId)
+    // Real API sources (free, no auth)
+    scrapeOpenMeteoWrapper(spotId),  // Wave data
+    scrapeMetNoWrapper(spotId),      // Wind/weather data
+    // Keep mock data as fallback
+    // scrapeMockDataWrapper(spotId),
   ];
 
   // Execute all scrapers in parallel
@@ -151,6 +150,42 @@ async function scrapeMockDataWrapper(spotId) {
     };
   } catch (error) {
     logger.error(`[Scraper] Mock data failed:`, error.message);
+    return null;
+  }
+}
+
+async function scrapeOpenMeteoWrapper(spotId) {
+  try {
+    logger.info(`[Scraper] Scraping Open-Meteo for ${spotId}`);
+    const data = await scrapeOpenMeteo(spotId);
+
+    if (!data) return null;
+
+    return {
+      source: 'open-meteo',
+      data: data,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    logger.error(`[Scraper] Open-Meteo failed:`, error.message);
+    return null;
+  }
+}
+
+async function scrapeMetNoWrapper(spotId) {
+  try {
+    logger.info(`[Scraper] Scraping MET.NO for ${spotId}`);
+    const data = await scrapeMetNo(spotId);
+
+    if (!data) return null;
+
+    return {
+      source: 'met-no',
+      data: data,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    logger.error(`[Scraper] MET.NO failed:`, error.message);
     return null;
   }
 }
