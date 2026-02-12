@@ -25,12 +25,13 @@ async function scrapeAsMarkdown(url) {
 
     // Use full path to claude command to avoid PATH issues
     const claudePath = 'C:\\Users\\user\\AppData\\Roaming\\npm\\claude.cmd';
-    const cmd = `"${claudePath}" --allowedTools "mcp__bright-data__scrape_as_markdown" --print -- "${prompt}"`;
+    const cmd = `echo. | "${claudePath}" --allowedTools "mcp__bright-data__scrape_as_markdown" --dangerously-skip-permissions --print -- "${prompt}"`;
 
     const { stdout, stderr } = await execPromise(cmd, {
-      timeout: 30000, // 30 second timeout
+      timeout: 60000, // 60 second timeout
       maxBuffer: 1024 * 1024 * 5, // 5MB buffer
-      shell: true // Use shell to execute .cmd file
+      shell: true, // Use shell to execute .cmd file
+      windowsHide: true // Hide console window on Windows
     });
 
     if (stderr) {
@@ -44,7 +45,13 @@ async function scrapeAsMarkdown(url) {
     return markdown;
 
   } catch (error) {
-    logger.error(`[Bright Data] Failed to scrape ${url}:`, error.message);
+    logger.error(`[Bright Data] Failed to scrape ${url}:`, {
+      message: error.message,
+      stdout: error.stdout?.substring(0, 200),
+      stderr: error.stderr?.substring(0, 200),
+      killed: error.killed,
+      signal: error.signal
+    });
     throw new Error(`Scraping failed: ${error.message}`);
   }
 }
@@ -66,12 +73,13 @@ async function searchEngine(query, engine = 'google') {
 
     // Use full path to claude command to avoid PATH issues
     const claudePath = 'C:\\Users\\user\\AppData\\Roaming\\npm\\claude.cmd';
-    const cmd = `"${claudePath}" --allowedTools "mcp__bright-data__search_engine" --print -- "${prompt}"`;
+    const cmd = `echo. | "${claudePath}" --allowedTools "mcp__bright-data__search_engine" --dangerously-skip-permissions --print -- "${prompt}"`;
 
     const { stdout, stderr } = await execPromise(cmd, {
-      timeout: 30000,
+      timeout: 60000, // 60 second timeout
       maxBuffer: 1024 * 1024 * 5,
-      shell: true // Use shell to execute .cmd file
+      shell: true, // Use shell to execute .cmd file
+      windowsHide: true // Hide console window on Windows
     });
 
     if (stderr) {
