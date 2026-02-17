@@ -18,6 +18,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@brightdata/mcp": "^2.6.0",
     "axios": "^1.13.5",
     "cheerio": "^1.2.0",
     "cors": "^2.8.5",

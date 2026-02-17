@@ -1,158 +1,260 @@
-const { exec } = require('child_process');
-const util = require('util');
+const { spawn } = require('child_process');
 const logger = require('../utils/logger');
 
-const execPromise = util.promisify(exec);
-
 /**
- * Bright Data MCP Integration
- * Wraps the Claude CLI to call Bright Data MCP tools
- */
-
-/**
- * Scrape a URL and return content as markdown
- * Uses Bright Data's scrape_as_markdown tool via Claude CLI
+ * Bright Data MCP Integration - Direct MCP client
  *
- * @param {string} url - The URL to scrape
- * @returns {Promise<string>} - Scraped content in markdown format
- */
-async function scrapeAsMarkdown(url) {
-  try {
-    logger.info(`[Bright Data] Scraping URL: ${url}`);
-
-    const escapedUrl = url.replace(/"/g, '\\"');
-    const prompt = `Scrape ${escapedUrl} including all JavaScript-rendered surf forecast data (waves, wind, temps, tables). Return complete markdown.`;
-
-    // Use PowerShell to execute claude command with proper stdin handling
-    const claudePath = 'C:\\Users\\user\\AppData\\Roaming\\npm\\claude.cmd';
-    const cmd = `powershell.exe -Command "& { '' | & '${claudePath}' --allowedTools 'mcp__bright-data__scrape_as_markdown' --dangerously-skip-permissions --print -- '${prompt.replace(/'/g, "''")}' }"`
-
-    const { stdout, stderr } = await execPromise(cmd, {
-      timeout: 120000, // 120 second timeout
-      maxBuffer: 1024 * 1024 * 5, // 5MB buffer
-      windowsHide: true // Hide console window on Windows
-    });
-
-    if (stderr) {
-      logger.warn(`[Bright Data] stderr: ${stderr}`);
-    }
-
-    // Parse the markdown from Claude's response
-    const markdown = extractMarkdownFromResponse(stdout);
-
-    logger.info(`[Bright Data] Successfully scraped ${url} (${markdown.length} chars)`);
-    return markdown;
-
-  } catch (error) {
-    logger.error(`[Bright Data] Failed to scrape ${url}:`, {
-      message: error.message,
-      stdout: error.stdout?.substring(0, 200),
-      stderr: error.stderr?.substring(0, 200),
-      killed: error.killed,
-      signal: error.signal
-    });
-    throw new Error(`Scraping failed: ${error.message}`);
-  }
-}
-
-/**
- * Search Google for a query and return results
- * Uses Bright Data's search_engine tool via Claude CLI
+ * Communicates with the @brightdata/mcp server directly via JSON-RPC over stdio.
+ * Uses two products:
+ *   - Web Unlocker (scrape_as_markdown) for simple sites
+ *   - Scraping Browser (navigate + snapshot) for sites that block Web Unlocker
  *
- * @param {string} query - Search query
- * @param {string} engine - Search engine ('google', 'bing', 'yandex')
- * @returns {Promise<Array>} - Array of search results
+ * Required env var: BRIGHT_DATA_API_KEY
  */
-async function searchEngine(query, engine = 'google') {
-  try {
-    logger.info(`[Bright Data] Searching ${engine} for: ${query}`);
 
-    const escapedQuery = query.replace(/"/g, '\\"');
-    const prompt = `Search ${engine} for "${escapedQuery}" using the search_engine tool and return the top 5 results in a structured format.`;
+function sendMessage(stdin, obj) {
+  stdin.write(JSON.stringify(obj) + '\n');
+}
 
-    // Use full path to claude command to avoid PATH issues
-    const claudePath = 'C:\\Users\\user\\AppData\\Roaming\\npm\\claude.cmd';
-    const cmd = `echo "" | "${claudePath}" --allowedTools "mcp__bright-data__search_engine" --dangerously-skip-permissions --print -- "${prompt}"`;
+/**
+ * Spawn an MCP server and run a single tool call.
+ */
+function callMcpTool(toolName, toolArgs, timeoutMs = 60000) {
+  return new Promise((resolve, reject) => {
+    const apiKey = process.env.BRIGHT_DATA_API_KEY;
+    if (!apiKey) return reject(new Error('BRIGHT_DATA_API_KEY not set'));
 
-    const { stdout, stderr } = await execPromise(cmd, {
-      timeout: 120000, // 120 second timeout
-      maxBuffer: 1024 * 1024 * 5,
-      shell: true, // Use shell to execute .cmd file
-      windowsHide: true // Hide console window on Windows
+    const isWindows = process.platform === 'win32';
+    const cmd = isWindows ? 'npx.cmd' : 'npx';
+    const mcpServer = spawn(cmd, ['@brightdata/mcp'], {
+      env: { ...process.env, API_TOKEN: apiKey, PRO_MODE: 'true' },
+      stdio: ['pipe', 'pipe', 'pipe']
     });
 
-    if (stderr) {
-      logger.warn(`[Bright Data] stderr: ${stderr}`);
-    }
+    let stdoutBuffer = '';
+    let initDone = false;
+    let settled = false;
 
-    // Parse search results from response
-    const results = extractSearchResultsFromResponse(stdout);
+    const finish = (err, result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { mcpServer.kill('SIGTERM'); } catch (_) {}
+      if (err) reject(err);
+      else resolve(result);
+    };
 
-    logger.info(`[Bright Data] Found ${results.length} results for "${query}"`);
-    return results;
+    const timer = setTimeout(() => {
+      finish(new Error(`MCP tool call timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
 
-  } catch (error) {
-    logger.error(`[Bright Data] Search failed for "${query}":`, error.message);
-    throw new Error(`Search failed: ${error.message}`);
-  }
+    mcpServer.on('error', (err) => finish(new Error(`Spawn failed: ${err.message}`)));
+    mcpServer.on('close', (code) => {
+      if (!settled) finish(new Error(`MCP server exited with code ${code}`));
+    });
+
+    mcpServer.stdout.on('data', (chunk) => {
+      stdoutBuffer += chunk.toString();
+      const lines = stdoutBuffer.split('\n');
+      stdoutBuffer = lines.pop();
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        let msg;
+        try { msg = JSON.parse(trimmed); } catch (_) { continue; }
+
+        if (msg.id === 1 && msg.result && !initDone) {
+          initDone = true;
+          sendMessage(mcpServer.stdin, { jsonrpc: '2.0', method: 'notifications/initialized', params: {} });
+          sendMessage(mcpServer.stdin, {
+            jsonrpc: '2.0', id: 2, method: 'tools/call',
+            params: { name: toolName, arguments: toolArgs }
+          });
+        } else if (msg.id === 2) {
+          if (msg.error) {
+            finish(new Error(`MCP tool error: ${msg.error.message || JSON.stringify(msg.error)}`));
+          } else {
+            const content = msg.result?.content;
+            const text = Array.isArray(content) ? content.map(c => c.text || '').join('\n') : '';
+            finish(null, text);
+          }
+        } else if (msg.error) {
+          finish(new Error(`MCP error: ${msg.error.message || JSON.stringify(msg.error)}`));
+        }
+      }
+    });
+
+    mcpServer.stderr.on('data', (chunk) => {
+      const text = chunk.toString().trim();
+      if (text) logger.debug(`[Bright Data MCP stderr] ${text}`);
+    });
+
+    sendMessage(mcpServer.stdin, {
+      jsonrpc: '2.0', id: 1, method: 'initialize',
+      params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'surf-report', version: '1.0.0' } }
+    });
+  });
 }
 
 /**
- * Extract markdown content from Claude's response
- * Removes Claude's commentary and extracts just the markdown
+ * Spawn an MCP server and run multiple tool calls sequentially in one session.
+ * Needed for Scraping Browser: navigate → snapshot.
  */
-function extractMarkdownFromResponse(response) {
-  // If response contains markdown code blocks, extract them
-  const markdownBlockMatch = response.match(/```markdown\n([\s\S]*?)\n```/);
-  if (markdownBlockMatch) {
-    return markdownBlockMatch[1].trim();
-  }
+function callMcpToolsInSession(toolCalls, extraEnv = {}, timeoutMs = 120000) {
+  return new Promise((resolve, reject) => {
+    const apiKey = process.env.BRIGHT_DATA_API_KEY;
+    if (!apiKey) return reject(new Error('BRIGHT_DATA_API_KEY not set'));
 
-  // If no code block, return the whole response (Claude might return it directly)
-  // Remove common Claude response patterns
-  let cleaned = response
-    .replace(/^(Here's|Here is|I'll|I've scraped).*?:/gim, '')
-    .replace(/^The (content|markdown|page).*?:/gim, '')
-    .trim();
+    const isWindows = process.platform === 'win32';
+    const cmd = isWindows ? 'npx.cmd' : 'npx';
+    const mcpServer = spawn(cmd, ['@brightdata/mcp'], {
+      env: { ...process.env, API_TOKEN: apiKey, PRO_MODE: 'true', ...extraEnv },
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
 
-  return cleaned;
-}
+    let stdoutBuffer = '';
+    let initDone = false;
+    let settled = false;
+    let currentIdx = 0;
+    const results = [];
 
-/**
- * Extract search results from Claude's response
- */
-function extractSearchResultsFromResponse(response) {
-  // Try to parse JSON if present
-  const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/);
-  if (jsonMatch) {
-    try {
-      return JSON.parse(jsonMatch[1]);
-    } catch (e) {
-      logger.warn('[Bright Data] Failed to parse JSON from response');
-    }
-  }
+    const finish = (err, result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { mcpServer.kill('SIGTERM'); } catch (_) {}
+      if (err) reject(err);
+      else resolve(result);
+    };
 
-  // Fallback: parse markdown-formatted results
-  const results = [];
-  const lines = response.split('\n');
+    const timer = setTimeout(() => {
+      finish(new Error(`MCP session timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    // Look for numbered list items with links: "1. **[Title](url)**"
-    const match = line.match(/^\d+\.\s+\*?\*?\[(.+?)\]\((.+?)\)\*?\*?/);
-    if (match) {
-      results.push({
-        title: match[1],
-        url: match[2],
-        description: lines[i + 1]?.trim() || ''
+    mcpServer.on('error', (err) => finish(new Error(`Spawn failed: ${err.message}`)));
+    mcpServer.on('close', (code) => {
+      if (!settled) finish(new Error(`MCP server exited with code ${code}`));
+    });
+
+    function sendNextToolCall() {
+      sendMessage(mcpServer.stdin, {
+        jsonrpc: '2.0',
+        id: 10 + currentIdx,
+        method: 'tools/call',
+        params: {
+          name: toolCalls[currentIdx].name,
+          arguments: toolCalls[currentIdx].arguments || {}
+        }
       });
     }
-  }
 
-  return results;
+    mcpServer.stdout.on('data', (chunk) => {
+      stdoutBuffer += chunk.toString();
+      const lines = stdoutBuffer.split('\n');
+      stdoutBuffer = lines.pop();
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        let msg;
+        try { msg = JSON.parse(trimmed); } catch (_) { continue; }
+
+        // Initialize response
+        if (msg.id === 1 && msg.result && !initDone) {
+          initDone = true;
+          sendMessage(mcpServer.stdin, { jsonrpc: '2.0', method: 'notifications/initialized', params: {} });
+          sendNextToolCall();
+        }
+        // Tool call response
+        else if (msg.id >= 10 && msg.id < 10 + toolCalls.length) {
+          if (msg.error) {
+            finish(new Error(`Tool '${toolCalls[msg.id - 10].name}' error: ${msg.error.message || JSON.stringify(msg.error)}`));
+            return;
+          }
+          const content = msg.result?.content;
+          const text = Array.isArray(content) ? content.map(c => c.text || '').join('\n') : '';
+          results.push(text);
+
+          currentIdx++;
+          if (currentIdx < toolCalls.length) {
+            sendNextToolCall();
+          } else {
+            finish(null, results);
+          }
+        }
+        else if (msg.error) {
+          finish(new Error(`MCP error: ${msg.error.message || JSON.stringify(msg.error)}`));
+        }
+      }
+    });
+
+    mcpServer.stderr.on('data', (chunk) => {
+      const text = chunk.toString().trim();
+      if (text) logger.debug(`[Bright Data MCP stderr] ${text}`);
+    });
+
+    sendMessage(mcpServer.stdin, {
+      jsonrpc: '2.0', id: 1, method: 'initialize',
+      params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'surf-report', version: '1.0.0' } }
+    });
+  });
 }
 
-module.exports = {
-  scrapeAsMarkdown,
-  searchEngine
-};
+/**
+ * Scrape a URL using the Scraping Browser (navigate + snapshot).
+ * Used for sites that block Web Unlocker.
+ */
+async function scrapeWithBrowser(url) {
+  logger.info(`[Bright Data] Browser scraping: ${url}`);
+  const results = await callMcpToolsInSession([
+    { name: 'scraping_browser_navigate', arguments: { url } },
+    { name: 'scraping_browser_snapshot', arguments: {} }
+  ], {}, 120000);
+
+  const content = results[1]; // snapshot is the second call
+
+  // Check if the result is actually an error message from the MCP tool
+  if (content && (content.includes('execution failed') || content.includes('status code 401') || content.includes('status code 403'))) {
+    logger.error(`[Bright Data] Browser scrape returned error for ${url}: ${content.substring(0, 200)}`);
+    throw new Error(`Browser scrape failed for ${url}: ${content.substring(0, 200)}`);
+  }
+
+  logger.info(`[Bright Data] Browser scraped ${url} (${content.length} chars)`);
+  return content;
+}
+
+/**
+ * Scrape a URL and return content as markdown.
+ * Tries Web Unlocker first (fast), falls back to Scraping Browser for blocked sites.
+ */
+async function scrapeAsMarkdown(url) {
+  logger.info(`[Bright Data] Scraping: ${url}`);
+
+  // Try Web Unlocker first (scrape_as_markdown)
+  try {
+    const result = await callMcpTool('scrape_as_markdown', { url }, 90000);
+    if (result && !result.includes('execution failed') && !result.includes('status code 401') && !result.includes('status code 403')) {
+      logger.info(`[Bright Data] Scraped ${url} via Web Unlocker (${result.length} chars)`);
+      return result;
+    }
+    logger.warn(`[Bright Data] Web Unlocker returned error for ${url}: ${result ? result.substring(0, 200) : 'empty'}`);
+  } catch (err) {
+    logger.warn(`[Bright Data] Web Unlocker error for ${url}: ${err.message}, trying Scraping Browser`);
+  }
+
+  // Fallback to Scraping Browser (navigate + snapshot)
+  return scrapeWithBrowser(url);
+}
+
+/**
+ * Search the web and return results
+ */
+async function searchEngine(query, engine = 'google') {
+  logger.info(`[Bright Data] Searching ${engine} for: ${query}`);
+  const result = await callMcpTool('search_engine', { query, engine }, 60000);
+  logger.info(`[Bright Data] Search complete (${result.length} chars)`);
+  return result;
+}
+
+module.exports = { scrapeAsMarkdown, scrapeWithBrowser, searchEngine };

@@ -19,17 +19,14 @@ async function scrapeOpenMeteo(spotId) {
       return null;
     }
 
-    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${coords.lat}&longitude=${coords.lon}&hourly=wave_height,wave_period,wave_direction&timezone=Asia/Jerusalem&forecast_days=1`;
+    // Fetch wave + swell + wind wave data
+    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${coords.lat}&longitude=${coords.lon}&hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,swell_wave_direction,wind_wave_height,wind_wave_period&timezone=Asia/Jerusalem&forecast_days=1`;
 
     logger.info(`[Open-Meteo] Fetching ${url}`);
 
-    const response = await axios.get(url, {
-      timeout: 10000
-    });
-
+    const response = await axios.get(url, { timeout: 10000 });
     const data = response.data;
 
-    // Get current hour data (first entry)
     const hourly = data.hourly;
     if (!hourly || !hourly.time || hourly.time.length === 0) {
       logger.warn(`[Open-Meteo] No data returned`);
@@ -40,7 +37,8 @@ async function scrapeOpenMeteo(spotId) {
       waves: {
         height: { min: null, max: null, avg: null },
         period: null,
-        direction: null
+        direction: null,
+        swell: null
       },
       wind: {
         speed: null,
@@ -54,7 +52,7 @@ async function scrapeOpenMeteo(spotId) {
       }
     };
 
-    // Use current hour data
+    // Primary wave data
     const waveHeight = hourly.wave_height?.[0];
     const wavePeriod = hourly.wave_period?.[0];
     const waveDirection = hourly.wave_direction?.[0];
@@ -78,6 +76,21 @@ async function scrapeOpenMeteo(spotId) {
       logger.debug(`[Open-Meteo] Wave direction: ${waveDirection}° (${conditions.waves.direction})`);
     }
 
+    // Swell data
+    const swellHeight = hourly.swell_wave_height?.[0];
+    const swellPeriod = hourly.swell_wave_period?.[0];
+    const swellDirection = hourly.swell_wave_direction?.[0];
+
+    if (swellHeight !== null && swellHeight !== undefined) {
+      conditions.waves.swell = {
+        height: Math.round(swellHeight * 10) / 10,
+        period: swellPeriod ? Math.round(swellPeriod) : null,
+        direction: swellDirection !== null && swellDirection !== undefined
+          ? degreesToCardinal(swellDirection) : null
+      };
+      logger.debug(`[Open-Meteo] Swell: ${swellHeight}m @ ${swellPeriod}s from ${conditions.waves.swell.direction}`);
+    }
+
     logger.info(`[Open-Meteo] Successfully fetched wave data`);
     return conditions;
 
@@ -87,15 +100,10 @@ async function scrapeOpenMeteo(spotId) {
   }
 }
 
-/**
- * Convert degrees to cardinal direction
- */
 function degreesToCardinal(degrees) {
   const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
   const index = Math.round(((degrees % 360) / 45)) % 8;
   return directions[index];
 }
 
-module.exports = {
-  scrapeOpenMeteo
-};
+module.exports = { scrapeOpenMeteo };
