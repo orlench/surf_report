@@ -9,13 +9,15 @@ const logger = require('../utils/logger');
 
 const SPOT_URLS = {
   herzliya_marina: 'https://www.surf-forecast.com/breaks/Herzliya/forecasts/latest',
-  netanya_kontiki: 'https://www.surf-forecast.com/breaks/Netanya/forecasts/latest'
+  netanya_kontiki: 'https://www.surf-forecast.com/breaks/Netanya/forecasts/latest',
+  tel_aviv_maaravi: 'https://www.surf-forecast.com/breaks/Hof-Maravi/forecasts/latest'
 };
 
 // Magicseaweed spot pages for Israeli breaks
 const MSW_URLS = {
   herzliya_marina: 'https://magicseaweed.com/Herzliya-Surf-Report/5359/',
-  netanya_kontiki: 'https://magicseaweed.com/Netanya-Surf-Report/5360/'
+  netanya_kontiki: 'https://magicseaweed.com/Netanya-Surf-Report/5360/',
+  tel_aviv_maaravi: 'https://magicseaweed.com/Hof-Maravi-Surf-Report/3663/'
 };
 
 async function scrapeMagicseaweed(spotId) {

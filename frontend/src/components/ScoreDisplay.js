@@ -1,13 +1,20 @@
-import React from 'react';
 import './ScoreDisplay.css';
 
-function ScoreDisplay({ score, rating, breakdown, timestamp, fromCache, cacheAge }) {
+function ScoreDisplay({ score, rating, timestamp, fromCache, cacheAge, conditions, onRefresh }) {
   const getColorClass = (score) => {
     if (score >= 85) return 'epic';
     if (score >= 70) return 'good';
     if (score >= 50) return 'fair';
     if (score >= 30) return 'poor';
     return 'flat';
+  };
+
+  const getVerdict = (score) => {
+    if (score >= 85) return 'Absolutely!';
+    if (score >= 70) return 'Yes, go!';
+    if (score >= 50) return 'Maybe...';
+    if (score >= 30) return 'Probably not';
+    return 'Stay home';
   };
 
   const formatTime = (timestamp) => {
@@ -23,90 +30,42 @@ function ScoreDisplay({ score, rating, breakdown, timestamp, fromCache, cacheAge
     return date.toLocaleString();
   };
 
-  // Calculate stroke dasharray for circular progress
-  const circumference = 2 * Math.PI * 45;
-  const progress = (score / 100) * circumference;
+  const colorClass = getColorClass(score);
+  const { waves, wind } = conditions || {};
+
+  const waveText = waves?.height?.min && waves?.height?.max
+    ? `${waves.height.min}–${waves.height.max}m`
+    : waves?.height?.avg
+      ? `${waves.height.avg}m`
+      : null;
 
   return (
-    <div className={`score-display ${getColorClass(score)}`}>
-      <div className="score-circle">
-        <svg width="200" height="200" viewBox="0 0 100 100">
-          {/* Background circle */}
-          <circle
-            cx="50"
-            cy="50"
-            r="45"
-            fill="none"
-            stroke="rgba(255, 255, 255, 0.1)"
-            strokeWidth="8"
-          />
-          {/* Progress circle */}
-          <circle
-            cx="50"
-            cy="50"
-            r="45"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="8"
-            strokeDasharray={`${progress} ${circumference}`}
-            strokeDashoffset="0"
-            strokeLinecap="round"
-            transform="rotate(-90 50 50)"
-            className="progress-ring"
-          />
-        </svg>
-        <div className="score-content">
-          <div className="score-number">{score}</div>
-          <div className="score-rating">{rating}</div>
-        </div>
-      </div>
+    <div className={`hero ${colorClass}`}>
+      <div className="hero-question">Should I go?</div>
+      <div className="hero-verdict">{getVerdict(score)}</div>
+      <span className={`rating-badge ${colorClass}`}>{rating}</span>
 
-      <div className="score-info">
-        <p className="last-updated">
-          {fromCache && <span className="cache-badge">Cached</span>}
-          Updated {fromCache && cacheAge ? `${Math.floor(cacheAge / 60)} min ago` : formatTime(timestamp)}
-        </p>
-      </div>
-
-      {/* Score breakdown */}
-      {breakdown && (
-        <div className="score-breakdown">
-          <h3>Score Breakdown</h3>
-          <div className="breakdown-bars">
-            <BreakdownBar label="Wave Height" value={breakdown.waveHeight} />
-            <BreakdownBar label="Wave Period" value={breakdown.wavePeriod} />
-            <BreakdownBar label="Wind Speed" value={breakdown.windSpeed} />
-            <BreakdownBar label="Wind Direction" value={breakdown.windDirection} />
-            <BreakdownBar label="Wave Direction" value={breakdown.waveDirection} />
-          </div>
-        </div>
+      {waveText && (
+        <div className="hero-wave-height">{waveText}</div>
       )}
-    </div>
-  );
-}
 
-function BreakdownBar({ label, value }) {
-  const getColor = (value) => {
-    if (value >= 80) return '#4caf50';
-    if (value >= 60) return '#8bc34a';
-    if (value >= 40) return '#ffc107';
-    return '#ff5722';
-  };
-
-  return (
-    <div className="breakdown-item">
-      <div className="breakdown-label">
-        <span>{label}</span>
-        <span className="breakdown-value">{value}</span>
+      <div className="hero-details">
+        <span className="hero-score">{score}/100</span>
+        {waves?.period && <span className="hero-detail">{waves.period}s period</span>}
+        {waves?.direction && <span className="hero-detail">{waves.direction} swell</span>}
+        {wind?.speed && <span className="hero-detail">{wind.speed} km/h wind</span>}
       </div>
-      <div className="breakdown-bar-bg">
-        <div
-          className="breakdown-bar-fill"
-          style={{
-            width: `${value}%`,
-            backgroundColor: getColor(value)
-          }}
-        />
+
+      <div className="hero-updated">
+        {fromCache && <span className="cache-badge">Cached</span>}
+        Updated {fromCache && cacheAge ? `${Math.floor(cacheAge / 60)} min ago` : formatTime(timestamp)}
+        <button className="hero-refresh" onClick={onRefresh} title="Refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="23 4 23 10 17 10" />
+            <polyline points="1 20 1 14 7 14" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+        </button>
       </div>
     </div>
   );

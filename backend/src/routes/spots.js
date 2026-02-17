@@ -18,6 +18,7 @@ router.get('/', (req, res) => {
     spots: spots.map(spot => ({
       id: spot.id,
       name: spot.name,
+      country: spot.country,
       location: spot.location,
       description: spot.description
     }))
