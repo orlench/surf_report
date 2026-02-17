@@ -1,11 +1,11 @@
-const brightData = require('../integrations/brightData');
-const { parseBeachCam, getBeachCamURL } = require('../parsers/beachcam');
+const { scrapeBeachCam } = require('../scrapers/beachcam');
 const { scrapeSurfForecast } = require('../scrapers/surfForecast');
 const { scrapeWindFinder } = require('../scrapers/windFinder');
 const { scrapeMagicseaweed } = require('../scrapers/magicseaweed');
 const { scrapeMockData } = require('../scrapers/mockData');
 const { scrapeOpenMeteo } = require('../scrapers/openMeteo');
 const { scrapeMetNo } = require('../scrapers/metNo');
+const { scrapeOpenMeteoForecast } = require('../scrapers/openMeteoForecast');
 const logger = require('../utils/logger');
 
 /**
@@ -20,11 +20,15 @@ async function fetchSurfData(spotId) {
 
   // Run all scrapers in parallel - use all available data even if partial
   const scrapers = [
-    // Real API sources (free, no auth)
-    scrapeOpenMeteoWrapper(spotId),  // Wave data
-    scrapeMetNoWrapper(spotId),      // Wind/weather data
-    // Keep mock data as fallback
-    // scrapeMockDataWrapper(spotId),
+    // Free JSON API sources (no auth)
+    scrapeOpenMeteoWrapper(spotId),         // Wave + swell data (Open-Meteo Marine)
+    scrapeMetNoWrapper(spotId),             // Wind/weather data (MET.NO)
+    scrapeOpenMeteoForecastWrapper(spotId), // Wind data (Open-Meteo ECMWF atmospheric)
+    // Web scrapers via Bright Data MCP
+    scrapeBeachCamWrapper(spotId),          // Israeli beach conditions (beachcam.co.il)
+    scrapeSurfForecastWrapper(spotId),      // surf-forecast.com - processed surf data
+    scrapeWindFinderWrapper(spotId),        // windfinder.com - wind specialist
+    scrapeMagicseaweedWrapper(spotId),      // magicseaweed.com - surf forecast
   ];
 
   // Execute all scrapers in parallel
@@ -120,15 +124,14 @@ async function scrapeMagicseaweedWrapper(spotId) {
 async function scrapeBeachCamWrapper(spotId) {
   try {
     logger.info(`[Scraper] Scraping BeachCam for ${spotId}`);
-    const url = getBeachCamURL(spotId);
-    const markdown = await brightData.scrapeAsMarkdown(url);
-    const parsed = parseBeachCam(markdown, spotId);
+    const data = await scrapeBeachCam(spotId);
+
+    if (!data) return null;
 
     return {
       source: 'beachcam',
-      data: parsed,
-      timestamp: new Date().toISOString(),
-      url: url
+      data: data,
+      timestamp: new Date().toISOString()
     };
   } catch (error) {
     logger.error(`[Scraper] BeachCam failed:`, error.message);
@@ -190,6 +193,24 @@ async function scrapeMetNoWrapper(spotId) {
   }
 }
 
+async function scrapeOpenMeteoForecastWrapper(spotId) {
+  try {
+    logger.info(`[Scraper] Scraping Open-Meteo Forecast (ECMWF) for ${spotId}`);
+    const data = await scrapeOpenMeteoForecast(spotId);
+
+    if (!data) return null;
+
+    return {
+      source: 'open-meteo-forecast',
+      data: data,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    logger.error(`[Scraper] Open-Meteo Forecast failed:`, error.message);
+    return null;
+  }
+}
+
 /**
  * Aggregate data from multiple sources
  * Combines data from different sources into a single conditions object
@@ -205,7 +226,8 @@ function aggregateData(sources) {
     waves: {
       height: { min: null, max: null, avg: null },
       period: null,
-      direction: null
+      direction: null,
+      swell: null
     },
     wind: {
       speed: null,
@@ -232,12 +254,15 @@ function aggregateData(sources) {
     windSpeed: [],
     windGusts: [],
     airTemp: [],
-    waterTemp: []
+    waterTemp: [],
+    swellHeight: [],
+    swellPeriod: []
   };
 
   // Most common wind/wave directions
   const windDirections = [];
   const waveDirections = [];
+  const swellDirections = [];
 
   // Extract values from each source - use ALL available data
   for (const source of sources) {
@@ -248,6 +273,10 @@ function aggregateData(sources) {
     if (data.waves?.height?.avg) values.waveHeightAvg.push(data.waves.height.avg);
     if (data.waves?.period) values.wavePeriod.push(data.waves.period);
     if (data.waves?.direction) waveDirections.push(data.waves.direction);
+
+    if (data.waves?.swell?.height) values.swellHeight.push(data.waves.swell.height);
+    if (data.waves?.swell?.period) values.swellPeriod.push(data.waves.swell.period);
+    if (data.waves?.swell?.direction) swellDirections.push(data.waves.swell.direction);
 
     if (data.wind?.speed) values.windSpeed.push(data.wind.speed);
     if (data.wind?.gusts) values.windGusts.push(data.wind.gusts);
@@ -286,6 +315,15 @@ function aggregateData(sources) {
   // Use most common direction
   aggregated.waves.direction = mostCommon(waveDirections);
   aggregated.wind.direction = mostCommon(windDirections);
+
+  // Aggregate swell data
+  if (values.swellHeight.length > 0) {
+    aggregated.waves.swell = {
+      height: Math.round(average(values.swellHeight) * 10) / 10,
+      period: values.swellPeriod.length > 0 ? Math.round(average(values.swellPeriod)) : null,
+      direction: mostCommon(swellDirections)
+    };
+  }
 
   logger.debug(`[Scraper] Aggregated from ${sources.length} sources: ` +
     `waves=${aggregated.waves.height.avg}m @ ${aggregated.waves.period}s, ` +

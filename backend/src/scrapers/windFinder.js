@@ -1,96 +1,129 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+const brightData = require('../integrations/brightData');
 const logger = require('../utils/logger');
 
 /**
- * Scrape windfinder.com for wind conditions
- * Provides: wind speed, direction, gusts
+ * Scrape windfinder.com for wind conditions via Bright Data MCP
+ * Provides: wind speed, direction, gusts, air temperature
  */
 
 const SPOT_URLS = {
-  herzliya_marina: 'https://www.windfinder.com/forecast/herzliya',
+  herzliya_marina: 'https://www.windfinder.com/forecast/herzliya_marina',
   netanya_kontiki: 'https://www.windfinder.com/forecast/netanya'
 };
 
 async function scrapeWindFinder(spotId) {
-  try {
-    const url = SPOT_URLS[spotId];
-    if (!url) {
-      logger.warn(`[WindFinder] No URL configured for spot: ${spotId}`);
-      return null;
-    }
-
-    logger.info(`[WindFinder] Scraping ${url}`);
-
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
-      timeout: 15000
-    });
-
-    const $ = cheerio.load(response.data);
-    const conditions = {
-      waves: {
-        height: { min: null, max: null, avg: null },
-        period: null,
-        direction: null
-      },
-      wind: {
-        speed: null,
-        direction: null,
-        gusts: null
-      },
-      weather: {
-        airTemp: null,
-        waterTemp: null,
-        cloudCover: null
-      }
-    };
-
-    // Get first forecast data point
-    const firstDataCell = $('.weathertable tbody tr').first();
-
-    // Wind speed (convert knots to km/h)
-    const windSpeed = firstDataCell.find('.wind').first().text().trim();
-    const speedMatch = windSpeed.match(/(\d+)/);
-    if (speedMatch) {
-      const knots = parseInt(speedMatch[1]);
-      conditions.wind.speed = Math.round(knots * 1.852); // knots to km/h
-      logger.debug(`[WindFinder] Wind speed: ${conditions.wind.speed} km/h`);
-    }
-
-    // Wind direction
-    const windDir = firstDataCell.find('.wind-unit__dir').text().trim();
-    if (windDir) {
-      conditions.wind.direction = windDir.toUpperCase();
-      logger.debug(`[WindFinder] Wind direction: ${conditions.wind.direction}`);
-    }
-
-    // Gusts
-    const gusts = firstDataCell.find('.gusts').text().trim();
-    const gustsMatch = gusts.match(/(\d+)/);
-    if (gustsMatch) {
-      const gustsKnots = parseInt(gustsMatch[1]);
-      conditions.wind.gusts = Math.round(gustsKnots * 1.852);
-      logger.debug(`[WindFinder] Wind gusts: ${conditions.wind.gusts} km/h`);
-    }
-
-    // Air temperature
-    const temp = firstDataCell.find('.temperature').first().text().trim();
-    const tempMatch = temp.match(/(\d+)/);
-    if (tempMatch) {
-      conditions.weather.airTemp = parseInt(tempMatch[1]);
-      logger.debug(`[WindFinder] Air temp: ${conditions.weather.airTemp}°C`);
-    }
-
-    logger.info(`[WindFinder] Successfully scraped data`);
-    return conditions;
-
-  } catch (error) {
-    logger.error(`[WindFinder] Scraping failed:`, error.message);
+  const url = SPOT_URLS[spotId];
+  if (!url) {
+    logger.warn(`[WindFinder] No URL configured for spot: ${spotId}`);
     return null;
   }
+
+  logger.info(`[WindFinder] Scraping ${url} via Bright Data`);
+
+  const markdown = await brightData.scrapeAsMarkdown(url);
+  return parseWindFinderMarkdown(markdown);
+}
+
+function parseWindFinderMarkdown(markdown) {
+  logger.info(`[WindFinder] Parsing markdown (${markdown.length} chars)`);
+  logger.info(`[WindFinder] Markdown preview: ${markdown.substring(0, 800)}`);
+
+  const conditions = {
+    waves: {
+      height: { min: null, max: null, avg: null },
+      period: null,
+      direction: null,
+      swell: null
+    },
+    wind: {
+      speed: null,
+      direction: null,
+      gusts: null
+    },
+    weather: {
+      airTemp: null,
+      waterTemp: null,
+      cloudCover: null
+    }
+  };
+
+  // Wind speed - WindFinder may show knots, km/h, or m/s
+  // Try km/h first, then knots, then m/s
+  const windKmhMatch = markdown.match(/wind[^.]*?(\d+)\s*km\/?h/i)
+    || markdown.match(/(\d+)\s*km\/?h[^.]*?wind/i);
+  const windKnotsMatch = markdown.match(/wind[^.]*?(\d+)\s*(?:kts?|knots?)/i)
+    || markdown.match(/(\d+)\s*(?:kts?|knots?)/i);
+  const windMs = markdown.match(/wind[^.]*?(\d+(?:\.\d+)?)\s*m\/s/i);
+
+  if (windKmhMatch) {
+    conditions.wind.speed = parseInt(windKmhMatch[1]);
+  } else if (windKnotsMatch) {
+    conditions.wind.speed = Math.round(parseInt(windKnotsMatch[1]) * 1.852);
+  } else if (windMs) {
+    conditions.wind.speed = Math.round(parseFloat(windMs[1]) * 3.6);
+  }
+
+  if (conditions.wind.speed !== null) {
+    logger.debug(`[WindFinder] Wind speed: ${conditions.wind.speed} km/h`);
+  }
+
+  // Wind gusts
+  const gustsKmhMatch = markdown.match(/gust[^.]*?(\d+)\s*km\/?h/i);
+  const gustsKnotsMatch = markdown.match(/gust[^.]*?(\d+)\s*(?:kts?|knots?)/i);
+  const gustsMs = markdown.match(/gust[^.]*?(\d+(?:\.\d+)?)\s*m\/s/i);
+
+  if (gustsKmhMatch) {
+    conditions.wind.gusts = parseInt(gustsKmhMatch[1]);
+  } else if (gustsKnotsMatch) {
+    conditions.wind.gusts = Math.round(parseInt(gustsKnotsMatch[1]) * 1.852);
+  } else if (gustsMs) {
+    conditions.wind.gusts = Math.round(parseFloat(gustsMs[1]) * 3.6);
+  }
+
+  if (conditions.wind.gusts !== null) {
+    logger.debug(`[WindFinder] Wind gusts: ${conditions.wind.gusts} km/h`);
+  }
+
+  // Wind direction
+  const windDirMatch = markdown.match(/wind[^.]*?(?:from|dir(?:ection)?)[:\s]+([NESW]{1,3})/i)
+    || markdown.match(/([NESW]{1,3})\s+wind/i)
+    || markdown.match(/wind[:\s]+[^A-Z]*([NESW]{1,3})\b/i);
+  if (windDirMatch) {
+    conditions.wind.direction = windDirMatch[1].toUpperCase();
+    logger.debug(`[WindFinder] Wind direction: ${conditions.wind.direction}`);
+  }
+
+  // Air temperature
+  const airTempMatch = markdown.match(/(?:air\s+)?temp(?:erature)?[:\s]+([\d.]+)\s*°?C/i)
+    || markdown.match(/([\d.]+)\s*°C/);
+  if (airTempMatch) {
+    const temp = parseFloat(airTempMatch[1]);
+    if (temp > -20 && temp < 50) {
+      conditions.weather.airTemp = Math.round(temp);
+      logger.debug(`[WindFinder] Air temp: ${conditions.weather.airTemp}°C`);
+    }
+  }
+
+  // Wave height (WindFinder sometimes shows wave data)
+  const waveMatch = markdown.match(/wave[^.]*?(\d+\.?\d*)\s*m/i);
+  if (waveMatch) {
+    const avg = parseFloat(waveMatch[1]);
+    conditions.waves.height = {
+      min: Math.round(avg * 0.85 * 10) / 10,
+      max: Math.round(avg * 1.15 * 10) / 10,
+      avg: Math.round(avg * 10) / 10
+    };
+    logger.debug(`[WindFinder] Wave height: ${avg}m`);
+  }
+
+  const hasData = conditions.wind.speed !== null;
+  if (!hasData) {
+    logger.warn(`[WindFinder] Could not extract wind data from markdown`);
+    return null;
+  }
+
+  logger.info(`[WindFinder] Successfully parsed data`);
+  return conditions;
 }
 
 module.exports = {
