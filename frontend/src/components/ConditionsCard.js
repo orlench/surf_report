@@ -1,111 +1,97 @@
-import React from 'react';
 import './ConditionsCard.css';
 
 function ConditionsCard({ conditions }) {
   const { waves, wind, weather } = conditions;
 
   return (
-    <div className="conditions-card">
-      <div className="conditions-grid">
-        {/* Wave Info */}
-        <div className="info-card">
-          <div className="card-icon">🌊</div>
-          <h3>Waves</h3>
-          <div className="card-content">
-            {waves.height && waves.height.avg ? (
-              <>
-                <div className="primary-stat">
-                  <span className="value">{waves.height.min}-{waves.height.max}m</span>
-                  <span className="label">Wave Height</span>
-                </div>
-                <div className="secondary-stats">
-                  {waves.period && (
-                    <div className="stat">
-                      <span className="label">Period</span>
-                      <span className="value">{waves.period}s</span>
-                    </div>
-                  )}
-                  {waves.direction && (
-                    <div className="stat">
-                      <span className="label">Direction</span>
-                      <span className="value">{waves.direction}</span>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="no-data">No wave data</div>
-            )}
-          </div>
+    <div className="conditions-grid">
+      {/* Surf Card */}
+      <div className="cond-card">
+        <div className="cond-header">
+          <span className="cond-icon">🌊</span>
+          <span className="cond-title">Surf</span>
         </div>
+        {waves.height && waves.height.avg ? (
+          <div className="cond-body">
+            <div className="cond-primary">{waves.height.min}–{waves.height.max}m</div>
+            <div className="cond-secondary">
+              {waves.period && <span>{waves.period}s period</span>}
+              {waves.direction && <span>{waves.direction}</span>}
+            </div>
+          </div>
+        ) : (
+          <div className="cond-empty">No data</div>
+        )}
+      </div>
 
-        {/* Wind Info */}
-        <div className="info-card">
-          <div className="card-icon">💨</div>
-          <h3>Wind</h3>
-          <div className="card-content">
-            {wind.speed ? (
-              <>
-                <div className="primary-stat">
-                  <span className="value">{wind.speed} km/h</span>
-                  <span className="label">Wind Speed</span>
-                </div>
-                <div className="secondary-stats">
-                  {wind.direction && (
-                    <div className="stat">
-                      <span className="label">Direction</span>
-                      <span className="value">{wind.direction}</span>
-                    </div>
-                  )}
-                  {wind.gusts && (
-                    <div className="stat">
-                      <span className="label">Gusts</span>
-                      <span className="value">{wind.gusts} km/h</span>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="no-data">No wind data</div>
-            )}
-          </div>
+      {/* Wind Card */}
+      <div className="cond-card">
+        <div className="cond-header">
+          <span className="cond-icon">💨</span>
+          <span className="cond-title">Wind</span>
         </div>
+        {wind.speed ? (
+          <div className="cond-body">
+            <div className="cond-primary">{wind.speed} km/h</div>
+            <div className="cond-secondary">
+              {wind.direction && <span>{wind.direction}</span>}
+              {wind.gusts && <span>Gusts {wind.gusts} km/h</span>}
+            </div>
+          </div>
+        ) : (
+          <div className="cond-empty">No data</div>
+        )}
+      </div>
 
-        {/* Weather Info */}
-        <div className="info-card">
-          <div className="card-icon">🌤️</div>
-          <h3>Weather</h3>
-          <div className="card-content">
-            {weather.airTemp || weather.waterTemp ? (
-              <>
-                <div className="primary-stat">
-                  {weather.airTemp && (
-                    <>
-                      <span className="value">{weather.airTemp}°C</span>
-                      <span className="label">Air Temp</span>
-                    </>
-                  )}
-                </div>
-                <div className="secondary-stats">
-                  {weather.waterTemp && (
-                    <div className="stat">
-                      <span className="label">Water Temp</span>
-                      <span className="value">{weather.waterTemp}°C</span>
-                    </div>
-                  )}
-                  {weather.cloudCover && (
-                    <div className="stat">
-                      <span className="label">Sky</span>
-                      <span className="value">{weather.cloudCover}</span>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="no-data">No weather data</div>
-            )}
-          </div>
+      {/* Swell Card */}
+      <div className="cond-card">
+        <div className="cond-header">
+          <span className="cond-icon">〰️</span>
+          <span className="cond-title">Swell</span>
         </div>
+        {waves.height && waves.height.avg ? (
+          <div className="cond-body">
+            <div className="cond-primary">
+              {waves.height.avg}m @ {waves.period || '—'}s
+            </div>
+            <div className="cond-secondary">
+              {waves.direction && <span>{waves.direction}</span>}
+            </div>
+          </div>
+        ) : (
+          <div className="cond-empty">No data</div>
+        )}
+      </div>
+
+      {/* Weather Card */}
+      <div className="cond-card">
+        <div className="cond-header">
+          <span className="cond-icon">🌤️</span>
+          <span className="cond-title">Weather</span>
+        </div>
+        {weather.airTemp || weather.waterTemp ? (
+          <div className="cond-body">
+            <div className="cond-temps">
+              {weather.airTemp && (
+                <div className="cond-temp-item">
+                  <span className="cond-primary">{weather.airTemp}°C</span>
+                  <span className="cond-temp-label">Air</span>
+                </div>
+              )}
+              {weather.waterTemp && (
+                <div className="cond-temp-item">
+                  <span className="cond-primary">{weather.waterTemp}°C</span>
+                  <span className="cond-temp-label">Water</span>
+                </div>
+              )}
+            </div>
+            <div className="cond-secondary">
+              {weather.cloudCover && <span>{weather.cloudCover}</span>}
+            </div>
+          </div>
+        ) : (
+          <div className="cond-empty">No data</div>
+        )}
       </div>
     </div>
   );

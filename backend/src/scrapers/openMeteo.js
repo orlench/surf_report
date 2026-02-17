@@ -8,7 +8,8 @@ const logger = require('../utils/logger');
 
 const SPOT_COORDS = {
   herzliya_marina: { lat: 32.1541, lon: 34.7944 },
-  netanya_kontiki: { lat: 32.3335, lon: 34.8597 }
+  netanya_kontiki: { lat: 32.3335, lon: 34.8597 },
+  tel_aviv_maaravi: { lat: 32.0602, lon: 34.7588 }
 };
 
 async function scrapeOpenMeteo(spotId) {
@@ -20,7 +21,7 @@ async function scrapeOpenMeteo(spotId) {
     }
 
     // Fetch wave + swell + wind wave data
-    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${coords.lat}&longitude=${coords.lon}&hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,swell_wave_direction,wind_wave_height,wind_wave_period&timezone=Asia/Jerusalem&forecast_days=1`;
+    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${coords.lat}&longitude=${coords.lon}&hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,swell_wave_direction,wind_wave_height,wind_wave_period,sea_surface_temperature&timezone=Asia/Jerusalem&forecast_days=1`;
 
     logger.info(`[Open-Meteo] Fetching ${url}`);
 
@@ -89,6 +90,13 @@ async function scrapeOpenMeteo(spotId) {
           ? degreesToCardinal(swellDirection) : null
       };
       logger.debug(`[Open-Meteo] Swell: ${swellHeight}m @ ${swellPeriod}s from ${conditions.waves.swell.direction}`);
+    }
+
+    // Ocean temperature
+    const oceanTemp = hourly.sea_surface_temperature?.[0];
+    if (oceanTemp !== null && oceanTemp !== undefined) {
+      conditions.weather.waterTemp = Math.round(oceanTemp);
+      logger.debug(`[Open-Meteo] Water temp: ${oceanTemp}°C`);
     }
 
     logger.info(`[Open-Meteo] Successfully fetched wave data`);

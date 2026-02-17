@@ -9,7 +9,8 @@ const logger = require('../utils/logger');
 
 const SPOT_COORDS = {
   herzliya_marina: { lat: 32.1541, lon: 34.7944 },
-  netanya_kontiki: { lat: 32.3335, lon: 34.8597 }
+  netanya_kontiki: { lat: 32.3335, lon: 34.8597 },
+  tel_aviv_maaravi: { lat: 32.0602, lon: 34.7588 }
 };
 
 async function scrapeOpenMeteoForecast(spotId) {
