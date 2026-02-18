@@ -49,8 +49,8 @@ router.get('/:spotId', async (req, res, next) => {
     // Aggregate from multiple sources
     const aggregated = aggregateData(rawData);
 
-    // Calculate score
-    const score = calculateSurfScore(aggregated, spotId);
+    // Calculate score (pass source count for confidence scoring)
+    const score = calculateSurfScore(aggregated, spotId, rawData.length);
 
     // Build response
     const response = {

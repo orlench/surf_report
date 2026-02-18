@@ -287,14 +287,31 @@ function aggregateData(sources) {
   }
 
   // Calculate averages
-  if (values.waveHeightMin.length > 0) {
-    aggregated.waves.height.min = Math.round(average(values.waveHeightMin) * 10) / 10;
-  }
-  if (values.waveHeightMax.length > 0) {
-    aggregated.waves.height.max = Math.round(average(values.waveHeightMax) * 10) / 10;
-  }
   if (values.waveHeightAvg.length > 0) {
     aggregated.waves.height.avg = Math.round(average(values.waveHeightAvg) * 10) / 10;
+  }
+
+  // Reality check: if swell height is available, cap wave height
+  // Many sources report "significant wave height" (swell + wind chop combined),
+  // which inflates the number beyond what surfers actually see.
+  // Face height at a beach break ≈ swell height × 1.3-1.5
+  const swellH = values.swellHeight.length > 0 ? average(values.swellHeight) : null;
+  if (swellH && aggregated.waves.height.avg !== null) {
+    const maxRealisticHeight = Math.round(swellH * 1.4 * 10) / 10; // beach break multiplier
+    if (aggregated.waves.height.avg > maxRealisticHeight) {
+      logger.info(`[Scraper] Capping wave height from ${aggregated.waves.height.avg}m to ${maxRealisticHeight}m (swell: ${Math.round(swellH * 10) / 10}m)`);
+      aggregated.waves.height.avg = maxRealisticHeight;
+    }
+  }
+
+  // Tighten min/max range to max 0.2m gap centered on avg
+  const avg = aggregated.waves.height.avg;
+  if (avg !== null) {
+    const maxGap = 0.2;
+    aggregated.waves.height.min = Math.round((avg - maxGap / 2) * 10) / 10;
+    aggregated.waves.height.max = Math.round((avg + maxGap / 2) * 10) / 10;
+    // Ensure min doesn't go below 0
+    if (aggregated.waves.height.min < 0) aggregated.waves.height.min = 0;
   }
   if (values.wavePeriod.length > 0) {
     aggregated.waves.period = Math.round(average(values.wavePeriod));

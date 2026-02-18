@@ -1,19 +1,23 @@
 import './ScoreDisplay.css';
 
-function ScoreDisplay({ score, rating, timestamp, fromCache, cacheAge, conditions, onRefresh }) {
+function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheAge, conditions, onRefresh }) {
   const getColorClass = (score) => {
     if (score >= 85) return 'epic';
-    if (score >= 70) return 'good';
+    if (score >= 75) return 'great';
+    if (score >= 65) return 'good';
     if (score >= 50) return 'fair';
-    if (score >= 30) return 'poor';
+    if (score >= 35) return 'marginal';
+    if (score >= 20) return 'poor';
     return 'flat';
   };
 
   const getVerdict = (score) => {
     if (score >= 85) return 'Absolutely!';
-    if (score >= 70) return 'Yes, go!';
+    if (score >= 75) return 'Get out there!';
+    if (score >= 65) return 'Yes, go!';
     if (score >= 50) return 'Maybe...';
-    if (score >= 30) return 'Probably not';
+    if (score >= 35) return 'Meh, probably not';
+    if (score >= 20) return 'Not worth it';
     return 'Stay home';
   };
 
@@ -44,6 +48,10 @@ function ScoreDisplay({ score, rating, timestamp, fromCache, cacheAge, condition
       <div className="hero-question">Should I go?</div>
       <div className="hero-verdict">{getVerdict(score)}</div>
       <span className={`rating-badge ${colorClass}`}>{rating}</span>
+
+      {explanation && (
+        <div className="hero-explanation">{explanation}</div>
+      )}
 
       {waveText && (
         <div className="hero-wave-height">{waveText}</div>
