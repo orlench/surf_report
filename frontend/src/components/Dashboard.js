@@ -107,6 +107,7 @@ function Dashboard() {
           <ScoreDisplay
             score={conditions.score.overall}
             rating={conditions.score.rating}
+            explanation={conditions.score.explanation}
             breakdown={conditions.score.breakdown}
             timestamp={conditions.timestamp}
             fromCache={conditions.fromCache}
@@ -124,6 +125,7 @@ function Dashboard() {
               <div className="breakdown-bars">
                 <BreakdownBar label="Wave Height" value={conditions.score.breakdown.waveHeight} />
                 <BreakdownBar label="Wave Period" value={conditions.score.breakdown.wavePeriod} />
+                <BreakdownBar label="Swell Quality" value={conditions.score.breakdown.swellQuality} />
                 <BreakdownBar label="Wind Speed" value={conditions.score.breakdown.windSpeed} />
                 <BreakdownBar label="Wind Direction" value={conditions.score.breakdown.windDirection} />
                 <BreakdownBar label="Wave Direction" value={conditions.score.breakdown.waveDirection} />

@@ -40,6 +40,11 @@
   color: #00c48c;
 }
 
+.rating-badge.great {
+  background: rgba(40, 210, 120, 0.2);
+  color: #28d278;
+}
+
 .rating-badge.good {
   background: rgba(76, 217, 100, 0.2);
   color: #4cd964;
@@ -50,6 +55,11 @@
   color: #f5a623;
 }
 
+.rating-badge.marginal {
+  background: rgba(230, 126, 34, 0.2);
+  color: #e67e22;
+}
+
 .rating-badge.poor {
   background: rgba(255, 107, 53, 0.2);
   color: #ff6b35;
@@ -58,6 +68,15 @@
 .rating-badge.flat {
   background: rgba(255, 59, 48, 0.2);
   color: #ff3b30;
+}
+
+.hero-explanation {
+  font-size: 0.95rem;
+  color: #8899aa;
+  max-width: 400px;
+  margin: 0 auto 20px;
+  line-height: 1.5;
+  font-weight: 400;
 }
 
 .hero-wave-height {
@@ -137,12 +156,20 @@
   color: #00c48c;
 }
 
+.hero.great .hero-verdict {
+  color: #28d278;
+}
+
 .hero.good .hero-verdict {
   color: #4cd964;
 }
 
 .hero.fair .hero-verdict {
   color: #f5a623;
+}
+
+.hero.marginal .hero-verdict {
+  color: #e67e22;
 }
 
 .hero.poor .hero-verdict {

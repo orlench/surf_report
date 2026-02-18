@@ -53,43 +53,39 @@ async function scrapeOpenMeteo(spotId) {
       }
     };
 
-    // Primary wave data
-    const waveHeight = hourly.wave_height?.[0];
-    const wavePeriod = hourly.wave_period?.[0];
-    const waveDirection = hourly.wave_direction?.[0];
-
-    if (waveHeight !== null && waveHeight !== undefined) {
-      conditions.waves.height = {
-        min: Math.round((waveHeight * 0.9) * 10) / 10,
-        max: Math.round((waveHeight * 1.1) * 10) / 10,
-        avg: Math.round(waveHeight * 10) / 10
-      };
-      logger.debug(`[Open-Meteo] Wave height: ${waveHeight}m`);
-    }
-
-    if (wavePeriod !== null && wavePeriod !== undefined) {
-      conditions.waves.period = Math.round(wavePeriod);
-      logger.debug(`[Open-Meteo] Wave period: ${wavePeriod}s`);
-    }
-
-    if (waveDirection !== null && waveDirection !== undefined) {
-      conditions.waves.direction = degreesToCardinal(waveDirection);
-      logger.debug(`[Open-Meteo] Wave direction: ${waveDirection}° (${conditions.waves.direction})`);
-    }
-
-    // Swell data
+    // Swell data (what surfers actually ride)
     const swellHeight = hourly.swell_wave_height?.[0];
     const swellPeriod = hourly.swell_wave_period?.[0];
     const swellDirection = hourly.swell_wave_direction?.[0];
 
+    // Use swell height as primary wave height (not combined wave_height which includes wind chop)
     if (swellHeight !== null && swellHeight !== undefined) {
+      conditions.waves.height = {
+        min: Math.round((swellHeight * 0.9) * 10) / 10,
+        max: Math.round((swellHeight * 1.1) * 10) / 10,
+        avg: Math.round(swellHeight * 10) / 10
+      };
       conditions.waves.swell = {
         height: Math.round(swellHeight * 10) / 10,
         period: swellPeriod ? Math.round(swellPeriod) : null,
         direction: swellDirection !== null && swellDirection !== undefined
           ? degreesToCardinal(swellDirection) : null
       };
-      logger.debug(`[Open-Meteo] Swell: ${swellHeight}m @ ${swellPeriod}s from ${conditions.waves.swell.direction}`);
+      logger.debug(`[Open-Meteo] Swell height: ${swellHeight}m (used as primary wave height)`);
+    }
+
+    // Wave period — prefer swell period over combined wave period
+    const wavePeriod = swellPeriod || hourly.wave_period?.[0];
+    if (wavePeriod !== null && wavePeriod !== undefined) {
+      conditions.waves.period = Math.round(wavePeriod);
+      logger.debug(`[Open-Meteo] Wave period: ${wavePeriod}s`);
+    }
+
+    // Wave direction — prefer swell direction
+    const waveDirection = swellDirection || hourly.wave_direction?.[0];
+    if (waveDirection !== null && waveDirection !== undefined) {
+      conditions.waves.direction = degreesToCardinal(waveDirection);
+      logger.debug(`[Open-Meteo] Wave direction: ${waveDirection}° (${conditions.waves.direction})`);
     }
 
     // Ocean temperature
