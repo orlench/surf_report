@@ -38,6 +38,25 @@ export async function fetchAllConditions() {
 }
 
 /**
+ * Fetch conditions for a custom spot by coordinates
+ */
+export async function fetchConditionsByCoords(lat, lon, name, country, options = {}) {
+  const params = { lat, lon, name, country };
+  if (options.weight) params.weight = options.weight;
+  if (options.skill) params.skill = options.skill;
+  const response = await axios.get(`${API_BASE}/conditions/custom`, { params });
+  return response.data;
+}
+
+/**
+ * Save a user-discovered spot to the backend
+ */
+export async function createSpot({ name, lat, lon, country, region }) {
+  const response = await axios.post(`${API_BASE}/spots`, { name, lat, lon, country, region });
+  return response.data;
+}
+
+/**
  * Fetch API health status
  */
 export async function fetchHealth() {

@@ -17,7 +17,8 @@ const SPOT_URLS = {
 const MSW_URLS = {
   herzliya_marina: 'https://magicseaweed.com/Herzliya-Surf-Report/5359/',
   netanya_kontiki: 'https://magicseaweed.com/Netanya-Surf-Report/5360/',
-  tel_aviv_maaravi: 'https://magicseaweed.com/Hof-Maravi-Surf-Report/3663/'
+  tel_aviv_maaravi: 'https://magicseaweed.com/Hof-Maravi-Surf-Report/3663/',
+  ocean_beach_sf: 'https://magicseaweed.com/Ocean-Beach-Surf-Report/255/'
 };
 
 async function scrapeMagicseaweed(spotId) {

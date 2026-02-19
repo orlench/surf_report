@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchSpots, fetchConditions } from '../api/surfApi';
+import { fetchSpots, fetchConditions, fetchConditionsByCoords, createSpot } from '../api/surfApi';
 import ScoreDisplay from './ScoreDisplay';
+import SpotSelector from './SpotSelector';
 import './Dashboard.css';
 
 const LOADING_MESSAGES = [
@@ -16,10 +17,26 @@ const LOADING_MESSAGES = [
   'Almost there, hang loose...',
 ];
 
+function getInitialSpot() {
+  const params = new URLSearchParams(window.location.search);
+  const urlSpot = params.get('spot');
+  if (urlSpot) return urlSpot;
+  return localStorage.getItem('selectedSpot') || 'netanya_kontiki';
+}
+
+/**
+ * Check if a spot ID is a custom (map-discovered) spot and return its metadata.
+ * Returns null for hardcoded spots.
+ */
+function getCustomSpotMeta(spotId) {
+  try {
+    const customSpots = JSON.parse(localStorage.getItem('customSpots') || '[]');
+    return customSpots.find(s => s.id === spotId) || null;
+  } catch { return null; }
+}
+
 function Dashboard() {
-  const [selectedSpot, setSelectedSpot] = useState(
-    () => localStorage.getItem('selectedSpot') || 'netanya_kontiki'
-  );
+  const [selectedSpot, setSelectedSpot] = useState(getInitialSpot);
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [showProfile, setShowProfile] = useState(false);
   const [userWeight, setUserWeight] = useState(
@@ -28,6 +45,29 @@ function Dashboard() {
   const [userSkill, setUserSkill] = useState(
     () => localStorage.getItem('userSkill') || ''
   );
+
+  const handleSpotChange = useCallback((spotId) => {
+    setSelectedSpot(spotId);
+    localStorage.setItem('selectedSpot', spotId);
+    const url = new URL(window.location);
+    url.searchParams.set('spot', spotId);
+    window.history.replaceState({}, '', url);
+
+    // If this is a custom spot, fire-and-forget a POST to persist it
+    const customMeta = getCustomSpotMeta(spotId);
+    if (customMeta) {
+      createSpot(customMeta).catch(() => {});
+    }
+  }, []);
+
+  // Keep URL in sync with selected spot
+  useEffect(() => {
+    const url = new URL(window.location);
+    if (url.searchParams.get('spot') !== selectedSpot) {
+      url.searchParams.set('spot', selectedSpot);
+      window.history.replaceState({}, '', url);
+    }
+  }, [selectedSpot]);
 
   const { data: spots } = useQuery({
     queryKey: ['spots'],
@@ -41,10 +81,19 @@ function Dashboard() {
     refetch
   } = useQuery({
     queryKey: ['conditions', selectedSpot, userWeight, userSkill],
-    queryFn: () => fetchConditions(selectedSpot, {
-      weight: userWeight || undefined,
-      skill: userSkill || undefined
-    }),
+    queryFn: () => {
+      const customMeta = getCustomSpotMeta(selectedSpot);
+      if (customMeta) {
+        return fetchConditionsByCoords(customMeta.lat, customMeta.lon, customMeta.name, customMeta.country, {
+          weight: userWeight || undefined,
+          skill: userSkill || undefined
+        });
+      }
+      return fetchConditions(selectedSpot, {
+        weight: userWeight || undefined,
+        skill: userSkill || undefined
+      });
+    },
     refetchInterval: 10 * 60 * 1000,
   });
 
@@ -65,16 +114,6 @@ function Dashboard() {
     lastRefresh.current = now;
     refetch({ queryKey: ['conditions', selectedSpot] });
   }, [refetch, selectedSpot]);
-
-  // Group spots by country for dropdown
-  const spotsByCountry = {};
-  if (spots) {
-    spots.forEach(spot => {
-      const country = spot.country || 'Other';
-      if (!spotsByCountry[country]) spotsByCountry[country] = [];
-      spotsByCountry[country].push(spot);
-    });
-  }
 
   if (error) {
     return (
@@ -97,21 +136,7 @@ function Dashboard() {
           </svg>
           <span className="top-bar-title">Should I Go?</span>
         </div>
-        <select
-          className="spot-select"
-          value={selectedSpot}
-          onChange={(e) => { setSelectedSpot(e.target.value); localStorage.setItem('selectedSpot', e.target.value); }}
-        >
-          {Object.entries(spotsByCountry).map(([country, countrySpots]) => (
-            <optgroup key={country} label={country}>
-              {countrySpots.map(spot => (
-                <option key={spot.id} value={spot.id}>
-                  {spot.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+        <SpotSelector spots={spots} value={selectedSpot} onChange={handleSpotChange} />
       </div>
 
       {/* Loading State */}

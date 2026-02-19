@@ -9,7 +9,8 @@ const logger = require('../utils/logger');
 const SPOT_URLS = {
   herzliya_marina: 'https://www.surf-forecast.com/breaks/Haambatia-Herzliya/forecasts/latest/six_day',
   netanya_kontiki: 'https://www.surf-forecast.com/breaks/Netanya/forecasts/latest/six_day',
-  tel_aviv_maaravi: 'https://www.surf-forecast.com/breaks/Hof-Maravi/forecasts/latest/six_day'
+  tel_aviv_maaravi: 'https://www.surf-forecast.com/breaks/Hof-Maravi/forecasts/latest/six_day',
+  ocean_beach_sf: 'https://www.surf-forecast.com/breaks/Ocean-Beach/forecasts/latest/six_day'
 };
 
 async function scrapeSurfForecast(spotId) {

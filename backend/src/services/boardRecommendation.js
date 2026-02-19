@@ -38,7 +38,7 @@ const BOARD_TYPES = {
   any: {
     boardType: 'any',
     boardName: 'Any board',
-    reason: "Perfect conditions — ride whatever makes you happy"
+    reason: "Good waves — ride whatever you're feeling"
   },
   stepup: {
     boardType: 'stepup',
@@ -103,16 +103,23 @@ function recommendBoard(conditions) {
 
   let boardKey = MATRIX[heightRange]?.[periodRange] || 'midlength';
 
-  // Wind modifier: strong onshore wind (>25 km/h from W/NW/SW on Israeli coast) -> bump volume
+  // Wind modifier: strong onshore wind (>25 km/h) -> bump volume
   // This means need more paddle power, so go one tier up
   const onshoreDirections = ['W', 'NW', 'SW', 'N'];
   const isOnshore = onshoreDirections.includes(windDir);
+  let windBumped = false;
   if (isOnshore && windSpeed > 25) {
     boardKey = bumpUp(boardKey);
+    windBumped = true;
     logger.debug(`[BoardRec] Wind modifier: strong onshore ${windDir} ${windSpeed}km/h, bumped to ${boardKey}`);
   }
 
   const board = { ...BOARD_TYPES[boardKey] };
+
+  // Override generic reason if board was bumped due to wind
+  if (windBumped) {
+    board.reason = `Choppy onshore wind — grab something with more volume`;
+  }
 
   logger.info(`[BoardRec] height=${height}m (${heightRange}), period=${period}s (${periodRange}), wind=${windSpeed}km/h ${windDir} => ${board.boardName}`);
 

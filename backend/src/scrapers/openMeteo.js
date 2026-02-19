@@ -9,8 +9,13 @@ const logger = require('../utils/logger');
 const SPOT_COORDS = {
   herzliya_marina: { lat: 32.1541, lon: 34.7944 },
   netanya_kontiki: { lat: 32.3335, lon: 34.8597 },
-  tel_aviv_maaravi: { lat: 32.0602, lon: 34.7588 }
+  tel_aviv_maaravi: { lat: 32.0602, lon: 34.7588 },
+  ocean_beach_sf: { lat: 37.7604, lon: -122.5107 }
 };
+
+function registerCoords(spotId, lat, lon) {
+  SPOT_COORDS[spotId] = { lat, lon };
+}
 
 async function scrapeOpenMeteo(spotId) {
   try {
@@ -134,4 +139,4 @@ function degreesToCardinal(degrees) {
   return directions[index];
 }
 
-module.exports = { scrapeOpenMeteo };
+module.exports = { scrapeOpenMeteo, registerCoords };
