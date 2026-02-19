@@ -464,8 +464,50 @@ function aggregateHourlyData(sources) {
   return timeline;
 }
 
+/**
+ * Fetch surf data for arbitrary coordinates (custom/dynamic spots).
+ * Only uses coordinate-based scrapers (not URL-based ones).
+ *
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @param {string} spotId - Spot identifier (for caching/logging)
+ * @returns {Promise<Array>} - Array of scraped data
+ */
+async function fetchSurfDataByCoords(lat, lon, spotId) {
+  logger.info(`[Scraper] Fetching data by coords for ${spotId} (${lat}, ${lon})`);
+
+  // Temporarily register coordinates for this spot in each coordinate-based scraper
+  const { registerCoords: regOpenMeteo } = require('../scrapers/openMeteo');
+  const { registerCoords: regMetNo } = require('../scrapers/metNo');
+  const { registerCoords: regForecast } = require('../scrapers/openMeteoForecast');
+
+  regOpenMeteo(spotId, lat, lon);
+  regMetNo(spotId, lat, lon);
+  regForecast(spotId, lat, lon);
+
+  // Run coordinate-based scrapers only
+  const scrapers = [
+    scrapeOpenMeteoWrapper(spotId),
+    scrapeMetNoWrapper(spotId),
+    scrapeOpenMeteoForecastWrapper(spotId),
+  ];
+
+  const results = await Promise.allSettled(scrapers);
+  const successfulData = results
+    .filter(r => r.status === 'fulfilled' && r.value !== null)
+    .map(r => r.value);
+
+  if (successfulData.length === 0) {
+    throw new Error('All coordinate-based scrapers failed');
+  }
+
+  logger.info(`[Scraper] Custom spot: ${successfulData.length}/${scrapers.length} sources succeeded`);
+  return successfulData;
+}
+
 module.exports = {
   fetchSurfData,
+  fetchSurfDataByCoords,
   aggregateData,
   aggregateHourlyData
 };

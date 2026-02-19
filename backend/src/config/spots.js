@@ -75,36 +75,111 @@ const SPOTS = {
       windDirection: ['E', 'SE', 'S'], // Offshore winds, sheltered from south
       waveDirection: ['W', 'NW', 'SW'] // Swell magnet, catches SW
     }
+  },
+  ocean_beach_sf: {
+    id: 'ocean_beach_sf',
+    name: 'Ocean Beach',
+    country: 'USA',
+    location: {
+      lat: 37.7604,
+      lon: -122.5107
+    },
+    description: 'Powerful beach break on San Francisco\'s west coast',
+    optimal: {
+      waveHeight: {
+        min: 1.0,
+        ideal: 2.0,
+        max: 3.5
+      },
+      wavePeriod: {
+        min: 10,
+        ideal: 14,
+        max: 20
+      },
+      windDirection: ['E', 'NE', 'SE'],   // Offshore winds for west-facing beach
+      waveDirection: ['W', 'WNW', 'NW']   // Pacific groundswell
+    }
   }
 };
 
+// In-memory store for dynamically created spots (from map discovery)
+const dynamicSpots = {};
+
 /**
- * Get all available spots
+ * Get or create a dynamic spot from coordinates.
+ * Returns a spot config object with sensible defaults.
+ */
+function getOrCreateSpot(id, { lat, lon, name, country }) {
+  if (SPOTS[id]) return SPOTS[id];
+  if (dynamicSpots[id]) return dynamicSpots[id];
+
+  dynamicSpots[id] = {
+    id,
+    name: name || id,
+    country: country || '',
+    location: { lat, lon },
+    description: `User-discovered spot`,
+    optimal: {
+      waveHeight: { min: 0.8, ideal: 1.5, max: 2.5 },
+      wavePeriod: { min: 8, ideal: 12, max: 16 },
+      windDirection: ['E', 'NE', 'SE'],
+      waveDirection: ['W', 'NW', 'SW']
+    }
+  };
+
+  return dynamicSpots[id];
+}
+
+/**
+ * Get all available spots (hardcoded + dynamic + persisted)
  */
 function getAllSpots() {
-  return Object.values(SPOTS);
+  return [...Object.values(SPOTS), ...Object.values(dynamicSpots)];
 }
 
 /**
  * Get spot by ID
  */
 function getSpotById(spotId) {
-  return SPOTS[spotId];
+  return SPOTS[spotId] || dynamicSpots[spotId];
 }
 
 /**
  * Get spot name
  */
 function getSpotName(spotId) {
-  const spot = SPOTS[spotId];
+  const spot = SPOTS[spotId] || dynamicSpots[spotId];
   return spot ? spot.name : spotId;
 }
 
 /**
- * Check if spot ID is valid
+ * Check if spot ID is valid (hardcoded only for legacy route)
  */
 function isValidSpot(spotId) {
   return spotId in SPOTS;
+}
+
+/**
+ * Load persisted user spots into dynamic store
+ */
+function loadPersistedSpots(spotsArray) {
+  for (const s of spotsArray) {
+    if (!SPOTS[s.id] && !dynamicSpots[s.id]) {
+      dynamicSpots[s.id] = {
+        id: s.id,
+        name: s.name,
+        country: s.country || '',
+        location: { lat: s.lat, lon: s.lon },
+        description: 'User-discovered spot',
+        optimal: {
+          waveHeight: { min: 0.8, ideal: 1.5, max: 2.5 },
+          wavePeriod: { min: 8, ideal: 12, max: 16 },
+          windDirection: ['E', 'NE', 'SE'],
+          waveDirection: ['W', 'NW', 'SW']
+        }
+      };
+    }
+  }
 }
 
 module.exports = {
@@ -112,5 +187,7 @@ module.exports = {
   getAllSpots,
   getSpotById,
   getSpotName,
-  isValidSpot
+  isValidSpot,
+  getOrCreateSpot,
+  loadPersistedSpots
 };

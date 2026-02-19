@@ -1,12 +1,101 @@
 const express = require('express');
 const router = express.Router();
-const { fetchSurfData, aggregateData, aggregateHourlyData } = require('../services/scraper');
+const { fetchSurfData, fetchSurfDataByCoords, aggregateData, aggregateHourlyData } = require('../services/scraper');
 const { calculateSurfScore } = require('../services/scoring');
 const { generateTrend } = require('../services/trend');
 const { recommendBoard, recommendBoardPersonalized } = require('../services/boardRecommendation');
-const { getSpotName, isValidSpot, getAllSpots } = require('../config/spots');
+const { getSpotName, isValidSpot, getAllSpots, getOrCreateSpot } = require('../config/spots');
 const cache = require('../services/cache');
 const logger = require('../utils/logger');
+
+/**
+ * GET /api/conditions/custom
+ * Get conditions for any coordinates (custom/discovered spots)
+ *
+ * Query params:
+ *   - lat: Latitude (required)
+ *   - lon: Longitude (required)
+ *   - name: Spot name (required)
+ *   - country: Country name (optional)
+ */
+router.get('/custom', async (req, res, next) => {
+  try {
+    const { lat, lon, name, country } = req.query;
+
+    // Validate required params
+    if (!lat || !lon || !name) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required params: lat, lon, name'
+      });
+    }
+
+    const latNum = parseFloat(lat);
+    const lonNum = parseFloat(lon);
+    if (isNaN(latNum) || latNum < -90 || latNum > 90) {
+      return res.status(400).json({ success: false, error: 'Invalid latitude' });
+    }
+    if (isNaN(lonNum) || lonNum < -180 || lonNum > 180) {
+      return res.status(400).json({ success: false, error: 'Invalid longitude' });
+    }
+
+    // Sanitize name
+    const spotName = String(name).slice(0, 100).trim();
+    const spotCountry = country ? String(country).slice(0, 100).trim() : '';
+    const spotId = spotName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+    logger.info(`[API] GET /api/conditions/custom ${spotName} (${latNum}, ${lonNum})`);
+
+    // Check cache
+    const cacheKey = `conditions:custom:${spotId}`;
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      const cacheAge = cache.getAge(cacheKey);
+      logger.info(`[API] Returning cached custom data for ${spotName} (age: ${cacheAge}s)`);
+      return res.json({ ...cached, fromCache: true, cacheAge });
+    }
+
+    // Register this spot dynamically
+    getOrCreateSpot(spotId, { lat: latNum, lon: lonNum, name: spotName, country: spotCountry });
+
+    // Fetch data using coordinate-based scrapers
+    const rawData = await fetchSurfDataByCoords(latNum, lonNum, spotId);
+    const aggregated = aggregateData(rawData);
+    const score = calculateSurfScore(aggregated, spotId, rawData.length);
+
+    const hourlyTimeline = aggregateHourlyData(rawData);
+    let trend = null;
+    try {
+      trend = generateTrend(hourlyTimeline, spotId, score.overall);
+    } catch (e) {
+      logger.warn(`[API] Trend analysis failed for custom spot: ${e.message}`);
+    }
+
+    const response = {
+      spotId,
+      spotName,
+      timestamp: new Date().toISOString(),
+      score,
+      conditions: aggregated,
+      trend,
+      boardRecommendation: recommendBoard(aggregated),
+      sources: rawData.map(d => ({
+        name: d.source,
+        status: 'success',
+        timestamp: d.timestamp,
+        url: d.url
+      })),
+      fromCache: false
+    };
+
+    cache.set(cacheKey, response, 600);
+    res.json(response);
+
+  } catch (error) {
+    logger.error(`[API] Error in /conditions/custom:`, error);
+    next(error);
+  }
+});
 
 /**
  * GET /api/conditions/:spotId
