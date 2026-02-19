@@ -1,6 +1,6 @@
 import './ScoreDisplay.css';
 
-function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheAge, conditions, onRefresh }) {
+function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheAge, conditions, trend, onRefresh }) {
   const getColorClass = (score) => {
     if (score >= 85) return 'epic';
     if (score >= 75) return 'great';
@@ -35,7 +35,7 @@ function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheA
   };
 
   const colorClass = getColorClass(score);
-  const { waves, wind } = conditions || {};
+  const { waves, wind, weather } = conditions || {};
 
   const waveText = waves?.height?.min && waves?.height?.max
     ? `${waves.height.min}–${waves.height.max}m`
@@ -43,11 +43,15 @@ function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheA
       ? `${waves.height.avg}m`
       : null;
 
+  const windText = wind?.speed
+    ? `${wind.direction ? wind.direction + ' ' : ''}${wind.speed} km/h${wind.gusts ? ` (gusts ${wind.gusts})` : ''}`
+    : null;
+
   return (
     <div className={`hero ${colorClass}`}>
       <div className="hero-question">Should I go?</div>
       <div className="hero-verdict">{getVerdict(score)}</div>
-      <span className={`rating-badge ${colorClass}`}>{rating}</span>
+      <span className={`rating-badge ${colorClass}`}>{rating} {score}/100</span>
 
       {explanation && (
         <div className="hero-explanation">{explanation}</div>
@@ -58,11 +62,21 @@ function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheA
       )}
 
       <div className="hero-details">
-        <span className="hero-score">{score}/100</span>
-        {waves?.period && <span className="hero-detail">{waves.period}s period</span>}
+        {waves?.period && <span className="hero-detail first">{waves.period}s period</span>}
         {waves?.direction && <span className="hero-detail">{waves.direction} swell</span>}
-        {wind?.speed && <span className="hero-detail">{wind.speed} km/h wind</span>}
+        {windText && <span className="hero-detail">{windText}</span>}
+        {weather?.airTemp && <span className="hero-detail">{weather.airTemp}°C air</span>}
+        {weather?.waterTemp && <span className="hero-detail">{weather.waterTemp}°C water</span>}
       </div>
+
+      {trend?.message && (
+        <div className="hero-trend">
+          <span className="trend-arrow">
+            {trend.trend === 'improving' ? '↗' : trend.trend === 'declining' ? '↘' : '→'}
+          </span>
+          <span className="trend-message">{trend.message}</span>
+        </div>
+      )}
 
       <div className="hero-updated">
         {fromCache && <span className="cache-badge">Cached</span>}

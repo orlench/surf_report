@@ -20,8 +20,8 @@ async function scrapeOpenMeteo(spotId) {
       return null;
     }
 
-    // Fetch wave + swell + wind wave data
-    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${coords.lat}&longitude=${coords.lon}&hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,swell_wave_direction,wind_wave_height,wind_wave_period,sea_surface_temperature&timezone=Asia/Jerusalem&forecast_days=1`;
+    // Fetch wave + swell + wind wave data (2 days for trend analysis)
+    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${coords.lat}&longitude=${coords.lon}&hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,swell_wave_direction,wind_wave_height,wind_wave_period,sea_surface_temperature&timezone=Asia/Jerusalem&forecast_days=2`;
 
     logger.info(`[Open-Meteo] Fetching ${url}`);
 
@@ -95,7 +95,31 @@ async function scrapeOpenMeteo(spotId) {
       logger.debug(`[Open-Meteo] Water temp: ${oceanTemp}°C`);
     }
 
-    logger.info(`[Open-Meteo] Successfully fetched wave data`);
+    // Extract full hourly arrays for trend analysis
+    const hourlyForecast = [];
+    for (let i = 0; i < hourly.time.length; i++) {
+      const h = {
+        time: hourly.time[i],
+        waves: { height: { avg: null }, period: null, direction: null, swell: null }
+      };
+      const sh = hourly.swell_wave_height?.[i];
+      const sp = hourly.swell_wave_period?.[i];
+      const sd = hourly.swell_wave_direction?.[i];
+      if (sh !== null && sh !== undefined) {
+        h.waves.height.avg = Math.round(sh * 10) / 10;
+        h.waves.swell = {
+          height: Math.round(sh * 10) / 10,
+          period: sp ? Math.round(sp) : null,
+          direction: sd !== null && sd !== undefined ? degreesToCardinal(sd) : null
+        };
+      }
+      h.waves.period = sp ? Math.round(sp) : (hourly.wave_period?.[i] ? Math.round(hourly.wave_period[i]) : null);
+      const wd = sd || hourly.wave_direction?.[i];
+      h.waves.direction = wd !== null && wd !== undefined ? degreesToCardinal(wd) : null;
+      hourlyForecast.push(h);
+    }
+    conditions.hourly = hourlyForecast;
+    logger.info(`[Open-Meteo] Successfully fetched wave data (${hourlyForecast.length} hourly entries)`);
     return conditions;
 
   } catch (error) {

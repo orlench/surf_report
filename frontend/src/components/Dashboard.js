@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchSpots, fetchConditions } from '../api/surfApi';
 import ScoreDisplay from './ScoreDisplay';
-import ConditionsCard from './ConditionsCard';
 import './Dashboard.css';
 
 const LOADING_MESSAGES = [
@@ -18,7 +17,9 @@ const LOADING_MESSAGES = [
 ];
 
 function Dashboard() {
-  const [selectedSpot, setSelectedSpot] = useState('herzliya_marina');
+  const [selectedSpot, setSelectedSpot] = useState(
+    () => localStorage.getItem('selectedSpot') || 'netanya_kontiki'
+  );
   const [loadingMsg, setLoadingMsg] = useState(0);
 
   const { data: spots } = useQuery({
@@ -77,7 +78,7 @@ function Dashboard() {
         <select
           className="spot-select"
           value={selectedSpot}
-          onChange={(e) => setSelectedSpot(e.target.value)}
+          onChange={(e) => { setSelectedSpot(e.target.value); localStorage.setItem('selectedSpot', e.target.value); }}
         >
           {Object.entries(spotsByCountry).map(([country, countrySpots]) => (
             <optgroup key={country} label={country}>
@@ -113,22 +114,21 @@ function Dashboard() {
             fromCache={conditions.fromCache}
             cacheAge={conditions.cacheAge}
             conditions={conditions.conditions}
+            trend={conditions.trend}
             onRefresh={handleRefresh}
           />
-
-          <ConditionsCard conditions={conditions.conditions} />
 
           {/* Score Breakdown */}
           {conditions.score.breakdown && (
             <div className="breakdown-section">
               <h3>Score Breakdown</h3>
               <div className="breakdown-bars">
-                <BreakdownBar label="Wave Height" value={conditions.score.breakdown.waveHeight} />
-                <BreakdownBar label="Wave Period" value={conditions.score.breakdown.wavePeriod} />
-                <BreakdownBar label="Swell Quality" value={conditions.score.breakdown.swellQuality} />
-                <BreakdownBar label="Wind Speed" value={conditions.score.breakdown.windSpeed} />
-                <BreakdownBar label="Wind Direction" value={conditions.score.breakdown.windDirection} />
-                <BreakdownBar label="Wave Direction" value={conditions.score.breakdown.waveDirection} />
+                <BreakdownBar label="Wave Height" value={conditions.score.breakdown.waveHeight} hint={getHint('waveHeight', conditions.score.breakdown.waveHeight)} />
+                <BreakdownBar label="Wave Period" value={conditions.score.breakdown.wavePeriod} hint={getHint('wavePeriod', conditions.score.breakdown.wavePeriod)} />
+                <BreakdownBar label="Swell Quality" value={conditions.score.breakdown.swellQuality} hint={getHint('swellQuality', conditions.score.breakdown.swellQuality)} />
+                <BreakdownBar label="Surface Calm" value={conditions.score.breakdown.windSpeed} hint={getHint('windSpeed', conditions.score.breakdown.windSpeed)} />
+                <BreakdownBar label="Wind Direction" value={conditions.score.breakdown.windDirection} hint={getHint('windDirection', conditions.score.breakdown.windDirection)} />
+                <BreakdownBar label="Wave Direction" value={conditions.score.breakdown.waveDirection} hint={getHint('waveDirection', conditions.score.breakdown.waveDirection)} />
               </div>
             </div>
           )}
@@ -136,12 +136,15 @@ function Dashboard() {
           {/* Sources Footer */}
           <div className="sources-footer">
             {conditions.sources && conditions.sources.map((source, idx) => (
-              <span
+              <a
                 key={idx}
                 className={`source-pill ${source.status}`}
+                href={source.url}
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 {source.name}
-              </span>
+              </a>
             ))}
           </div>
         </>
@@ -150,26 +153,90 @@ function Dashboard() {
   );
 }
 
-function BreakdownBar({ label, value }) {
-  const getColor = (value) => {
-    if (value >= 80) return '#00c48c';
-    if (value >= 60) return '#4cd964';
-    if (value >= 40) return '#f5a623';
-    return '#ff6b35';
+function getHint(factor, value) {
+  const hints = {
+    waveHeight: [
+      [80, 'Ideal size'],
+      [60, 'Decent size'],
+      [40, 'A bit small'],
+      [20, 'Very small'],
+      [0,  'Flat']
+    ],
+    wavePeriod: [
+      [80, 'Long, clean waves'],
+      [60, 'Good quality'],
+      [40, 'Short period'],
+      [20, 'Wind chop'],
+      [0,  'Very choppy']
+    ],
+    swellQuality: [
+      [80, 'Solid groundswell'],
+      [60, 'Decent swell'],
+      [40, 'Mixed swell'],
+      [20, 'Mostly wind swell'],
+      [0,  'No real swell']
+    ],
+    windSpeed: [
+      [80, 'Glassy, barely any wind'],
+      [60, 'Light breeze, manageable'],
+      [40, 'Moderate wind, some chop'],
+      [20, 'Strong wind, rough surface'],
+      [0,  'Blown out, too windy']
+    ],
+    windDirection: [
+      [80, 'Offshore'],
+      [60, 'Cross-shore'],
+      [40, 'Side-on'],
+      [20, 'Onshore'],
+      [0,  'Direct onshore']
+    ],
+    waveDirection: [
+      [80, 'Perfect angle'],
+      [60, 'Good angle'],
+      [40, 'Okay angle'],
+      [20, 'Off angle'],
+      [0,  'Wrong direction']
+    ]
   };
+  const levels = hints[factor] || [];
+  for (const [threshold, text] of levels) {
+    if (value >= threshold) return text;
+  }
+  return '';
+}
 
+function getScoreLabel(value) {
+  if (value >= 80) return 'A';
+  if (value >= 60) return 'B';
+  if (value >= 40) return 'C';
+  if (value >= 20) return 'D';
+  return 'F';
+}
+
+function getScoreColor(value) {
+  if (value >= 80) return '#00c48c';
+  if (value >= 60) return '#4cd964';
+  if (value >= 40) return '#f5a623';
+  if (value >= 20) return '#ff6b35';
+  return '#ff3b30';
+}
+
+function BreakdownBar({ label, value, hint }) {
   return (
     <div className="breakdown-item">
-      <div className="breakdown-label">
-        <span>{label}</span>
-        <span className="breakdown-value">{value}</span>
+      <div className="breakdown-top">
+        <span className="breakdown-grade" style={{ color: getScoreColor(value) }}>{getScoreLabel(value)}</span>
+        <div className="breakdown-text">
+          <span className="breakdown-label-text">{label}</span>
+          <span className="breakdown-hint">{hint}</span>
+        </div>
       </div>
       <div className="breakdown-bar-bg">
         <div
           className="breakdown-bar-fill"
           style={{
             width: `${value}%`,
-            backgroundColor: getColor(value)
+            backgroundColor: getScoreColor(value)
           }}
         />
       </div>

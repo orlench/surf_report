@@ -5,6 +5,43 @@
   border-radius: 16px;
   background: #243447;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background 0.3s ease;
+}
+
+/* Hero background colors by rating */
+.hero.epic {
+  background: linear-gradient(135deg, #00c48c, #009e73);
+  border-color: rgba(0, 196, 140, 0.3);
+}
+
+.hero.great {
+  background: linear-gradient(135deg, #28d278, #1fad62);
+  border-color: rgba(40, 210, 120, 0.3);
+}
+
+.hero.good {
+  background: linear-gradient(135deg, #4cd964, #3ab550);
+  border-color: rgba(76, 217, 100, 0.3);
+}
+
+.hero.fair {
+  background: linear-gradient(135deg, #f5a623, #d4901c);
+  border-color: rgba(245, 166, 35, 0.3);
+}
+
+.hero.marginal {
+  background: linear-gradient(135deg, #e67e22, #c46a1a);
+  border-color: rgba(230, 126, 34, 0.3);
+}
+
+.hero.poor {
+  background: linear-gradient(135deg, #ff6b35, #d9562a);
+  border-color: rgba(255, 107, 53, 0.3);
+}
+
+.hero.flat {
+  background: linear-gradient(135deg, #ff3b30, #d42f26);
+  border-color: rgba(255, 59, 48, 0.3);
 }
 
 .hero-question {
@@ -12,7 +49,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 2px;
-  color: #8899aa;
+  color: rgba(255, 255, 255, 0.7);
   margin-bottom: 8px;
 }
 
@@ -33,46 +70,13 @@
   text-transform: uppercase;
   letter-spacing: 1.5px;
   margin-bottom: 20px;
-}
-
-.rating-badge.epic {
-  background: rgba(0, 196, 140, 0.2);
-  color: #00c48c;
-}
-
-.rating-badge.great {
-  background: rgba(40, 210, 120, 0.2);
-  color: #28d278;
-}
-
-.rating-badge.good {
-  background: rgba(76, 217, 100, 0.2);
-  color: #4cd964;
-}
-
-.rating-badge.fair {
-  background: rgba(245, 166, 35, 0.2);
-  color: #f5a623;
-}
-
-.rating-badge.marginal {
-  background: rgba(230, 126, 34, 0.2);
-  color: #e67e22;
-}
-
-.rating-badge.poor {
-  background: rgba(255, 107, 53, 0.2);
-  color: #ff6b35;
-}
-
-.rating-badge.flat {
-  background: rgba(255, 59, 48, 0.2);
-  color: #ff3b30;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 .hero-explanation {
   font-size: 0.95rem;
-  color: #8899aa;
+  color: rgba(255, 255, 255, 0.8);
   max-width: 400px;
   margin: 0 auto 20px;
   line-height: 1.5;
@@ -104,19 +108,23 @@
 
 .hero-detail {
   font-size: 0.9rem;
-  color: #8899aa;
+  color: rgba(255, 255, 255, 0.7);
   font-weight: 500;
 }
 
 .hero-detail::before {
   content: '·';
   margin-right: 8px;
-  color: #5a6a7a;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.hero-detail.first::before {
+  display: none;
 }
 
 .hero-updated {
   font-size: 0.8rem;
-  color: #5a6a7a;
+  color: rgba(255, 255, 255, 0.5);
   margin-top: 4px;
   display: flex;
   align-items: center;
@@ -127,7 +135,7 @@
 .hero-refresh {
   background: none;
   border: none;
-  color: #5a6a7a;
+  color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -137,12 +145,12 @@
 }
 
 .hero-refresh:hover {
-  color: #8899aa;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .cache-badge {
-  background: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
   padding: 2px 8px;
   border-radius: 3px;
   font-size: 0.7rem;
@@ -151,33 +159,34 @@
   letter-spacing: 0.5px;
 }
 
-/* Verdict color by rating */
-.hero.epic .hero-verdict {
-  color: #00c48c;
+/* Trend indicator */
+.hero-trend {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin: 16px auto 0;
+  max-width: 420px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.hero.great .hero-verdict {
-  color: #28d278;
+.trend-arrow {
+  font-size: 1.2rem;
+  flex-shrink: 0;
 }
 
-.hero.good .hero-verdict {
-  color: #4cd964;
+.trend-message {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
 }
 
-.hero.fair .hero-verdict {
-  color: #f5a623;
-}
-
-.hero.marginal .hero-verdict {
-  color: #e67e22;
-}
-
-.hero.poor .hero-verdict {
-  color: #ff6b35;
-}
-
-.hero.flat .hero-verdict {
-  color: #ff3b30;
+/* All text in hero is white on colored background */
+.hero .hero-verdict {
+  color: #ffffff;
 }
 
 @media (max-width: 768px) {

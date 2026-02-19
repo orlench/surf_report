@@ -120,38 +120,59 @@
 .breakdown-bars {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .breakdown-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
-.breakdown-label {
+.breakdown-top {
   display: flex;
-  justify-content: space-between;
-  font-size: 0.85rem;
-  color: #8899aa;
-  font-weight: 500;
+  align-items: center;
+  gap: 12px;
 }
 
-.breakdown-value {
-  font-weight: 700;
+.breakdown-grade {
+  font-size: 1.1rem;
+  font-weight: 800;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.breakdown-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.breakdown-label-text {
+  font-size: 0.85rem;
   color: #ffffff;
+  font-weight: 600;
+}
+
+.breakdown-hint {
+  font-size: 0.75rem;
+  color: #6a7a8a;
+  font-weight: 400;
 }
 
 .breakdown-bar-bg {
-  height: 6px;
+  height: 4px;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
+  border-radius: 2px;
   overflow: hidden;
+  margin-left: 36px;
 }
 
 .breakdown-bar-fill {
   height: 100%;
-  border-radius: 3px;
+  border-radius: 2px;
   transition: width 0.3s ease;
 }
 
@@ -173,6 +194,12 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.source-pill:hover {
+  opacity: 0.7;
 }
 
 .source-pill.success {

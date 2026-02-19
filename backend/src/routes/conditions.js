@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { fetchSurfData, aggregateData } = require('../services/scraper');
+const { fetchSurfData, aggregateData, aggregateHourlyData } = require('../services/scraper');
 const { calculateSurfScore } = require('../services/scoring');
+const { generateTrend } = require('../services/trend');
 const { getSpotName, isValidSpot, getAllSpots } = require('../config/spots');
 const cache = require('../services/cache');
 const logger = require('../utils/logger');
@@ -52,6 +53,15 @@ router.get('/:spotId', async (req, res, next) => {
     // Calculate score (pass source count for confidence scoring)
     const score = calculateSurfScore(aggregated, spotId, rawData.length);
 
+    // Generate trend analysis from hourly forecast data
+    const hourlyTimeline = aggregateHourlyData(rawData);
+    let trend = null;
+    try {
+      trend = generateTrend(hourlyTimeline, spotId, score.overall);
+    } catch (e) {
+      logger.warn(`[API] Trend analysis failed: ${e.message}`);
+    }
+
     // Build response
     const response = {
       spotId,
@@ -59,6 +69,7 @@ router.get('/:spotId', async (req, res, next) => {
       timestamp: new Date().toISOString(),
       score,
       conditions: aggregated,
+      trend,
       sources: rawData.map(d => ({
         name: d.source,
         status: 'success',
