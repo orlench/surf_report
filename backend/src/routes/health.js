@@ -10,6 +10,14 @@ const logger = require('../utils/logger');
 router.get('/', (req, res) => {
   logger.debug(`[API] GET /api/health`);
 
+  // In production, only return status — don't expose internals
+  if (process.env.NODE_ENV === 'production') {
+    return res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString()
+    });
+  }
+
   const cacheStats = cache.getStats();
 
   res.json({

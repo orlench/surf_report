@@ -56,11 +56,11 @@ function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheA
 
   // Friendly wetsuit hint based on water temp (Mediterranean)
   const getWetsuitHint = (temp) => {
-    if (!temp) return '';
-    if (temp >= 24) return 'boardshorts';
-    if (temp >= 20) return 'spring suit';
-    if (temp >= 16) return '3/2 wetsuit';
-    return '4/3 wetsuit';
+    if (!temp) return null;
+    if (temp >= 24) return { label: 'Boardshorts', short: 'boardshorts' };
+    if (temp >= 20) return { label: 'Spring Suit', short: 'spring suit' };
+    if (temp >= 16) return { label: '3/2 Wetsuit', short: '3/2 wetsuit' };
+    return { label: '4/3 Wetsuit', short: '4/3 wetsuit' };
   };
 
   // Friendly period quality
@@ -98,7 +98,7 @@ function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheA
         {waves?.direction && <span className="hero-detail">{waves.direction} direction</span>}
         {windText && <span className="hero-detail">{windText}</span>}
         {weather?.airTemp != null && <span className="hero-detail">{weather.airTemp}°C air</span>}
-        {weather?.waterTemp != null && <span className="hero-detail">{weather.waterTemp}°C water{wetsuitHint ? ` (${wetsuitHint})` : ''}</span>}
+        {weather?.waterTemp != null && <span className="hero-detail">{weather.waterTemp}°C water</span>}
       </div>
 
       {boardRecommendation && (
@@ -113,6 +113,21 @@ function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheA
               <span className="board-rec-volume">~{boardRecommendation.volume.recommended}L</span>
             )}
           </div>
+          {wetsuitHint && weather?.waterTemp != null && (
+            <div className="board-rec-wetsuit">
+              {wetsuitHint.short === 'boardshorts' ? (
+                <svg className="wetsuit-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4 4H20V7L18 21H13L12 13L11 21H6L4 7Z" opacity="0.85" />
+                </svg>
+              ) : (
+                <svg className="wetsuit-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9 2H15L17 5H21V9H17L16 21H13L12 14L11 21H8L7 9H3V5H7Z" opacity="0.85" />
+                </svg>
+              )}
+              <span className="wetsuit-label">{wetsuitHint.label}</span>
+              <span className="wetsuit-temp">{weather.waterTemp}°C</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -126,7 +141,6 @@ function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheA
       )}
 
       <div className="hero-updated">
-        {fromCache && <span className="cache-badge">Cached</span>}
         Updated {fromCache && cacheAge ? `${Math.floor(cacheAge / 60)} min ago` : formatTime(timestamp)}
         <button className="hero-refresh" onClick={onRefresh} title="Refresh">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
