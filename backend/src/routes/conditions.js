@@ -30,8 +30,26 @@ router.get('/:spotId', async (req, res, next) => {
 
     logger.info(`[API] GET /api/conditions/${spotId} (refresh: ${!!refresh})`);
 
+    // Validate and sanitize optional query params
+    let weight = null;
+    let skill = null;
+
+    if (req.query.weight) {
+      weight = parseFloat(req.query.weight);
+      if (isNaN(weight) || weight < 20 || weight > 250) {
+        return res.status(400).json({ success: false, error: 'Invalid weight: must be 20-250 kg' });
+      }
+    }
+
+    if (req.query.skill) {
+      const validSkills = ['beginner', 'intermediate', 'advanced', 'expert'];
+      skill = req.query.skill;
+      if (!validSkills.includes(skill)) {
+        return res.status(400).json({ success: false, error: 'Invalid skill: must be beginner, intermediate, advanced, or expert' });
+      }
+    }
+
     // Board recommendation helper (computed per-request for personalization)
-    const { weight, skill } = req.query;
     const getBoardRec = (conditions) => {
       if (weight && skill) {
         return recommendBoardPersonalized(conditions, { weight, skillLevel: skill });

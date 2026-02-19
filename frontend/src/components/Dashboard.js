@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchSpots, fetchConditions } from '../api/surfApi';
 import ScoreDisplay from './ScoreDisplay';
@@ -57,9 +57,14 @@ function Dashboard() {
     return () => clearInterval(interval);
   }, [isLoading]);
 
-  const handleRefresh = () => {
+  // Throttle refresh to once per 5 seconds
+  const lastRefresh = useRef(0);
+  const handleRefresh = useCallback(() => {
+    const now = Date.now();
+    if (now - lastRefresh.current < 5000) return;
+    lastRefresh.current = now;
     refetch({ queryKey: ['conditions', selectedSpot] });
-  };
+  }, [refetch, selectedSpot]);
 
   // Group spots by country for dropdown
   const spotsByCountry = {};
@@ -85,6 +90,13 @@ function Dashboard() {
     <div className="dashboard">
       {/* Top Bar */}
       <div className="top-bar">
+        <div className="top-bar-brand">
+          <svg className="top-bar-icon" viewBox="0 0 28 28" fill="none">
+            <path d="M2 20c3-6 7-10 12-10s8 3 12 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M5 18c2.5-4 5.5-7 9-7s6 2 9 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+          </svg>
+          <span className="top-bar-title">Should I Go?</span>
+        </div>
         <select
           className="spot-select"
           value={selectedSpot}
@@ -186,17 +198,25 @@ function Dashboard() {
 
           {/* Sources Footer */}
           <div className="sources-footer">
-            {conditions.sources && conditions.sources.map((source, idx) => (
-              <a
-                key={idx}
-                className={`source-pill ${source.status}`}
-                href={source.url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {source.name}
-              </a>
-            ))}
+            {conditions.sources && conditions.sources.map((source, idx) => {
+              // Only allow http/https URLs
+              const isValidUrl = source.url && /^https?:\/\//i.test(source.url);
+              return isValidUrl ? (
+                <a
+                  key={idx}
+                  className={`source-pill ${source.status}`}
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {source.name}
+                </a>
+              ) : (
+                <span key={idx} className={`source-pill ${source.status}`}>
+                  {source.name}
+                </span>
+              );
+            })}
           </div>
         </>
       )}

@@ -26,8 +26,24 @@ function callMcpTool(toolName, toolArgs, timeoutMs = 60000) {
 
     const isWindows = process.platform === 'win32';
     const cmd = isWindows ? 'npx.cmd' : 'npx';
+    // Only pass necessary env vars to child process
+    const childEnv = {
+      PATH: process.env.PATH,
+      NODE_ENV: process.env.NODE_ENV,
+      API_TOKEN: apiKey,
+      PRO_MODE: 'true'
+    };
+    // Windows needs additional env vars for npx to work
+    if (process.platform === 'win32') {
+      childEnv.APPDATA = process.env.APPDATA;
+      childEnv.LOCALAPPDATA = process.env.LOCALAPPDATA;
+      childEnv.SystemRoot = process.env.SystemRoot;
+      childEnv.TEMP = process.env.TEMP;
+      childEnv.TMP = process.env.TMP;
+    }
+
     const mcpServer = spawn(cmd, ['@brightdata/mcp'], {
-      env: { ...process.env, API_TOKEN: apiKey, PRO_MODE: 'true' },
+      env: childEnv,
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
@@ -108,8 +124,25 @@ function callMcpToolsInSession(toolCalls, extraEnv = {}, timeoutMs = 120000) {
 
     const isWindows = process.platform === 'win32';
     const cmd = isWindows ? 'npx.cmd' : 'npx';
+
+    // Only pass necessary env vars to child process
+    const childEnv = {
+      PATH: process.env.PATH,
+      NODE_ENV: process.env.NODE_ENV,
+      API_TOKEN: apiKey,
+      PRO_MODE: 'true',
+      ...extraEnv
+    };
+    if (process.platform === 'win32') {
+      childEnv.APPDATA = process.env.APPDATA;
+      childEnv.LOCALAPPDATA = process.env.LOCALAPPDATA;
+      childEnv.SystemRoot = process.env.SystemRoot;
+      childEnv.TEMP = process.env.TEMP;
+      childEnv.TMP = process.env.TMP;
+    }
+
     const mcpServer = spawn(cmd, ['@brightdata/mcp'], {
-      env: { ...process.env, API_TOKEN: apiKey, PRO_MODE: 'true', ...extraEnv },
+      env: childEnv,
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
