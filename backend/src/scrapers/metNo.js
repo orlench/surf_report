@@ -100,7 +100,37 @@ async function scrapeMetNo(spotId) {
       logger.debug(`[MET.NO] Cloud cover: ${conditions.weather.cloudCover} (${cloudPercent}%)`);
     }
 
-    logger.info(`[MET.NO] Successfully fetched wind/weather data`);
+    // Extract hourly forecast for trend analysis (next 48 hours)
+    const hourlyForecast = [];
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+    for (const entry of timeseries) {
+      const entryTime = new Date(entry.time);
+      if (entryTime > cutoff) break;
+      const details = entry.data?.instant?.details;
+      if (!details) continue;
+      const h = {
+        time: entry.time,
+        wind: { speed: null, direction: null, gusts: null },
+        weather: { airTemp: null }
+      };
+      if (details.wind_speed !== undefined) {
+        h.wind.speed = Math.round(details.wind_speed * 3.6);
+      }
+      if (details.wind_from_direction !== undefined) {
+        h.wind.direction = degreesToCardinal(details.wind_from_direction);
+      }
+      const next1h = entry.data?.next_1_hours?.details;
+      if (next1h?.wind_speed_of_gust !== undefined) {
+        h.wind.gusts = Math.round(next1h.wind_speed_of_gust * 3.6);
+      }
+      if (details.air_temperature !== undefined) {
+        h.weather.airTemp = Math.round(details.air_temperature);
+      }
+      hourlyForecast.push(h);
+    }
+    conditions.hourly = hourlyForecast;
+    logger.info(`[MET.NO] Successfully fetched wind/weather data (${hourlyForecast.length} hourly entries)`);
     return conditions;
 
   } catch (error) {

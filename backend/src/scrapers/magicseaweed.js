@@ -156,8 +156,46 @@ function parseMagicseaweedMarkdown(markdown) {
     return null;
   }
 
-  logger.info(`[Magicseaweed] Successfully parsed data`);
+  // Best-effort hourly forecast extraction
+  conditions.hourly = parseMagicseaweedHourly(markdown);
+
+  logger.info(`[Magicseaweed] Successfully parsed data (${conditions.hourly.length} hourly entries)`);
   return conditions;
+}
+
+function parseMagicseaweedHourly(markdown) {
+  const hourly = [];
+  try {
+    const rows = markdown.split('\n');
+    const today = new Date();
+
+    for (const row of rows) {
+      const timeMatch = row.match(/(\d{1,2})\s*(?:AM|PM|:00|h)/i);
+      if (!timeMatch) continue;
+
+      let hour = parseInt(timeMatch[1]);
+      if (/PM/i.test(row) && hour < 12) hour += 12;
+      if (/AM/i.test(row) && hour === 12) hour = 0;
+
+      const waveMatch = row.match(/(\d+\.?\d*)\s*(?:m|ft)/i);
+      const periodMatch = row.match(/(\d+)\s*s/);
+      const windMatch = row.match(/(\d+)\s*km\/?h/i) || row.match(/(\d+)\s*(?:kts?|knots?)/i);
+      const dirMatch = row.match(/\b([NESW]{1,3})\b/);
+
+      if (waveMatch || windMatch) {
+        const isFt = /ft/i.test(row);
+        const waveAvg = waveMatch ? parseFloat(waveMatch[1]) * (isFt ? 0.3048 : 1) : null;
+        hourly.push({
+          time: `${today.toISOString().split('T')[0]}T${String(hour).padStart(2, '0')}:00`,
+          waves: waveAvg ? { height: { avg: Math.round(waveAvg * 10) / 10 }, period: periodMatch ? parseInt(periodMatch[1]) : null, direction: null } : undefined,
+          wind: windMatch ? { speed: Math.round(parseInt(windMatch[1]) * (/kts?/i.test(row) ? 1.852 : 1)), direction: dirMatch ? dirMatch[1].toUpperCase() : null, gusts: null } : undefined
+        });
+      }
+    }
+  } catch (e) {
+    logger.debug(`[Magicseaweed] Hourly parsing failed: ${e.message}`);
+  }
+  return hourly;
 }
 
 module.exports = {

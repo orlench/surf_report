@@ -77,7 +77,8 @@ async function scrapeSurfForecastWrapper(spotId) {
     return {
       source: 'surf-forecast',
       data: data,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      url: 'https://www.surf-forecast.com'
     };
   } catch (error) {
     logger.error(`[Scraper] Surf-forecast failed:`, error.message);
@@ -95,7 +96,8 @@ async function scrapeWindFinderWrapper(spotId) {
     return {
       source: 'windfinder',
       data: data,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      url: 'https://www.windfinder.com'
     };
   } catch (error) {
     logger.error(`[Scraper] WindFinder failed:`, error.message);
@@ -113,7 +115,8 @@ async function scrapeMagicseaweedWrapper(spotId) {
     return {
       source: 'magicseaweed',
       data: data,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      url: 'https://magicseaweed.com'
     };
   } catch (error) {
     logger.error(`[Scraper] Magicseaweed failed:`, error.message);
@@ -131,7 +134,8 @@ async function scrapeBeachCamWrapper(spotId) {
     return {
       source: 'beachcam',
       data: data,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      url: 'https://www.beachcam.co.il'
     };
   } catch (error) {
     logger.error(`[Scraper] BeachCam failed:`, error.message);
@@ -167,7 +171,8 @@ async function scrapeOpenMeteoWrapper(spotId) {
     return {
       source: 'open-meteo',
       data: data,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      url: 'https://open-meteo.com'
     };
   } catch (error) {
     logger.error(`[Scraper] Open-Meteo failed:`, error.message);
@@ -185,7 +190,8 @@ async function scrapeMetNoWrapper(spotId) {
     return {
       source: 'met-no',
       data: data,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      url: 'https://www.met.no'
     };
   } catch (error) {
     logger.error(`[Scraper] MET.NO failed:`, error.message);
@@ -203,7 +209,8 @@ async function scrapeOpenMeteoForecastWrapper(spotId) {
     return {
       source: 'open-meteo-forecast',
       data: data,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      url: 'https://open-meteo.com'
     };
   } catch (error) {
     logger.error(`[Scraper] Open-Meteo Forecast failed:`, error.message);
@@ -378,7 +385,87 @@ function mostCommon(arr) {
   return mostCommonItem;
 }
 
+/**
+ * Aggregate hourly forecast data from all sources into a unified timeline
+ * Merges wave data (Open-Meteo Marine) with wind data (Open-Meteo Forecast, MET.NO, web scrapers)
+ *
+ * @param {Array} sources - Array of source data objects (each has .data.hourly)
+ * @returns {Array} - Merged hourly timeline sorted by time
+ */
+function aggregateHourlyData(sources) {
+  // Collect all hourly entries keyed by hour
+  const hourMap = {};
+
+  for (const source of sources) {
+    const hourlyEntries = source.data?.hourly;
+    if (!hourlyEntries || !Array.isArray(hourlyEntries)) continue;
+
+    for (const entry of hourlyEntries) {
+      if (!entry.time) continue;
+      // Normalize to hour key (YYYY-MM-DDTHH:00)
+      const hourKey = entry.time.substring(0, 13) + ':00';
+
+      if (!hourMap[hourKey]) {
+        hourMap[hourKey] = {
+          time: hourKey,
+          waveHeights: [],
+          wavePeriods: [],
+          waveDirections: [],
+          swellHeights: [],
+          swellPeriods: [],
+          swellDirections: [],
+          windSpeeds: [],
+          windDirections: [],
+          windGusts: [],
+          airTemps: []
+        };
+      }
+
+      const h = hourMap[hourKey];
+      if (entry.waves?.height?.avg) h.waveHeights.push(entry.waves.height.avg);
+      if (entry.waves?.period) h.wavePeriods.push(entry.waves.period);
+      if (entry.waves?.direction) h.waveDirections.push(entry.waves.direction);
+      if (entry.waves?.swell?.height) h.swellHeights.push(entry.waves.swell.height);
+      if (entry.waves?.swell?.period) h.swellPeriods.push(entry.waves.swell.period);
+      if (entry.waves?.swell?.direction) h.swellDirections.push(entry.waves.swell.direction);
+      if (entry.wind?.speed) h.windSpeeds.push(entry.wind.speed);
+      if (entry.wind?.direction) h.windDirections.push(entry.wind.direction);
+      if (entry.wind?.gusts) h.windGusts.push(entry.wind.gusts);
+      if (entry.weather?.airTemp) h.airTemps.push(entry.weather.airTemp);
+    }
+  }
+
+  // Convert to conditions-like objects for scoring
+  const timeline = Object.values(hourMap)
+    .sort((a, b) => a.time.localeCompare(b.time))
+    .map(h => ({
+      time: h.time,
+      waves: {
+        height: { avg: h.waveHeights.length > 0 ? Math.round(average(h.waveHeights) * 10) / 10 : null },
+        period: h.wavePeriods.length > 0 ? Math.round(average(h.wavePeriods)) : null,
+        direction: mostCommon(h.waveDirections),
+        swell: h.swellHeights.length > 0 ? {
+          height: Math.round(average(h.swellHeights) * 10) / 10,
+          period: h.swellPeriods.length > 0 ? Math.round(average(h.swellPeriods)) : null,
+          direction: mostCommon(h.swellDirections)
+        } : null
+      },
+      wind: {
+        speed: h.windSpeeds.length > 0 ? Math.round(average(h.windSpeeds)) : null,
+        direction: mostCommon(h.windDirections),
+        gusts: h.windGusts.length > 0 ? Math.round(average(h.windGusts)) : null
+      },
+      weather: {
+        airTemp: h.airTemps.length > 0 ? Math.round(average(h.airTemps)) : null
+      }
+    }));
+
+  logger.info(`[Scraper] Aggregated ${timeline.length} hourly entries from ${sources.length} sources`);
+  return timeline;
+}
+
 module.exports = {
   fetchSurfData,
-  aggregateData
+  aggregateData,
+  aggregateHourlyData
 };

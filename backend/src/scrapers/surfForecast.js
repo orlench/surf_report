@@ -172,8 +172,51 @@ function parseSurfForecastMarkdown(markdown) {
     return null;
   }
 
-  logger.info(`[Surf-forecast] Successfully parsed data`);
+  // Best-effort hourly forecast extraction from markdown tables
+  conditions.hourly = parseSurfForecastHourly(markdown);
+
+  logger.info(`[Surf-forecast] Successfully parsed data (${conditions.hourly.length} hourly entries)`);
   return conditions;
+}
+
+function parseSurfForecastHourly(markdown) {
+  const hourly = [];
+  try {
+    // Surf-forecast pages often have tabular data with time rows
+    // Look for patterns like "AM|PM|Night" or hour-indexed forecast rows
+    // Each row may contain: time, wave height, period, wind speed, wind dir
+    const rows = markdown.split('\n');
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    for (const row of rows) {
+      // Look for forecast table rows with wave/wind data and time references
+      const timeMatch = row.match(/(\d{1,2})\s*(?:AM|PM|:00)/i);
+      if (!timeMatch) continue;
+
+      let hour = parseInt(timeMatch[1]);
+      if (/PM/i.test(row) && hour < 12) hour += 12;
+      if (/AM/i.test(row) && hour === 12) hour = 0;
+
+      const waveMatch = row.match(/(\d+\.?\d*)\s*m/);
+      const periodMatch = row.match(/(\d+)\s*s/);
+      const windMatch = row.match(/(\d+)\s*km\/?h/i) || row.match(/(\d+)\s*kts?/i);
+      const windDirMatch = row.match(/\b([NESW]{1,3})\b/);
+
+      if (waveMatch || windMatch) {
+        const entry = {
+          time: `${today.toISOString().split('T')[0]}T${String(hour).padStart(2, '0')}:00`,
+          waves: { height: { avg: waveMatch ? parseFloat(waveMatch[1]) : null }, period: periodMatch ? parseInt(periodMatch[1]) : null, direction: null },
+          wind: { speed: windMatch ? Math.round(parseInt(windMatch[1]) * (/kts?/i.test(row) ? 1.852 : 1)) : null, direction: windDirMatch ? windDirMatch[1].toUpperCase() : null, gusts: null }
+        };
+        hourly.push(entry);
+      }
+    }
+  } catch (e) {
+    logger.debug(`[Surf-forecast] Hourly parsing failed: ${e.message}`);
+  }
+  return hourly;
 }
 
 module.exports = {

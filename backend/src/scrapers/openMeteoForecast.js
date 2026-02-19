@@ -21,7 +21,7 @@ async function scrapeOpenMeteoForecast(spotId) {
       return null;
     }
 
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m,apparent_temperature,cloud_cover&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&timezone=Asia/Jerusalem&forecast_days=1&models=best_match`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m,apparent_temperature,cloud_cover&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&timezone=Asia/Jerusalem&forecast_days=2&models=best_match`;
 
     logger.info(`[Open-Meteo Forecast] Fetching ${url}`);
 
@@ -77,7 +77,29 @@ async function scrapeOpenMeteoForecast(spotId) {
       else conditions.weather.cloudCover = 'Overcast';
     }
 
-    logger.info(`[Open-Meteo Forecast] Successfully fetched wind data`);
+    // Extract full hourly arrays for trend analysis
+    const hourlyData = data.hourly;
+    const hourlyForecast = [];
+    if (hourlyData?.time) {
+      for (let i = 0; i < hourlyData.time.length; i++) {
+        const h = {
+          time: hourlyData.time[i],
+          wind: { speed: null, direction: null, gusts: null }
+        };
+        if (hourlyData.wind_speed_10m?.[i] !== null && hourlyData.wind_speed_10m?.[i] !== undefined) {
+          h.wind.speed = Math.round(hourlyData.wind_speed_10m[i]);
+        }
+        if (hourlyData.wind_direction_10m?.[i] !== null && hourlyData.wind_direction_10m?.[i] !== undefined) {
+          h.wind.direction = degreesToCardinal(hourlyData.wind_direction_10m[i]);
+        }
+        if (hourlyData.wind_gusts_10m?.[i] !== null && hourlyData.wind_gusts_10m?.[i] !== undefined) {
+          h.wind.gusts = Math.round(hourlyData.wind_gusts_10m[i]);
+        }
+        hourlyForecast.push(h);
+      }
+    }
+    conditions.hourly = hourlyForecast;
+    logger.info(`[Open-Meteo Forecast] Successfully fetched wind data (${hourlyForecast.length} hourly entries)`);
     return conditions;
 
   } catch (error) {
