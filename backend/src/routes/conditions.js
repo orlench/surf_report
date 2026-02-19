@@ -3,6 +3,7 @@ const router = express.Router();
 const { fetchSurfData, aggregateData, aggregateHourlyData } = require('../services/scraper');
 const { calculateSurfScore } = require('../services/scoring');
 const { generateTrend } = require('../services/trend');
+const { recommendBoard, recommendBoardPersonalized } = require('../services/boardRecommendation');
 const { getSpotName, isValidSpot, getAllSpots } = require('../config/spots');
 const cache = require('../services/cache');
 const logger = require('../utils/logger');
@@ -29,6 +30,15 @@ router.get('/:spotId', async (req, res, next) => {
 
     logger.info(`[API] GET /api/conditions/${spotId} (refresh: ${!!refresh})`);
 
+    // Board recommendation helper (computed per-request for personalization)
+    const { weight, skill } = req.query;
+    const getBoardRec = (conditions) => {
+      if (weight && skill) {
+        return recommendBoardPersonalized(conditions, { weight, skillLevel: skill });
+      }
+      return recommendBoard(conditions);
+    };
+
     // Check cache unless refresh requested
     if (!refresh) {
       const cached = cache.get(`conditions:${spotId}`);
@@ -37,6 +47,7 @@ router.get('/:spotId', async (req, res, next) => {
         logger.info(`[API] Returning cached data for ${spotId} (age: ${cacheAge}s)`);
         return res.json({
           ...cached,
+          boardRecommendation: getBoardRec(cached.conditions),
           fromCache: true,
           cacheAge
         });
@@ -70,6 +81,7 @@ router.get('/:spotId', async (req, res, next) => {
       score,
       conditions: aggregated,
       trend,
+      boardRecommendation: getBoardRec(aggregated),
       sources: rawData.map(d => ({
         name: d.source,
         status: 'success',
