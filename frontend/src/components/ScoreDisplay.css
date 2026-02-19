@@ -159,6 +159,59 @@
   letter-spacing: 0.5px;
 }
 
+/* Board recommendation */
+.hero-board-rec {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 16px auto 0;
+  max-width: 420px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.board-svg-wrap {
+  flex-shrink: 0;
+  height: 64px;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.board-svg-wrap .board-svg {
+  height: 100%;
+  width: auto;
+}
+
+.board-rec-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.board-rec-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.board-rec-reason {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.board-rec-volume {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 2px;
+}
+
 /* Trend indicator */
 .hero-trend {
   background: rgba(255, 255, 255, 0.15);

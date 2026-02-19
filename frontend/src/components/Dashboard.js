@@ -21,6 +21,13 @@ function Dashboard() {
     () => localStorage.getItem('selectedSpot') || 'netanya_kontiki'
   );
   const [loadingMsg, setLoadingMsg] = useState(0);
+  const [showProfile, setShowProfile] = useState(false);
+  const [userWeight, setUserWeight] = useState(
+    () => localStorage.getItem('userWeight') || ''
+  );
+  const [userSkill, setUserSkill] = useState(
+    () => localStorage.getItem('userSkill') || ''
+  );
 
   const { data: spots } = useQuery({
     queryKey: ['spots'],
@@ -33,8 +40,11 @@ function Dashboard() {
     error,
     refetch
   } = useQuery({
-    queryKey: ['conditions', selectedSpot],
-    queryFn: () => fetchConditions(selectedSpot),
+    queryKey: ['conditions', selectedSpot, userWeight, userSkill],
+    queryFn: () => fetchConditions(selectedSpot, {
+      weight: userWeight || undefined,
+      skill: userSkill || undefined
+    }),
     refetchInterval: 10 * 60 * 1000,
   });
 
@@ -115,8 +125,49 @@ function Dashboard() {
             cacheAge={conditions.cacheAge}
             conditions={conditions.conditions}
             trend={conditions.trend}
+            boardRecommendation={conditions.boardRecommendation}
             onRefresh={handleRefresh}
           />
+
+          {/* Personalize profile */}
+          <div className="profile-section">
+            <button
+              className="profile-toggle"
+              onClick={() => setShowProfile(prev => !prev)}
+            >
+              {showProfile ? 'Hide' : 'Personalize board volume'}
+            </button>
+            {showProfile && (
+              <div className="profile-inputs">
+                <label className="profile-label">
+                  Weight (kg)
+                  <input
+                    type="number"
+                    className="profile-input"
+                    value={userWeight}
+                    onChange={(e) => { setUserWeight(e.target.value); localStorage.setItem('userWeight', e.target.value); }}
+                    placeholder="75"
+                    min="30"
+                    max="150"
+                  />
+                </label>
+                <label className="profile-label">
+                  Skill
+                  <select
+                    className="profile-input"
+                    value={userSkill}
+                    onChange={(e) => { setUserSkill(e.target.value); localStorage.setItem('userSkill', e.target.value); }}
+                  >
+                    <option value="">—</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                    <option value="expert">Expert</option>
+                  </select>
+                </label>
+              </div>
+            )}
+          </div>
 
           {/* Score Breakdown */}
           {conditions.score.breakdown && (

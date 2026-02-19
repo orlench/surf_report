@@ -352,72 +352,101 @@ function getRating(score) {
 }
 
 /**
- * Generate a human-readable explanation of conditions
+ * Generate a conversational, friendly explanation of conditions.
+ * Should sound like a surf buddy texting you about the waves.
  */
 function generateExplanation(conditions, breakdown, score) {
-  const parts = [];
   const waves = conditions.waves || {};
   const wind = conditions.wind || {};
   const swell = waves.swell || {};
 
-  // Wave size description
-  const height = waves.height?.avg;
-  if (height) {
-    if (breakdown.waveHeight >= 80) {
-      parts.push(`Great wave size at ${height}m`);
-    } else if (breakdown.waveHeight >= 50) {
-      parts.push(`Decent ${height}m waves`);
-    } else if (height < 0.3) {
-      parts.push('Essentially flat');
-    } else {
-      parts.push(`Small waves at ${height}m`);
-    }
-  } else {
-    parts.push('No wave data available');
+  const height = waves.height?.avg || 0;
+  const period = swell.period || waves.period || 0;
+  const windSpeed = wind.speed || 0;
+
+  // Body-height wave descriptions
+  const heightWord = getHeightWord(height);
+
+  // Swell quality word
+  const swellWord = period >= 12 ? 'clean groundswell'
+    : period >= 9 ? 'decent swell'
+    : period >= 6 ? 'short wind swell'
+    : 'choppy wind slop';
+
+  // Wind quality
+  const isOffshore = breakdown.windDirection >= 70;
+  const isOnshore = breakdown.windDirection < 40;
+  const isLight = breakdown.windSpeed >= 70;
+  const isCalm = breakdown.windSpeed >= 85;
+
+  // EPIC / GREAT (85+)
+  if (score >= 85) {
+    const windPhrase = isCalm ? 'glassy offshore winds' : 'clean offshore conditions';
+    return `Pumping! ${capitalize(heightWord)} waves with a ${swellWord} and ${windPhrase}. Don't even think about it — just go.`;
   }
 
-  // Period / swell quality
-  const period = swell.period || waves.period;
-  if (period) {
-    if (period >= 12) {
-      parts.push(`clean groundswell (${period}s period)`);
-    } else if (period >= 9) {
-      parts.push(`decent ${period}s period`);
-    } else if (period >= 6) {
-      parts.push(`short-period wind swell (${period}s)`);
-    } else {
-      parts.push(`very choppy ${period}s wind chop`);
-    }
+  // GREAT (75-84)
+  if (score >= 75) {
+    const windPhrase = isOffshore ? 'groomed by the offshore breeze'
+      : isLight ? 'with light winds keeping things clean'
+      : 'and the wind is cooperating';
+    return `Looking really good out there — ${heightWord} waves ${windPhrase}. Definitely worth paddling out.`;
   }
 
-  // Wind conditions
-  if (wind.speed !== null && wind.speed !== undefined) {
-    const dir = wind.direction || '';
-    if (breakdown.windSpeed >= 80 && breakdown.windDirection >= 80) {
-      parts.push('glassy with offshore wind');
-    } else if (breakdown.windSpeed >= 80) {
-      parts.push('light wind');
-    } else if (breakdown.windSpeed >= 50) {
-      if (breakdown.windDirection <= 30) {
-        parts.push(`onshore ${dir} wind at ${wind.speed} km/h`);
-      } else {
-        parts.push(`moderate ${wind.speed} km/h wind`);
-      }
-    } else {
-      if (breakdown.windDirection <= 30) {
-        parts.push(`strong onshore ${dir} wind (${wind.speed} km/h)`);
-      } else {
-        parts.push(`windy at ${wind.speed} km/h`);
-      }
-    }
-
-    // Gust note
-    if (wind.gusts && wind.gusts > wind.speed * 1.4) {
-      parts.push(`gusty to ${wind.gusts} km/h`);
-    }
+  // GOOD (65-74)
+  if (score >= 65) {
+    const bumpNote = isOnshore ? 'A few bumps from the breeze but' : '';
+    return `Solid ${heightWord} waves with a ${swellWord}. ${bumpNote ? bumpNote + ' d' : 'D'}efinitely worth a session.`;
   }
 
-  return parts.join(', ') + '.';
+  // FAIR (50-64)
+  if (score >= 50) {
+    if (height < 0.5) {
+      return `It's small out there but surfable. You'll catch some waves if you're patient.`;
+    }
+    const issue = isOnshore ? 'the onshore wind is making things messy'
+      : period < 8 ? 'the short period means the waves lack push'
+      : 'nothing to write home about';
+    return `It's okay — ${heightWord} waves but ${issue}. Worth it if you want a paddle.`;
+  }
+
+  // MARGINAL (35-49)
+  if (score >= 35) {
+    if (height < 0.4) {
+      return `Pretty small and scrappy. You might catch a few if you're on the right board, but keep expectations low.`;
+    }
+    const issue = windSpeed > 25 ? `the ${wind.direction || ''} wind is making a mess of things`
+      : period < 7 ? 'choppy wind swell with no real push'
+      : 'conditions are rough';
+    return `Meh — ${issue}. Only worth it if you're itching to get wet.`;
+  }
+
+  // POOR (20-34)
+  if (score >= 20) {
+    return `Pretty rough out there — choppy and disorganized. Only for the desperate or the optimistic.`;
+  }
+
+  // FLAT (<20)
+  if (height < 0.2) {
+    return `Basically a lake. Save your wax for another day.`;
+  }
+  return `Not much happening. Maybe go for a swim instead.`;
+}
+
+function getHeightWord(height) {
+  if (height < 0.2) return 'flat';
+  if (height < 0.4) return 'ankle-high';
+  if (height < 0.6) return 'knee-high';
+  if (height < 0.9) return 'waist-high';
+  if (height < 1.2) return 'chest-high';
+  if (height < 1.6) return 'head-high';
+  if (height < 2.2) return 'overhead';
+  if (height < 3.0) return 'double-overhead';
+  return 'triple-overhead';
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 module.exports = {

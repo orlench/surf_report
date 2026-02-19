@@ -14,11 +14,17 @@ export async function fetchSpots() {
  * Fetch conditions for a specific spot
  *
  * @param {string} spotId - Spot identifier
- * @param {boolean} refresh - Force fetch fresh data (bypass cache)
+ * @param {Object} options - Optional params
+ * @param {boolean} options.refresh - Force fetch fresh data (bypass cache)
+ * @param {number} options.weight - User weight in kg (for board volume)
+ * @param {string} options.skill - User skill level (for board volume)
  */
-export async function fetchConditions(spotId, refresh = false) {
+export async function fetchConditions(spotId, options = {}) {
   const url = `${API_BASE}/conditions/${spotId}`;
-  const params = refresh ? { refresh: 'true' } : {};
+  const params = {};
+  if (options.refresh) params.refresh = 'true';
+  if (options.weight) params.weight = options.weight;
+  if (options.skill) params.skill = options.skill;
   const response = await axios.get(url, { params });
   return response.data;
 }

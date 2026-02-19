@@ -1,6 +1,7 @@
+import { getBoardSVG } from './BoardIllustrations';
 import './ScoreDisplay.css';
 
-function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheAge, conditions, trend, onRefresh }) {
+function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheAge, conditions, trend, boardRecommendation, onRefresh }) {
   const getColorClass = (score) => {
     if (score >= 85) return 'epic';
     if (score >= 75) return 'great';
@@ -43,9 +44,40 @@ function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheA
       ? `${waves.height.avg}m`
       : null;
 
+  // Friendly wind descriptor
+  const getWindDesc = (speed) => {
+    if (!speed) return '';
+    if (speed < 10) return 'Calm';
+    if (speed < 20) return 'Light breeze';
+    if (speed < 30) return 'Breezy';
+    if (speed < 40) return 'Windy';
+    return 'Very windy';
+  };
+
+  // Friendly wetsuit hint based on water temp (Mediterranean)
+  const getWetsuitHint = (temp) => {
+    if (!temp) return '';
+    if (temp >= 24) return 'boardshorts';
+    if (temp >= 20) return 'spring suit';
+    if (temp >= 16) return '3/2 wetsuit';
+    return '4/3 wetsuit';
+  };
+
+  // Friendly period quality
+  const getPeriodDesc = (period) => {
+    if (!period) return '';
+    if (period >= 12) return 'Clean';
+    if (period >= 9) return 'Decent';
+    if (period >= 6) return 'Short';
+    return 'Choppy';
+  };
+
+  const windDesc = getWindDesc(wind?.speed);
   const windText = wind?.speed
-    ? `${wind.direction ? wind.direction + ' ' : ''}${wind.speed} km/h${wind.gusts ? ` (gusts ${wind.gusts})` : ''}`
+    ? `${windDesc} ${wind.direction ? wind.direction + ' ' : ''}${wind.speed} km/h${wind.gusts ? ` (gusts ${wind.gusts})` : ''}`
     : null;
+  const wetsuitHint = getWetsuitHint(weather?.waterTemp);
+  const periodDesc = getPeriodDesc(waves?.period);
 
   return (
     <div className={`hero ${colorClass}`}>
@@ -62,12 +94,27 @@ function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheA
       )}
 
       <div className="hero-details">
-        {waves?.period && <span className="hero-detail first">{waves.period}s period</span>}
-        {waves?.direction && <span className="hero-detail">{waves.direction} swell</span>}
+        {waves?.period && <span className="hero-detail first">{periodDesc} {waves.period}s swell</span>}
+        {waves?.direction && <span className="hero-detail">{waves.direction} direction</span>}
         {windText && <span className="hero-detail">{windText}</span>}
-        {weather?.airTemp && <span className="hero-detail">{weather.airTemp}°C air</span>}
-        {weather?.waterTemp && <span className="hero-detail">{weather.waterTemp}°C water</span>}
+        {weather?.airTemp != null && <span className="hero-detail">{weather.airTemp}°C air</span>}
+        {weather?.waterTemp != null && <span className="hero-detail">{weather.waterTemp}°C water{wetsuitHint ? ` (${wetsuitHint})` : ''}</span>}
       </div>
+
+      {boardRecommendation && (
+        <div className="hero-board-rec">
+          <div className="board-svg-wrap">
+            {getBoardSVG(boardRecommendation.boardType)}
+          </div>
+          <div className="board-rec-text">
+            <span className="board-rec-name">{boardRecommendation.boardName}</span>
+            <span className="board-rec-reason">{boardRecommendation.reason}</span>
+            {boardRecommendation.volume && (
+              <span className="board-rec-volume">~{boardRecommendation.volume.recommended}L</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {trend?.message && (
         <div className="hero-trend">
