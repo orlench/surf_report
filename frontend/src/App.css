@@ -10,8 +10,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #1b2838;
-  color: #ffffff;
+  background: #f5f7fa;
+  color: #1a2b3c;
   min-height: 100vh;
 }
 
@@ -27,12 +27,12 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 300px;
-  color: #8899aa;
+  color: #718096;
   font-size: 1rem;
 }
 
 .spinner {
-  border: 3px solid rgba(255, 255, 255, 0.08);
+  border: 3px solid rgba(0, 0, 0, 0.08);
   border-top: 3px solid #3b82f6;
   border-radius: 50%;
   width: 40px;
@@ -54,7 +54,7 @@ body {
   padding: 24px;
   margin: 20px auto;
   max-width: 600px;
-  color: #fca5a5;
+  color: #c53030;
   text-align: center;
 }
 
@@ -62,12 +62,12 @@ body {
   margin-bottom: 8px;
   font-size: 1.2rem;
   font-weight: 700;
-  color: #fca5a5;
+  color: #c53030;
 }
 
 .error p {
   margin-bottom: 16px;
-  color: #f87171;
+  color: #e53e3e;
 }
 
 .error button {

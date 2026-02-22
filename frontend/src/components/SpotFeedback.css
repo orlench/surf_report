@@ -1,7 +1,7 @@
 .spot-feedback {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .spot-feedback-header {
@@ -14,14 +14,14 @@
 .spot-feedback-label {
   font-size: 0.82rem;
   font-weight: 600;
-  color: #8899aa;
+  color: #718096;
 }
 
 .spot-feedback-badge {
   font-size: 0.7rem;
   font-weight: 600;
   color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(59, 130, 246, 0.08);
   padding: 3px 8px;
   border-radius: 10px;
 }
@@ -30,10 +30,10 @@
   width: 100%;
   min-height: 72px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.10);
   border-radius: 10px;
-  color: #c0cdd8;
+  color: #4a5568;
   font-size: 0.84rem;
   font-family: inherit;
   line-height: 1.5;
@@ -44,7 +44,7 @@
 }
 
 .spot-feedback-input::placeholder {
-  color: #445566;
+  color: #a0aec0;
   font-style: italic;
 }
 
@@ -96,13 +96,13 @@
 }
 
 .spot-feedback-tag.up {
-  background: rgba(0, 196, 140, 0.12);
-  color: #00c48c;
+  background: rgba(5, 150, 105, 0.1);
+  color: #059669;
 }
 
 .spot-feedback-tag.down {
-  background: rgba(245, 166, 35, 0.12);
-  color: #f5a623;
+  background: rgba(217, 119, 6, 0.1);
+  color: #d97706;
 }
 
 /* Recent feedback */
@@ -113,7 +113,7 @@
 .spot-feedback-recent-toggle {
   background: none;
   border: none;
-  color: #556677;
+  color: #a0aec0;
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
@@ -122,7 +122,7 @@
 }
 
 .spot-feedback-recent-toggle:hover {
-  color: #8899aa;
+  color: #718096;
 }
 
 .spot-feedback-recent-list {
@@ -134,14 +134,14 @@
 
 .spot-feedback-recent-item {
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.02);
   border-radius: 8px;
   border-left: 2px solid rgba(59, 130, 246, 0.3);
 }
 
 .spot-feedback-recent-text {
   font-size: 0.78rem;
-  color: #667788;
+  color: #718096;
   margin: 0;
   font-style: italic;
   line-height: 1.4;

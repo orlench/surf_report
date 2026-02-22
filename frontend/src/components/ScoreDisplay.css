@@ -3,8 +3,8 @@
   padding: 48px 24px 40px;
   margin-bottom: 24px;
   border-radius: 16px;
-  background: #243447;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #94a3b8;
+  border: 1px solid rgba(0, 0, 0, 0.06);
   transition: background 0.3s ease;
 }
 
@@ -297,8 +297,8 @@ select.board-personalize-input {
 }
 
 select.board-personalize-input option {
-  background: #1a2a3a;
-  color: #ffffff;
+  background: #ffffff;
+  color: #1a2b3c;
 }
 
 /* Trend indicator */
