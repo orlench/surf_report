@@ -15,6 +15,7 @@ function getRecentCustomSpots() {
 function SpotSelector({ spots, value, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [mapInitialSearch, setMapInitialSearch] = useState('');
   const [search, setSearch] = useState('');
   const [highlighted, setHighlighted] = useState(-1);
   const containerRef = useRef(null);
@@ -130,7 +131,7 @@ function SpotSelector({ spots, value, onChange }) {
         </button>
         <button
           className="spot-selector-map-btn"
-          onClick={() => { setIsOpen(false); setShowMap(true); }}
+          onClick={() => { setMapInitialSearch(''); setIsOpen(false); setShowMap(true); }}
           type="button"
           title="Find on map"
         >
@@ -171,7 +172,25 @@ function SpotSelector({ spots, value, onChange }) {
                 ))}
               </div>
             )}
-            {flatList.length === 0 && !customSpots.length && (
+            {search && flatList.length === 0 && (
+              <button
+                className="spot-selector-add-btn"
+                onClick={() => {
+                  setMapInitialSearch(search);
+                  setIsOpen(false);
+                  setSearch('');
+                  setShowMap(true);
+                }}
+                type="button"
+              >
+                <svg viewBox="0 0 20 20" fill="none" width="14" height="14">
+                  <path d="M1 4l6-2 6 2 6-2v14l-6 2-6-2-6 2V4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                  <path d="M7 2v14M13 6v14" stroke="currentColor" strokeWidth="1.5" />
+                </svg>
+                Find "{search}" on map
+              </button>
+            )}
+            {!search && flatList.length === 0 && !customSpots.length && (
               <div className="spot-selector-empty">No spots found</div>
             )}
             {Object.entries(grouped).map(([country, countrySpots]) => (
@@ -199,6 +218,7 @@ function SpotSelector({ spots, value, onChange }) {
       {/* Map overlay */}
       {showMap && (
         <SpotMap
+          initialSearch={mapInitialSearch}
           onSelect={(spot) => {
             const id = slugify(spot.name);
             // Save to recent custom spots
