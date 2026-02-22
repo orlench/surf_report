@@ -128,8 +128,8 @@ function Dashboard() {
     const now = Date.now();
     if (now - lastRefresh.current < 5000) return;
     lastRefresh.current = now;
-    refetch({ queryKey: ['conditions', selectedSpot] });
-  }, [refetch, selectedSpot]);
+    refetch();
+  }, [refetch]);
 
   const is404 = error?.response?.status === 404 || error?.message?.includes('404');
 
@@ -141,7 +141,7 @@ function Dashboard() {
             <svg className="top-bar-icon" viewBox="0 0 28 28" fill="none">
               <path d="M2 20c3-6 7-10 12-10s8 3 12 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
               <path d="M5 18c2.5-4 5.5-7 9-7s6 2 9 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
-            </svg>
+            </svg>{/* sad face for error state */}
             <span className="top-bar-title">Should I Go?</span>
           </div>
           <SpotSelector spots={spots} value={selectedSpot} onChange={handleSpotChange} />
@@ -224,10 +224,25 @@ function Dashboard() {
       {/* Top Bar */}
       <div className="top-bar">
         <div className="top-bar-brand">
-          <svg className="top-bar-icon" viewBox="0 0 28 28" fill="none">
-            <path d="M2 20c3-6 7-10 12-10s8 3 12 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-            <path d="M5 18c2.5-4 5.5-7 9-7s6 2 9 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
-          </svg>
+          {(() => {
+            const s = adjustedScore !== null ? adjustedScore : conditions?.score?.overall;
+            const happy = s != null && s >= 50;
+            return (
+              <svg className="top-bar-icon" viewBox="0 0 28 28" fill="none">
+                {happy ? (
+                  <>
+                    <path d="M2 12c3 6 7 10 12 10s8-3 12-10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                    <path d="M5 14c2.5 4 5.5 7 9 7s6-2 9-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M2 20c3-6 7-10 12-10s8 3 12 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                    <path d="M5 18c2.5-4 5.5-7 9-7s6 2 9 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+                  </>
+                )}
+              </svg>
+            );
+          })()}
           <span className="top-bar-title">Should I Go?</span>
         </div>
         <SpotSelector spots={spots} value={selectedSpot} onChange={handleSpotChange} />
