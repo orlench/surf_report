@@ -27,11 +27,11 @@ function spotsToGeoJSON(spots) {
   };
 }
 
-function SpotMap({ onSelect, onClose }) {
+function SpotMap({ onSelect, onClose, initialSearch = '' }) {
   const mapRef = useRef(null);
   const searchRef = useRef(null);
   const [viewState, setViewState] = useState(DEFAULT_VIEW);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch);
   const [searchResults, setSearchResults] = useState([]);
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [geolocated, setGeolocated] = useState(false);
