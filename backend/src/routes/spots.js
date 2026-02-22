@@ -3,9 +3,11 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 const { getAllSpots, getSpotById, getOrCreateSpot, loadPersistedSpots } = require('../config/spots');
+const { interpretFeedback } = require('../services/llm');
 const logger = require('../utils/logger');
 
 const USER_SPOTS_PATH = path.join(__dirname, '../../data/userSpots.json');
+const FEEDBACK_PATH = path.join(__dirname, '../../data/spotFeedback.json');
 
 // Load persisted user spots on startup
 try {
@@ -118,6 +120,103 @@ router.get('/:spotId', (req, res) => {
   res.json({
     success: true,
     spot
+  });
+});
+
+// --- Feedback helpers ---
+
+function loadFeedback() {
+  try {
+    if (fs.existsSync(FEEDBACK_PATH)) {
+      return JSON.parse(fs.readFileSync(FEEDBACK_PATH, 'utf8'));
+    }
+  } catch (e) { /* ignore */ }
+  return {};
+}
+
+function saveFeedback(data) {
+  fs.mkdirSync(path.dirname(FEEDBACK_PATH), { recursive: true });
+  fs.writeFileSync(FEEDBACK_PATH, JSON.stringify(data, null, 2));
+}
+
+function aggregateMultipliers(entries) {
+  if (!entries || entries.length === 0) return null;
+  const factors = ['waveHeight', 'wavePeriod', 'swellQuality', 'windSpeed', 'windDirection', 'waveDirection'];
+  const avg = {};
+  for (const f of factors) {
+    const sum = entries.reduce((acc, e) => acc + (e.multipliers[f] || 1.0), 0);
+    avg[f] = Math.round((sum / entries.length) * 100) / 100;
+  }
+  return avg;
+}
+
+/**
+ * POST /api/spots/:spotId/feedback
+ * Submit surfer feedback about a spot
+ */
+router.post('/:spotId/feedback', async (req, res) => {
+  try {
+    const { spotId } = req.params;
+    const { text } = req.body;
+
+    if (!text || typeof text !== 'string' || text.trim().length < 10) {
+      return res.status(400).json({ success: false, error: 'Feedback text must be at least 10 characters' });
+    }
+
+    const cleanText = text.slice(0, 500).trim();
+    logger.info(`[Feedback] Processing feedback for ${spotId}: "${cleanText.slice(0, 80)}..."`);
+
+    const multipliers = await interpretFeedback(cleanText);
+
+    const allFeedback = loadFeedback();
+    if (!allFeedback[spotId]) allFeedback[spotId] = [];
+
+    allFeedback[spotId].push({
+      text: cleanText,
+      multipliers,
+      timestamp: new Date().toISOString()
+    });
+
+    // Keep max 50 feedback entries per spot
+    if (allFeedback[spotId].length > 50) {
+      allFeedback[spotId] = allFeedback[spotId].slice(-50);
+    }
+
+    saveFeedback(allFeedback);
+
+    const aggregated = aggregateMultipliers(allFeedback[spotId]);
+
+    res.json({
+      success: true,
+      multipliers: aggregated,
+      feedbackCount: allFeedback[spotId].length,
+      yourMultipliers: multipliers
+    });
+  } catch (error) {
+    logger.error(`[Feedback] Error:`, error);
+    res.status(500).json({ success: false, error: 'Failed to process feedback' });
+  }
+});
+
+/**
+ * GET /api/spots/:spotId/feedback
+ * Get aggregated feedback for a spot
+ */
+router.get('/:spotId/feedback', (req, res) => {
+  const { spotId } = req.params;
+  const allFeedback = loadFeedback();
+  const entries = allFeedback[spotId] || [];
+
+  const aggregated = aggregateMultipliers(entries);
+
+  res.json({
+    success: true,
+    multipliers: aggregated,
+    feedbackCount: entries.length,
+    recentFeedback: entries.slice(-5).reverse().map(e => ({
+      text: e.text,
+      timestamp: e.timestamp
+    }))
   });
 });
 

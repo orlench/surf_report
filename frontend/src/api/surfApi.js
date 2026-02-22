@@ -57,6 +57,22 @@ export async function createSpot({ name, lat, lon, country, region }) {
 }
 
 /**
+ * Submit surfer feedback for a spot
+ */
+export async function submitFeedback(spotId, text) {
+  const response = await axios.post(`${API_BASE}/spots/${spotId}/feedback`, { text });
+  return response.data;
+}
+
+/**
+ * Fetch aggregated feedback for a spot
+ */
+export async function fetchFeedback(spotId) {
+  const response = await axios.get(`${API_BASE}/spots/${spotId}/feedback`);
+  return response.data;
+}
+
+/**
  * Fetch API health status
  */
 export async function fetchHealth() {

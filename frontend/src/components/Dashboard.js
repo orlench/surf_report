@@ -4,6 +4,7 @@ import { fetchSpots, fetchConditions, fetchConditionsByCoords, createSpot } from
 import ScoreDisplay from './ScoreDisplay';
 import SpotSelector from './SpotSelector';
 import SpotMap from './SpotMap';
+import SpotFeedback from './SpotFeedback';
 import './Dashboard.css';
 
 const LOADING_MESSAGES = [
@@ -51,6 +52,8 @@ function Dashboard() {
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [showProfile, setShowProfile] = useState(false);
   const [showErrorMap, setShowErrorMap] = useState(false);
+  const [adjustedScore, setAdjustedScore] = useState(null);
+  const [adjustedRating, setAdjustedRating] = useState(null);
   const [userWeight, setUserWeight] = useState(
     () => localStorage.getItem('userWeight') || ''
   );
@@ -60,6 +63,8 @@ function Dashboard() {
 
   const handleSpotChange = useCallback((spotId) => {
     setSelectedSpot(spotId);
+    setAdjustedScore(null);
+    setAdjustedRating(null);
     localStorage.setItem('selectedSpot', spotId);
     const url = new URL(window.location);
     url.searchParams.set('spot', spotId);
@@ -243,8 +248,8 @@ function Dashboard() {
       {conditions && !isLoading && (
         <>
           <ScoreDisplay
-            score={conditions.score.overall}
-            rating={conditions.score.rating}
+            score={adjustedScore !== null ? adjustedScore : conditions.score.overall}
+            rating={adjustedRating !== null ? adjustedRating : conditions.score.rating}
             explanation={conditions.score.explanation}
             breakdown={conditions.score.breakdown}
             timestamp={conditions.timestamp}
@@ -309,6 +314,20 @@ function Dashboard() {
                 <BreakdownBar label="Wave Direction" value={conditions.score.breakdown.waveDirection} hint={getHint('waveDirection', conditions.score.breakdown.waveDirection)} />
               </div>
             </div>
+          )}
+
+          {/* Surfer Feedback */}
+          {conditions.score.breakdown && (
+            <SpotFeedback
+              spotId={conditions.spotId || selectedSpot}
+              breakdown={conditions.score.breakdown}
+              weights={conditions.weights}
+              originalScore={conditions.score.overall}
+              onScoreAdjusted={(score, rating) => {
+                setAdjustedScore(score);
+                setAdjustedRating(rating);
+              }}
+            />
           )}
 
           {/* Sources Footer */}

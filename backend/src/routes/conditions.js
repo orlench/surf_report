@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { fetchSurfData, fetchSurfDataByCoords, aggregateData, aggregateHourlyData } = require('../services/scraper');
-const { calculateSurfScore } = require('../services/scoring');
+const { calculateSurfScore, WEIGHTS } = require('../services/scoring');
 const { generateTrend } = require('../services/trend');
 const { recommendBoard, recommendBoardPersonalized } = require('../services/boardRecommendation');
 const { getSpotName, isValidSpot, getAllSpots, getOrCreateSpot } = require('../config/spots');
@@ -76,6 +76,7 @@ router.get('/custom', async (req, res, next) => {
       spotName,
       timestamp: new Date().toISOString(),
       score,
+      weights: WEIGHTS,
       conditions: aggregated,
       trend,
       boardRecommendation: recommendBoard(aggregated),
@@ -186,6 +187,7 @@ router.get('/:spotId', async (req, res, next) => {
       spotName: getSpotName(spotId),
       timestamp: new Date().toISOString(),
       score,
+      weights: WEIGHTS,
       conditions: aggregated,
       trend,
       boardRecommendation: getBoardRec(aggregated),

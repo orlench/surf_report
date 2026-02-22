@@ -450,6 +450,7 @@ function capitalize(str) {
 }
 
 module.exports = {
+  WEIGHTS,
   calculateSurfScore,
   scoreWaveHeight,
   scoreWavePeriod,
