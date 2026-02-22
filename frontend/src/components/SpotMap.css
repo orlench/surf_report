@@ -300,6 +300,29 @@
   }
 }
 
+@media (max-width: 480px) {
+  .spot-map-search {
+    font-size: 0.86rem;
+  }
+
+  .spot-map-sheet {
+    padding: 10px 16px 20px;
+  }
+
+  .spot-map-sheet-name {
+    font-size: 1rem;
+  }
+
+  .spot-map-sheet-btn {
+    padding: 12px;
+    font-size: 0.92rem;
+  }
+
+  .spot-map-overlay:has(.spot-map-sheet) .spot-map-geolocate {
+    bottom: 180px;
+  }
+}
+
 /* Safe area for notched phones */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .spot-map-sheet {

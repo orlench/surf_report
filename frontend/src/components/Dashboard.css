@@ -296,3 +296,38 @@
     padding: 20px;
   }
 }
+
+@media (max-width: 480px) {
+  .top-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .top-bar-title {
+    font-size: 1rem;
+  }
+
+  .breakdown-section {
+    padding: 16px;
+  }
+
+  .breakdown-bar-bg {
+    margin-left: 0;
+  }
+
+  .breakdown-top {
+    gap: 8px;
+  }
+
+  .error-page {
+    padding: 32px 16px 24px;
+  }
+
+  .error-page-title {
+    font-size: 1.3rem;
+  }
+
+  .site-footer-links {
+    gap: 12px;
+  }
+}

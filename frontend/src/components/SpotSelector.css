@@ -203,3 +203,27 @@
     min-width: 200px;
   }
 }
+
+@media (max-width: 480px) {
+  .spot-selector-trigger {
+    padding: 7px 10px;
+    gap: 6px;
+  }
+
+  .spot-selector-value {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .spot-selector-dropdown {
+    min-width: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .spot-selector-map-btn {
+    width: 32px;
+    height: 32px;
+  }
+}

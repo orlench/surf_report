@@ -99,3 +99,21 @@
     font-size: 1.5rem;
   }
 }
+
+@media (max-width: 480px) {
+  .cond-card {
+    padding: 14px;
+  }
+
+  .cond-primary {
+    font-size: 1.3rem;
+  }
+
+  .cond-temps {
+    gap: 16px;
+  }
+
+  .cond-secondary span {
+    font-size: 0.8rem;
+  }
+}

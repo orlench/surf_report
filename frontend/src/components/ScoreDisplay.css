@@ -354,3 +354,62 @@ select.board-personalize-input option {
     display: none;
   }
 }
+
+@media (max-width: 480px) {
+  .hero {
+    padding: 28px 16px 24px;
+  }
+
+  .hero-question {
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+  }
+
+  .hero-verdict {
+    font-size: 1.9rem;
+  }
+
+  .hero-wave-height {
+    font-size: 2.2rem;
+  }
+
+  .hero-explanation {
+    font-size: 0.88rem;
+  }
+
+  .rating-badge {
+    font-size: 0.75rem;
+    padding: 5px 14px;
+    letter-spacing: 1px;
+  }
+
+  .hero-detail {
+    font-size: 0.82rem;
+  }
+
+  .hero-board-rec {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .board-svg-wrap {
+    height: 48px;
+  }
+
+  .board-rec-wetsuit {
+    padding-left: 10px;
+  }
+
+  .board-personalize {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .hero-trend {
+    padding: 8px 12px;
+  }
+
+  .trend-message {
+    font-size: 0.8rem;
+  }
+}
