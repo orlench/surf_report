@@ -50,20 +50,27 @@ function SpotFeedback({ spotId, breakdown, weights, originalScore, onScoreAdjust
   const [recentFeedback, setRecentFeedback] = useState([]);
   const [showRecent, setShowRecent] = useState(false);
 
-  // Load existing feedback for this spot
+  // Load user's own feedback from localStorage, server feedback for display only
   useEffect(() => {
     if (!spotId) return;
+
+    // Apply user's own multipliers from localStorage
+    try {
+      const stored = JSON.parse(localStorage.getItem(`feedback:${spotId}`));
+      if (stored?.multipliers) {
+        setMultipliers(stored.multipliers);
+        const adjusted = recalculateScore(breakdown, weights, stored.multipliers);
+        if (adjusted !== null && onScoreAdjusted) {
+          onScoreAdjusted(adjusted, getRating(adjusted));
+        }
+      }
+    } catch {} // eslint-disable-line no-empty
+
+    // Fetch server data for display only (count + recent tips)
     fetchFeedback(spotId)
       .then(data => {
         setFeedbackCount(data.feedbackCount || 0);
         setRecentFeedback(data.recentFeedback || []);
-        if (data.multipliers) {
-          setMultipliers(data.multipliers);
-          const adjusted = recalculateScore(breakdown, weights, data.multipliers);
-          if (adjusted !== null && onScoreAdjusted) {
-            onScoreAdjusted(adjusted, getRating(adjusted));
-          }
-        }
       })
       .catch(() => {});
   }, [spotId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -73,9 +80,12 @@ function SpotFeedback({ spotId, breakdown, weights, originalScore, onScoreAdjust
     setLoading(true);
     try {
       const data = await submitFeedback(spotId, text.trim());
-      if (data.multipliers) {
-        setMultipliers(data.multipliers);
-        const adjusted = recalculateScore(breakdown, weights, data.multipliers);
+      // Use user's own multipliers (not aggregated) and save to localStorage
+      const myMultipliers = data.yourMultipliers || data.multipliers;
+      if (myMultipliers) {
+        setMultipliers(myMultipliers);
+        localStorage.setItem(`feedback:${spotId}`, JSON.stringify({ multipliers: myMultipliers }));
+        const adjusted = recalculateScore(breakdown, weights, myMultipliers);
         if (adjusted !== null && onScoreAdjusted) {
           onScoreAdjusted(adjusted, getRating(adjusted));
         }

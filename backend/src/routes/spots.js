@@ -123,7 +123,17 @@ router.get('/:spotId', (req, res) => {
   });
 });
 
-// --- Feedback helpers ---
+// --- Feedback ---
+// DESIGN DECISION (2026-02-22):
+// Feedback is stored server-side (spotFeedback.json) for every submission, but
+// score adjustment currently happens only in the user's browser via localStorage.
+// Each surfer sees their own weight adjustments — not a global average.
+//
+// The backend keeps ALL submissions so we can later switch to crowd-sourced
+// aggregation (wisdom of the crowds) without losing any data. The POST response
+// returns both `multipliers` (aggregated) and `yourMultipliers` (individual) so
+// the frontend can use either approach.
+// ---
 
 function loadFeedback() {
   try {
