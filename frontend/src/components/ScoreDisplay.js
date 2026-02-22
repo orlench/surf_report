@@ -1,7 +1,7 @@
 import { getBoardSVG } from './BoardIllustrations';
 import './ScoreDisplay.css';
 
-function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheAge, conditions, trend, boardRecommendation, onRefresh }) {
+function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheAge, conditions, trend, boardRecommendation, onRefresh, userWeight, userSkill, onWeightChange, onSkillChange }) {
   const getColorClass = (score) => {
     if (score >= 85) return 'epic';
     if (score >= 75) return 'great';
@@ -128,6 +128,37 @@ function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheA
               <span className="wetsuit-temp">{weather.waterTemp}°C</span>
             </div>
           )}
+        </div>
+      )}
+
+      {boardRecommendation && (
+        <div className="board-personalize">
+          <label className="board-personalize-label">
+            <span>Weight (kg)</span>
+            <input
+              type="number"
+              className="board-personalize-input"
+              value={userWeight}
+              onChange={(e) => onWeightChange(e.target.value)}
+              placeholder="75"
+              min="30"
+              max="150"
+            />
+          </label>
+          <label className="board-personalize-label">
+            <span>Skill</span>
+            <select
+              className="board-personalize-input"
+              value={userSkill}
+              onChange={(e) => onSkillChange(e.target.value)}
+            >
+              <option value="">—</option>
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+              <option value="expert">Expert</option>
+            </select>
+          </label>
         </div>
       )}
 

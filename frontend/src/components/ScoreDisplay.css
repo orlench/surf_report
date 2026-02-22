@@ -232,6 +232,56 @@
   color: rgba(255, 255, 255, 0.6);
 }
 
+/* Board personalization */
+.board-personalize {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.board-personalize-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.board-personalize-input {
+  width: 72px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.board-personalize-input:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+select.board-personalize-input {
+  width: auto;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.5)' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+}
+
+select.board-personalize-input option {
+  background: #1a2a3a;
+  color: #ffffff;
+}
+
 /* Trend indicator */
 .hero-trend {
   background: rgba(255, 255, 255, 0.15);

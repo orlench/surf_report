@@ -50,7 +50,6 @@ function getRecentCustomSpots() {
 function Dashboard() {
   const [selectedSpot, setSelectedSpot] = useState(getInitialSpot);
   const [loadingMsg, setLoadingMsg] = useState(0);
-  const [showProfile, setShowProfile] = useState(false);
   const [showErrorMap, setShowErrorMap] = useState(false);
   const [adjustedScore, setAdjustedScore] = useState(null);
   const [adjustedRating, setAdjustedRating] = useState(null);
@@ -259,47 +258,11 @@ function Dashboard() {
             trend={conditions.trend}
             boardRecommendation={conditions.boardRecommendation}
             onRefresh={handleRefresh}
+            userWeight={userWeight}
+            userSkill={userSkill}
+            onWeightChange={(val) => { setUserWeight(val); localStorage.setItem('userWeight', val); }}
+            onSkillChange={(val) => { setUserSkill(val); localStorage.setItem('userSkill', val); }}
           />
-
-          {/* Personalize profile */}
-          <div className="profile-section">
-            <button
-              className="profile-toggle"
-              onClick={() => setShowProfile(prev => !prev)}
-            >
-              {showProfile ? 'Hide' : 'Personalize board volume'}
-            </button>
-            {showProfile && (
-              <div className="profile-inputs">
-                <label className="profile-label">
-                  Weight (kg)
-                  <input
-                    type="number"
-                    className="profile-input"
-                    value={userWeight}
-                    onChange={(e) => { setUserWeight(e.target.value); localStorage.setItem('userWeight', e.target.value); }}
-                    placeholder="75"
-                    min="30"
-                    max="150"
-                  />
-                </label>
-                <label className="profile-label">
-                  Skill
-                  <select
-                    className="profile-input"
-                    value={userSkill}
-                    onChange={(e) => { setUserSkill(e.target.value); localStorage.setItem('userSkill', e.target.value); }}
-                  >
-                    <option value="">—</option>
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                    <option value="expert">Expert</option>
-                  </select>
-                </label>
-              </div>
-            )}
-          </div>
 
           {/* Score Breakdown */}
           {conditions.score.breakdown && (
