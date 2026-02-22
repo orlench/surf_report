@@ -308,29 +308,6 @@ function Dashboard() {
             />
           )}
 
-          {/* Sources Footer */}
-          <div className="sources-footer">
-            {conditions.sources && conditions.sources.map((source, idx) => {
-              // Only allow http/https URLs
-              const isValidUrl = source.url && /^https?:\/\//i.test(source.url);
-              return isValidUrl ? (
-                <a
-                  key={idx}
-                  className={`source-pill ${source.status}`}
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {source.name}
-                </a>
-              ) : (
-                <span key={idx} className={`source-pill ${source.status}`}>
-                  {source.name}
-                </span>
-              );
-            })}
-          </div>
-
           {/* Site footer */}
           <div className="site-footer">
             <p className="site-footer-text">
