@@ -113,6 +113,10 @@ function getOrCreateSpot(id, { lat, lon, name, country }) {
   if (SPOTS[id]) return SPOTS[id];
   if (dynamicSpots[id]) return dynamicSpots[id];
 
+  const { registerCoords: regOpenMeteo } = require('../scrapers/openMeteo');
+  const { registerCoords: regMetNo } = require('../scrapers/metNo');
+  const { registerCoords: regForecast } = require('../scrapers/openMeteoForecast');
+
   dynamicSpots[id] = {
     id,
     name: name || id,
@@ -126,6 +130,10 @@ function getOrCreateSpot(id, { lat, lon, name, country }) {
       waveDirection: ['W', 'NW', 'SW']
     }
   };
+
+  regOpenMeteo(id, lat, lon);
+  regMetNo(id, lat, lon);
+  regForecast(id, lat, lon);
 
   return dynamicSpots[id];
 }
@@ -156,13 +164,17 @@ function getSpotName(spotId) {
  * Check if spot ID is valid (hardcoded only for legacy route)
  */
 function isValidSpot(spotId) {
-  return spotId in SPOTS;
+  return spotId in SPOTS || spotId in dynamicSpots;
 }
 
 /**
  * Load persisted user spots into dynamic store
  */
 function loadPersistedSpots(spotsArray) {
+  const { registerCoords: regOpenMeteo } = require('../scrapers/openMeteo');
+  const { registerCoords: regMetNo } = require('../scrapers/metNo');
+  const { registerCoords: regForecast } = require('../scrapers/openMeteoForecast');
+
   for (const s of spotsArray) {
     if (!SPOTS[s.id] && !dynamicSpots[s.id]) {
       dynamicSpots[s.id] = {
@@ -178,6 +190,9 @@ function loadPersistedSpots(spotsArray) {
           waveDirection: ['W', 'NW', 'SW']
         }
       };
+      regOpenMeteo(s.id, s.lat, s.lon);
+      regMetNo(s.id, s.lat, s.lon);
+      regForecast(s.id, s.lat, s.lon);
     }
   }
 }
