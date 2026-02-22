@@ -59,6 +59,7 @@ async function interpretFeedback(text) {
     }
 
     const multipliers = JSON.parse(content);
+    logger.info(`[LLM] Groq response: ${content}`);
     return validateMultipliers(multipliers);
   } catch (err) {
     logger.warn(`[LLM] Groq call failed: ${err.message}`);
