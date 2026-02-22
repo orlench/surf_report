@@ -117,16 +117,29 @@ function SpotSelector({ spots, value, onChange }) {
 
   return (
     <div className="spot-selector" ref={containerRef}>
-      <button
-        className="spot-selector-trigger"
-        onClick={() => setIsOpen(prev => !prev)}
-        type="button"
-      >
-        <span className="spot-selector-value">{selectedLabel}</span>
-        <svg className="spot-selector-chevron" viewBox="0 0 10 7" fill="none" data-open={isOpen}>
-          <path d="M1 1.5L5 5.5L9 1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+      <div className="spot-selector-row">
+        <button
+          className="spot-selector-trigger"
+          onClick={() => setIsOpen(prev => !prev)}
+          type="button"
+        >
+          <span className="spot-selector-value">{selectedLabel}</span>
+          <svg className="spot-selector-chevron" viewBox="0 0 10 7" fill="none" data-open={isOpen}>
+            <path d="M1 1.5L5 5.5L9 1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <button
+          className="spot-selector-map-btn"
+          onClick={() => { setIsOpen(false); setShowMap(true); }}
+          type="button"
+          title="Find on map"
+        >
+          <svg viewBox="0 0 20 20" fill="none" width="16" height="16">
+            <path d="M1 4l6-2 6 2 6-2v14l-6 2-6-2-6 2V4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M7 2v14M13 6v14" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        </button>
+      </div>
 
       {isOpen && (
         <div className="spot-selector-dropdown">
@@ -180,18 +193,6 @@ function SpotSelector({ spots, value, onChange }) {
               </div>
             ))}
           </div>
-          {/* Find on map button */}
-          <button
-            className="spot-selector-map-btn"
-            onClick={() => { setIsOpen(false); setShowMap(true); }}
-            type="button"
-          >
-            <svg viewBox="0 0 20 20" fill="none" width="14" height="14">
-              <path d="M1 4l6-2 6 2 6-2v14l-6 2-6-2-6 2V4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-              <path d="M7 2v14M13 6v14" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-            Find on map
-          </button>
         </div>
       )}
 
