@@ -293,6 +293,87 @@
   color: #3b82f6;
 }
 
+/* Error page */
+.error-page {
+  text-align: center;
+  padding: 48px 20px 32px;
+}
+
+.error-page-wave {
+  margin-bottom: 20px;
+  animation: errorBob 3s ease-in-out infinite;
+}
+
+@keyframes errorBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.error-page-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 6px;
+}
+
+.error-page-subtitle {
+  font-size: 1rem;
+  color: #8899aa;
+  margin: 0 0 16px;
+  font-weight: 500;
+}
+
+.error-page-detail {
+  font-size: 0.85rem;
+  color: #556677;
+  margin: 0 auto 28px;
+  max-width: 360px;
+  line-height: 1.5;
+}
+
+.error-page-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.error-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.error-page-btn:active {
+  transform: scale(0.97);
+}
+
+.error-page-btn.primary {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.error-page-btn.primary:hover {
+  background: #2563eb;
+}
+
+.error-page-btn.secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: #8899aa;
+}
+
+.error-page-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.10);
+  color: #ffffff;
+}
+
 @media (max-width: 768px) {
   .top-bar {
     padding: 12px 0;
