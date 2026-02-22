@@ -95,30 +95,38 @@ function SpotMap({ onSelect, onClose }) {
     flyTo(spot.lat, spot.lon);
   }, [flyTo]);
 
-  const handleMapClick = useCallback((e) => {
-    const map = mapRef.current;
-    if (!map) return;
+  const handleMapClick = useCallback(async (e) => {
+    // Get the underlying MapLibre map instance
+    const mapInstance = mapRef.current?.getMap ? mapRef.current.getMap() : mapRef.current;
+    if (!mapInstance) return;
 
     // Check for cluster click
-    const clusterFeatures = map.queryRenderedFeatures(e.point, {
+    const clusterFeatures = mapInstance.queryRenderedFeatures(e.point, {
       layers: ['clusters']
     });
     if (clusterFeatures.length > 0) {
       const cluster = clusterFeatures[0];
-      const source = map.getSource('spots');
-      source.getClusterExpansionZoom(cluster.properties.cluster_id, (err, zoom) => {
-        if (err) return;
+      const source = mapInstance.getSource('spots');
+      try {
+        const zoom = await source.getClusterExpansionZoom(cluster.properties.cluster_id);
         flyTo(
           cluster.geometry.coordinates[1],
           cluster.geometry.coordinates[0],
           zoom
         );
-      });
+      } catch (err) {
+        // Fallback: just zoom in a bit
+        flyTo(
+          cluster.geometry.coordinates[1],
+          cluster.geometry.coordinates[0],
+          (mapInstance.getZoom() || 2) + 3
+        );
+      }
       return;
     }
 
     // Check for spot pin click
-    const spotFeatures = map.queryRenderedFeatures(e.point, {
+    const spotFeatures = mapInstance.queryRenderedFeatures(e.point, {
       layers: ['spot-pins']
     });
     if (spotFeatures.length > 0) {
