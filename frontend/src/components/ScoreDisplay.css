@@ -388,21 +388,47 @@ select.board-personalize-input option {
   }
 
   .hero-board-rec {
-    padding: 10px 12px;
-    gap: 10px;
+    padding: 12px;
+    gap: 8px;
   }
 
   .board-svg-wrap {
-    height: 48px;
+    height: 44px;
+  }
+
+  .board-rec-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .board-rec-name {
+    font-size: 0.84rem;
+  }
+
+  .board-rec-reason {
+    font-size: 0.76rem;
   }
 
   .board-rec-wetsuit {
-    padding-left: 10px;
+    width: 100%;
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 8px;
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
   }
 
   .board-personalize {
     gap: 8px;
     flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .board-personalize-label {
+    font-size: 0.72rem;
   }
 
   .hero-trend {
