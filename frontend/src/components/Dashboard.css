@@ -31,6 +31,12 @@
   letter-spacing: -0.3px;
 }
 
+.top-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Loading State */
 .loading {
   display: flex;

@@ -5,6 +5,7 @@ import ScoreDisplay from './ScoreDisplay';
 import SpotSelector from './SpotSelector';
 import SpotMap from './SpotMap';
 import SpotFeedback from './SpotFeedback';
+import NotificationBell from './NotificationBell';
 import './Dashboard.css';
 
 const LOADING_MESSAGES = [
@@ -131,6 +132,11 @@ function Dashboard() {
     refetch();
   }, [refetch]);
 
+  const currentSpotName = conditions?.spotName
+    || spots?.find(s => s.id === selectedSpot)?.name
+    || getCustomSpotMeta(selectedSpot)?.name
+    || selectedSpot.replace(/_/g, ' ');
+
   const is404 = error?.response?.status === 404 || error?.message?.includes('404');
 
   if (error) {
@@ -144,7 +150,10 @@ function Dashboard() {
             </svg>{/* sad face for error state */}
             <span className="top-bar-title">Should I Go?</span>
           </div>
-          <SpotSelector spots={spots} value={selectedSpot} onChange={handleSpotChange} />
+          <div className="top-bar-actions">
+            <NotificationBell currentSpotId={selectedSpot} currentSpotName={currentSpotName} />
+            <SpotSelector spots={spots} value={selectedSpot} onChange={handleSpotChange} />
+          </div>
         </div>
 
         <div className="error-page">
@@ -245,7 +254,10 @@ function Dashboard() {
           })()}
           <span className="top-bar-title">Should I Go?</span>
         </div>
-        <SpotSelector spots={spots} value={selectedSpot} onChange={handleSpotChange} />
+        <div className="top-bar-actions">
+          <NotificationBell currentSpotId={selectedSpot} currentSpotName={currentSpotName} />
+          <SpotSelector spots={spots} value={selectedSpot} onChange={handleSpotChange} />
+        </div>
       </div>
 
       {/* Loading State */}

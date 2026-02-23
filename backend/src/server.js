@@ -54,20 +54,24 @@ app.use((req, res, next) => {
 app.use('/api/spots', require('./routes/spots'));
 app.use('/api/conditions', require('./routes/conditions'));
 app.use('/api/health', require('./routes/health'));
+app.use('/api/push', require('./routes/push'));
 
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
     name: 'Surf Report API',
     version: '1.0.0',
-    description: 'Surf conditions aggregator for Israeli beaches',
+    description: 'Surf conditions aggregator for any beach in the world',
     endpoints: {
       spots: '/api/spots',
       conditions: '/api/conditions/:spotId',
       allConditions: '/api/conditions',
-      health: '/api/health'
+      health: '/api/health',
+      pushSubscribe: '/api/push/subscribe',
+      pushUnsubscribe: '/api/push/unsubscribe',
+      pushVapidKey: '/api/push/vapid-public-key'
     },
-    documentation: 'https://github.com/YOUR_USERNAME/surf_report'
+    documentation: 'https://github.com/orlench/surf_report'
   });
 });
 
@@ -108,6 +112,10 @@ app.listen(PORT, () => {
   logger.info(`📡 API endpoint: http://localhost:${PORT}/api`);
   logger.info(`💚 Health check: http://localhost:${PORT}/api/health`);
   logger.info(`📖 Documentation: http://localhost:${PORT}/`);
+
+  // Start push notification scheduler
+  const { startNotificationScheduler } = require('./services/pushNotifier');
+  startNotificationScheduler();
 });
 
 // Graceful shutdown
