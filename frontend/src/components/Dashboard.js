@@ -11,18 +11,6 @@ import NotificationBell from './NotificationBell';
 import ProgressScreen from './ProgressScreen';
 import './Dashboard.css';
 
-const LOADING_MESSAGES = [
-  'Checking the lineup...',
-  'Reading the swell charts...',
-  'Asking the locals...',
-  'Waxing up the board...',
-  'Paddling out...',
-  'Scanning the horizon...',
-  'Feeling the wind...',
-  'No rush, good things take time...',
-  'Almost there, hang loose...',
-];
-
 function getInitialSpot() {
   const params = new URLSearchParams(window.location.search);
   const urlSpot = params.get('spot');
@@ -54,7 +42,6 @@ function getRecentCustomSpots() {
 function Dashboard() {
   const queryClient = useQueryClient();
   const [selectedSpot, setSelectedSpot] = useState(getInitialSpot);
-  const [loadingMsg, setLoadingMsg] = useState(0);
   const [showErrorMap, setShowErrorMap] = useState(false);
   const [adjustedScore, setAdjustedScore] = useState(null);
   const [adjustedRating, setAdjustedRating] = useState(null);
@@ -65,22 +52,29 @@ function Dashboard() {
     () => localStorage.getItem('userSkill') || ''
   );
 
-  // First-visit progress screen flow
-  const isFirstVisit = selectedSpot === null;
-  const [showProgressScreen, setShowProgressScreen] = useState(isFirstVisit);
-  const { location, nearestSpot, nearestSpotName, isDetecting } = useGeoDetect(isFirstVisit);
-  const { steps: sseSteps, isStreaming, finalData, startStream, cleanup } = useSSEProgress();
+  // Progress screen flow
+  const isFirstVisitRef = useRef(selectedSpot === null);
+  const [showProgressScreen, setShowProgressScreen] = useState(true);
+  const { location, nearestSpot, nearestSpotName, isDetecting } = useGeoDetect(isFirstVisitRef.current);
+  const { steps: sseSteps, isStreaming, finalData, error: sseError, startStream, cleanup } = useSSEProgress();
 
-  // When geo resolves, set spot + start SSE stream
+  // Start SSE for returning users on mount
   useEffect(() => {
-    if (!isFirstVisit || !nearestSpot || isDetecting) return;
+    if (isFirstVisitRef.current || !selectedSpot) return;
+    startStream(selectedSpot);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // When geo resolves (first visit), set spot + start SSE stream
+  useEffect(() => {
+    if (!isFirstVisitRef.current || !nearestSpot || isDetecting) return;
     setSelectedSpot(nearestSpot);
     localStorage.setItem('selectedSpot', nearestSpot);
     const url = new URL(window.location);
     url.searchParams.set('spot', nearestSpot);
     window.history.replaceState({}, '', url);
     startStream(nearestSpot);
-  }, [isFirstVisit, nearestSpot, isDetecting, startStream]);
+  }, [nearestSpot, isDetecting, startStream]);
 
   // When SSE completes, seed React Query cache and dismiss progress screen
   useEffect(() => {
@@ -96,12 +90,19 @@ function Dashboard() {
     return () => clearTimeout(timer);
   }, [finalData, queryClient, userWeight, userSkill, cleanup]);
 
-  // Build geo/spot steps for ProgressScreen
-  const geoStep = showProgressScreen ? {
+  // SSE error fallback: dismiss progress and let React Query fetch
+  useEffect(() => {
+    if (!sseError) return;
+    setShowProgressScreen(false);
+    cleanup();
+  }, [sseError, cleanup]);
+
+  // Build geo/spot steps for ProgressScreen (only on first visit)
+  const geoStep = isFirstVisitRef.current && showProgressScreen ? {
     status: isDetecting ? 'loading' : 'done',
     snippet: location ? `${location.city || ''}, ${location.country || ''}`.replace(/^, |, $/g, '') : null,
   } : null;
-  const spotStep = showProgressScreen && !isDetecting ? {
+  const spotStep = isFirstVisitRef.current && showProgressScreen && !isDetecting ? {
     status: nearestSpot ? 'done' : 'loading',
     snippet: nearestSpotName || null,
   } : null;
@@ -110,6 +111,8 @@ function Dashboard() {
     setSelectedSpot(spotId);
     setAdjustedScore(null);
     setAdjustedRating(null);
+    setShowProgressScreen(true);
+    startStream(spotId);
     localStorage.setItem('selectedSpot', spotId);
     const url = new URL(window.location);
     url.searchParams.set('spot', spotId);
@@ -120,7 +123,7 @@ function Dashboard() {
     if (customMeta) {
       createSpot(customMeta).catch(() => {});
     }
-  }, []);
+  }, [startStream]);
 
   // Keep URL in sync with selected spot
   useEffect(() => {
@@ -138,9 +141,7 @@ function Dashboard() {
 
   const {
     data: conditions,
-    isLoading,
     error,
-    refetch
   } = useQuery({
     queryKey: ['conditions', selectedSpot, userWeight, userSkill],
     queryFn: () => {
@@ -160,23 +161,15 @@ function Dashboard() {
     enabled: !!selectedSpot && !showProgressScreen,
   });
 
-  useEffect(() => {
-    if (!isLoading) return;
-    setLoadingMsg(0);
-    const interval = setInterval(() => {
-      setLoadingMsg(prev => (prev + 1) % LOADING_MESSAGES.length);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, [isLoading]);
-
   // Throttle refresh to once per 5 seconds
   const lastRefresh = useRef(0);
   const handleRefresh = useCallback(() => {
     const now = Date.now();
     if (now - lastRefresh.current < 5000) return;
     lastRefresh.current = now;
-    refetch();
-  }, [refetch]);
+    setShowProgressScreen(true);
+    startStream(selectedSpot);
+  }, [startStream, selectedSpot]);
 
   const currentSpotName = conditions?.spotName
     || spots?.find(s => s.id === selectedSpot)?.name
@@ -306,7 +299,7 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* First-visit progress screen */}
+      {/* Progress screen */}
       {showProgressScreen && (
         <ProgressScreen
           geoStep={geoStep}
@@ -316,18 +309,8 @@ function Dashboard() {
         />
       )}
 
-      {/* Loading State (returning users) */}
-      {isLoading && !showProgressScreen && (
-        <div className="loading">
-          <div className="loader-wave">
-            <span></span><span></span><span></span><span></span><span></span>
-          </div>
-          <p className="loading-msg">{LOADING_MESSAGES[loadingMsg]}</p>
-        </div>
-      )}
-
       {/* Main Content */}
-      {conditions && !isLoading && !showProgressScreen && (
+      {conditions && !showProgressScreen && (
         <>
           <ScoreDisplay
             score={adjustedScore !== null ? adjustedScore : conditions.score.overall}

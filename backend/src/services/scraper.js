@@ -20,13 +20,13 @@ async function fetchSurfData(spotId, onProgress) {
 
   // Scraper definitions with labels for progress reporting
   const scraperDefs = [
-    { name: 'open-meteo',          label: 'Checking wave height',         category: 'waves',    fn: () => scrapeOpenMeteoWrapper(spotId) },
-    { name: 'met-no',              label: 'Reading wind conditions',      category: 'wind',     fn: () => scrapeMetNoWrapper(spotId) },
-    { name: 'open-meteo-forecast', label: 'Measuring water temperature',  category: 'weather',  fn: () => scrapeOpenMeteoForecastWrapper(spotId) },
-    { name: 'beachcam',            label: 'Scanning beachcam.co.il',      category: 'visual',   fn: () => scrapeBeachCamWrapper(spotId) },
-    { name: 'surf-forecast',       label: 'Scanning surf-forecast.com',   category: 'forecast', fn: () => scrapeSurfForecastWrapper(spotId) },
-    { name: 'windfinder',          label: 'Scanning windfinder.com',      category: 'wind',     fn: () => scrapeWindFinderWrapper(spotId) },
-    { name: 'magicseaweed',        label: 'Scanning magicseaweed.com',    category: 'forecast', fn: () => scrapeMagicseaweedWrapper(spotId) },
+    { name: 'open-meteo',          label: 'Checking wave height',          category: 'waves',    fn: () => scrapeOpenMeteoWrapper(spotId) },
+    { name: 'met-no',              label: 'Reading wind conditions',       category: 'wind',     fn: () => scrapeMetNoWrapper(spotId) },
+    { name: 'open-meteo-forecast', label: 'Measuring water temperature',   category: 'weather',  fn: () => scrapeOpenMeteoForecastWrapper(spotId) },
+    { name: 'beachcam',            label: 'Checking local beach cameras',  category: 'visual',   fn: () => scrapeBeachCamWrapper(spotId) },
+    { name: 'surf-forecast',       label: 'Analyzing swell forecast',      category: 'forecast', fn: () => scrapeSurfForecastWrapper(spotId) },
+    { name: 'windfinder',          label: 'Reading wind forecast',         category: 'wind',     fn: () => scrapeWindFinderWrapper(spotId) },
+    { name: 'magicseaweed',        label: 'Checking tide and swell data',  category: 'forecast', fn: () => scrapeMagicseaweedWrapper(spotId) },
   ];
 
   let completedCount = 0;

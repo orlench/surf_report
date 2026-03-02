@@ -37,56 +37,6 @@
   gap: 6px;
 }
 
-/* Loading State */
-.loading {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  min-height: 350px;
-  gap: 24px;
-}
-
-.loader-wave {
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 40px;
-}
-
-.loader-wave span {
-  display: block;
-  width: 6px;
-  background: #3b82f6;
-  border-radius: 3px;
-  animation: wave 1.2s ease-in-out infinite;
-}
-
-.loader-wave span:nth-child(1) { height: 20px; animation-delay: 0s; }
-.loader-wave span:nth-child(2) { height: 30px; animation-delay: 0.1s; }
-.loader-wave span:nth-child(3) { height: 40px; animation-delay: 0.2s; }
-.loader-wave span:nth-child(4) { height: 30px; animation-delay: 0.3s; }
-.loader-wave span:nth-child(5) { height: 20px; animation-delay: 0.4s; }
-
-@keyframes wave {
-  0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
-  50% { transform: scaleY(1); opacity: 1; }
-}
-
-.loading-msg {
-  color: #718096;
-  font-size: 1rem;
-  font-weight: 500;
-  animation: fadeMsg 2.5s ease-in-out infinite;
-}
-
-@keyframes fadeMsg {
-  0% { opacity: 0; transform: translateY(4px); }
-  15% { opacity: 1; transform: translateY(0); }
-  85% { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-4px); }
-}
-
 /* Score Breakdown Section */
 .breakdown-section {
   background: #ffffff;
