@@ -55,7 +55,7 @@ function Dashboard() {
   // Progress screen flow
   const isFirstVisitRef = useRef(selectedSpot === null);
   const [showProgressScreen, setShowProgressScreen] = useState(true);
-  const { location, nearestSpot, nearestSpotName, isDetecting } = useGeoDetect(isFirstVisitRef.current);
+  const { location, nearestSpot, nearestSpotName, nearbySpots, isDetecting } = useGeoDetect(isFirstVisitRef.current);
   const { steps: sseSteps, isStreaming, finalData, error: sseError, startStream, cleanup } = useSSEProgress();
 
   // Start SSE for returning users on mount
@@ -192,7 +192,7 @@ function Dashboard() {
           </div>
           <div className="top-bar-actions">
             <NotificationBell currentSpotId={selectedSpot} currentSpotName={currentSpotName} />
-            <SpotSelector spots={spots} value={selectedSpot} onChange={handleSpotChange} />
+            <SpotSelector spots={spots} value={selectedSpot} onChange={handleSpotChange} nearbySpots={nearbySpots} />
           </div>
         </div>
 
@@ -232,9 +232,6 @@ function Dashboard() {
                     <path d="M7 2v14M13 6v14" stroke="currentColor" strokeWidth="1.5" />
                   </svg>
                   Find a spot on the map
-                </button>
-                <button className="error-page-btn secondary" onClick={() => handleSpotChange('netanya_kontiki')} type="button">
-                  Go to home break
                 </button>
               </>
             ) : (
@@ -296,7 +293,7 @@ function Dashboard() {
         </div>
         <div className="top-bar-actions">
           <NotificationBell currentSpotId={selectedSpot} currentSpotName={currentSpotName} />
-          <SpotSelector spots={spots} value={selectedSpot} onChange={handleSpotChange} />
+          <SpotSelector spots={spots} value={selectedSpot} onChange={handleSpotChange} nearbySpots={nearbySpots} />
         </div>
       </div>
 

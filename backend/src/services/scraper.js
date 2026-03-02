@@ -1,8 +1,4 @@
 const { scrapeBeachCam } = require('../scrapers/beachcam');
-const { scrapeSurfForecast } = require('../scrapers/surfForecast');
-const { scrapeWindFinder } = require('../scrapers/windFinder');
-const { scrapeMagicseaweed } = require('../scrapers/magicseaweed');
-const { scrapeMockData } = require('../scrapers/mockData');
 const { scrapeOpenMeteo } = require('../scrapers/openMeteo');
 const { scrapeMetNo } = require('../scrapers/metNo');
 const { scrapeOpenMeteoForecast } = require('../scrapers/openMeteoForecast');
@@ -24,9 +20,6 @@ async function fetchSurfData(spotId, onProgress) {
     { name: 'met-no',              label: 'Reading wind conditions',       category: 'wind',     fn: () => scrapeMetNoWrapper(spotId) },
     { name: 'open-meteo-forecast', label: 'Measuring water temperature',   category: 'weather',  fn: () => scrapeOpenMeteoForecastWrapper(spotId) },
     { name: 'beachcam',            label: 'Checking local beach cameras',  category: 'visual',   fn: () => scrapeBeachCamWrapper(spotId) },
-    { name: 'surf-forecast',       label: 'Analyzing swell forecast',      category: 'forecast', fn: () => scrapeSurfForecastWrapper(spotId) },
-    { name: 'windfinder',          label: 'Reading wind forecast',         category: 'wind',     fn: () => scrapeWindFinderWrapper(spotId) },
-    { name: 'magicseaweed',        label: 'Checking tide and swell data',  category: 'forecast', fn: () => scrapeMagicseaweedWrapper(spotId) },
   ];
 
   let completedCount = 0;
@@ -101,63 +94,6 @@ async function fetchSurfData(spotId, onProgress) {
  * This allows us to use partial data from successful sources
  */
 
-async function scrapeSurfForecastWrapper(spotId) {
-  try {
-    logger.info(`[Scraper] Scraping Surf-forecast for ${spotId}`);
-    const data = await scrapeSurfForecast(spotId);
-
-    if (!data) return null;
-
-    return {
-      source: 'surf-forecast',
-      data: data,
-      timestamp: new Date().toISOString(),
-      url: 'https://www.surf-forecast.com'
-    };
-  } catch (error) {
-    logger.error(`[Scraper] Surf-forecast failed:`, error.message);
-    return null;
-  }
-}
-
-async function scrapeWindFinderWrapper(spotId) {
-  try {
-    logger.info(`[Scraper] Scraping WindFinder for ${spotId}`);
-    const data = await scrapeWindFinder(spotId);
-
-    if (!data) return null;
-
-    return {
-      source: 'windfinder',
-      data: data,
-      timestamp: new Date().toISOString(),
-      url: 'https://www.windfinder.com'
-    };
-  } catch (error) {
-    logger.error(`[Scraper] WindFinder failed:`, error.message);
-    return null;
-  }
-}
-
-async function scrapeMagicseaweedWrapper(spotId) {
-  try {
-    logger.info(`[Scraper] Scraping Magicseaweed for ${spotId}`);
-    const data = await scrapeMagicseaweed(spotId);
-
-    if (!data) return null;
-
-    return {
-      source: 'magicseaweed',
-      data: data,
-      timestamp: new Date().toISOString(),
-      url: 'https://magicseaweed.com'
-    };
-  } catch (error) {
-    logger.error(`[Scraper] Magicseaweed failed:`, error.message);
-    return null;
-  }
-}
-
 async function scrapeBeachCamWrapper(spotId) {
   try {
     logger.info(`[Scraper] Scraping BeachCam for ${spotId}`);
@@ -173,24 +109,6 @@ async function scrapeBeachCamWrapper(spotId) {
     };
   } catch (error) {
     logger.error(`[Scraper] BeachCam failed:`, error.message);
-    return null;
-  }
-}
-
-async function scrapeMockDataWrapper(spotId) {
-  try {
-    logger.info(`[Scraper] Getting mock data for ${spotId}`);
-    const data = await scrapeMockData(spotId);
-
-    if (!data) return null;
-
-    return {
-      source: 'mock-data',
-      data: data,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    logger.error(`[Scraper] Mock data failed:`, error.message);
     return null;
   }
 }
@@ -507,10 +425,10 @@ function aggregateHourlyData(sources) {
  * @param {string} spotId - Spot identifier (for caching/logging)
  * @returns {Promise<Array>} - Array of scraped data
  */
-async function fetchSurfDataByCoords(lat, lon, spotId) {
+async function fetchSurfDataByCoords(lat, lon, spotId, onProgress) {
   logger.info(`[Scraper] Fetching data by coords for ${spotId} (${lat}, ${lon})`);
 
-  // Temporarily register coordinates for this spot in each coordinate-based scraper
+  // Register coordinates for this spot in each coordinate-based scraper
   const { registerCoords: regOpenMeteo } = require('../scrapers/openMeteo');
   const { registerCoords: regMetNo } = require('../scrapers/metNo');
   const { registerCoords: regForecast } = require('../scrapers/openMeteoForecast');
@@ -519,24 +437,8 @@ async function fetchSurfDataByCoords(lat, lon, spotId) {
   regMetNo(spotId, lat, lon);
   regForecast(spotId, lat, lon);
 
-  // Run coordinate-based scrapers only
-  const scrapers = [
-    scrapeOpenMeteoWrapper(spotId),
-    scrapeMetNoWrapper(spotId),
-    scrapeOpenMeteoForecastWrapper(spotId),
-  ];
-
-  const results = await Promise.allSettled(scrapers);
-  const successfulData = results
-    .filter(r => r.status === 'fulfilled' && r.value !== null)
-    .map(r => r.value);
-
-  if (successfulData.length === 0) {
-    throw new Error('All coordinate-based scrapers failed');
-  }
-
-  logger.info(`[Scraper] Custom spot: ${successfulData.length}/${scrapers.length} sources succeeded`);
-  return successfulData;
+  // Delegate to main fetch path (coords are now registered)
+  return fetchSurfData(spotId, onProgress);
 }
 
 /**

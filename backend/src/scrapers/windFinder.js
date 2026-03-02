@@ -6,12 +6,7 @@ const logger = require('../utils/logger');
  * Provides: wind speed, direction, gusts, air temperature
  */
 
-const SPOT_URLS = {
-  herzliya_marina: 'https://www.windfinder.com/forecast/herzliya_marina',
-  netanya_kontiki: 'https://www.windfinder.com/forecast/netanya',
-  tel_aviv_maaravi: 'https://www.windfinder.com/forecast/jaffa_tel_aviv_israel',
-  ocean_beach_sf: 'https://www.windfinder.com/forecast/ocean_beach'
-};
+const SPOT_URLS = {};
 
 async function scrapeWindFinder(spotId) {
   const url = SPOT_URLS[spotId];

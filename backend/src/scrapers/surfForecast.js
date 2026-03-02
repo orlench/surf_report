@@ -6,12 +6,7 @@ const logger = require('../utils/logger');
  * Provides: wave height, period, wind speed/direction, swell data
  */
 
-const SPOT_URLS = {
-  herzliya_marina: 'https://www.surf-forecast.com/breaks/Haambatia-Herzliya/forecasts/latest/six_day',
-  netanya_kontiki: 'https://www.surf-forecast.com/breaks/Netanya/forecasts/latest/six_day',
-  tel_aviv_maaravi: 'https://www.surf-forecast.com/breaks/Hof-Maravi/forecasts/latest/six_day',
-  ocean_beach_sf: 'https://www.surf-forecast.com/breaks/Ocean-Beach/forecasts/latest/six_day'
-};
+const SPOT_URLS = {};
 
 async function scrapeSurfForecast(spotId) {
   const url = SPOT_URLS[spotId];

@@ -7,9 +7,19 @@ const { interpretFeedback } = require('../services/llm');
 const logger = require('../utils/logger');
 
 const USER_SPOTS_PATH = path.join(__dirname, '../../data/userSpots.json');
+const DEFAULT_SPOTS_PATH = path.join(__dirname, '../../data/defaultSpots.json');
 const FEEDBACK_PATH = path.join(__dirname, '../../data/spotFeedback.json');
 
-// Load persisted user spots on startup
+// Load default spots first (global database)
+try {
+  const data = JSON.parse(fs.readFileSync(DEFAULT_SPOTS_PATH, 'utf8'));
+  loadPersistedSpots(data);
+  logger.info(`[Spots] Loaded ${data.length} default spots`);
+} catch (e) {
+  logger.warn(`[Spots] Failed to load default spots: ${e.message}`);
+}
+
+// Load persisted user spots (map-discovered)
 try {
   if (fs.existsSync(USER_SPOTS_PATH)) {
     const data = JSON.parse(fs.readFileSync(USER_SPOTS_PATH, 'utf8'));

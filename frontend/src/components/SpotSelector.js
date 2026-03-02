@@ -12,7 +12,7 @@ function getRecentCustomSpots() {
   } catch { return []; }
 }
 
-function SpotSelector({ spots, value, onChange }) {
+function SpotSelector({ spots, value, onChange, nearbySpots = [] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [mapInitialSearch, setMapInitialSearch] = useState('');
@@ -28,8 +28,21 @@ function SpotSelector({ spots, value, onChange }) {
   const customMatch = customSpots.find(s => s.id === value);
   const selectedLabel = selectedSpot ? selectedSpot.name : (customMatch ? customMatch.name : value);
 
+  // Build nearby spot IDs set for deduplication
+  const nearbyIds = useMemo(() => new Set(nearbySpots.map(s => s.id)), [nearbySpots]);
+
   // Group and filter spots
-  const { grouped, flatList } = useMemo(() => {
+  const { grouped, flatList, recentFiltered } = useMemo(() => {
+    if (!search && nearbySpots.length > 0) {
+      // Geo resolved: show nearbySpots + recent custom spots (deduped)
+      const flat = [];
+      nearbySpots.forEach(s => flat.push(s));
+      const recent = customSpots.filter(cs => !nearbyIds.has(cs.id)).slice(0, 5);
+      recent.forEach(cs => flat.push(cs));
+      return { grouped: {}, flatList: flat, recentFiltered: recent };
+    }
+
+    // Searching, or geo not yet resolved: filter all spots by name/country
     const filtered = (spots || []).filter(spot => {
       if (!search) return true;
       const q = search.toLowerCase();
@@ -45,12 +58,15 @@ function SpotSelector({ spots, value, onChange }) {
     });
 
     const flat = [];
+    // Include custom spots in flatList for keyboard nav (fallback, no search)
+    const recent = !search ? customSpots.slice(0, 5) : [];
+    recent.forEach(cs => flat.push(cs));
     Object.entries(g).forEach(([, countrySpots]) => {
       countrySpots.forEach(spot => flat.push(spot));
     });
 
-    return { grouped: g, flatList: flat };
-  }, [spots, search]);
+    return { grouped: g, flatList: flat, recentFiltered: recent };
+  }, [spots, search, nearbySpots, nearbyIds, customSpots]);
 
   // Close on outside click
   useEffect(() => {
@@ -156,22 +172,50 @@ function SpotSelector({ spots, value, onChange }) {
             />
           </div>
           <div className="spot-selector-list" ref={listRef}>
-            {/* Recent custom spots */}
-            {!search && customSpots.length > 0 && (
+            {/* Default view: Near you + Recent */}
+            {!search && nearbySpots.length > 0 && (
               <div>
-                <div className="spot-selector-group">Recent</div>
-                {customSpots.slice(0, 5).map(cs => (
-                  <button
-                    key={cs.id}
-                    className={`spot-option${cs.id === value ? ' selected' : ''}`}
-                    onClick={() => handleSelect(cs.id)}
-                    type="button"
-                  >
-                    {cs.name}
-                  </button>
-                ))}
+                <div className="spot-selector-group">Near you</div>
+                {nearbySpots.map(spot => {
+                  const idx = flatList.indexOf(spot);
+                  return (
+                    <button
+                      key={spot.id}
+                      className={`spot-option${spot.id === value ? ' selected' : ''}${idx === highlighted ? ' highlighted' : ''}`}
+                      onClick={() => handleSelect(spot.id)}
+                      type="button"
+                    >
+                      <span>{spot.name}</span>
+                      {spot.distance != null && (
+                        <span className="spot-option-distance">{spot.distance} km</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
+            {!search && recentFiltered.length > 0 && (
+              <div>
+                <div className="spot-selector-group">Recent</div>
+                {recentFiltered.map(cs => {
+                  const idx = flatList.indexOf(cs);
+                  return (
+                    <button
+                      key={cs.id}
+                      className={`spot-option${cs.id === value ? ' selected' : ''}${idx === highlighted ? ' highlighted' : ''}`}
+                      onClick={() => handleSelect(cs.id)}
+                      type="button"
+                    >
+                      {cs.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {flatList.length === 0 && !search && (
+              <div className="spot-selector-empty">No spots found</div>
+            )}
+            {/* Search results grouped by country (also fallback when geo not loaded) */}
             {search && flatList.length === 0 && (
               <button
                 className="spot-selector-add-btn"
@@ -189,9 +233,6 @@ function SpotSelector({ spots, value, onChange }) {
                 </svg>
                 Find "{search}" on map
               </button>
-            )}
-            {!search && flatList.length === 0 && !customSpots.length && (
-              <div className="spot-selector-empty">No spots found</div>
             )}
             {Object.entries(grouped).map(([country, countrySpots]) => (
               <div key={country}>

@@ -2,19 +2,19 @@ import { useState, useEffect } from 'react';
 import { fetchNearestSpot } from '../api/surfApi';
 
 /**
- * Detects the visitor's location via IP geolocation and returns the nearest spot.
- * Only fires when `enabled` is true (i.e. no selectedSpot in localStorage).
+ * Detects the visitor's location via IP geolocation.
+ * Always fetches on mount to populate nearbySpots for the dropdown.
+ * When `autoSelect` is true, also sets nearestSpot for auto-selection (first visit).
  */
-export default function useGeoDetect(enabled) {
+export default function useGeoDetect(autoSelect) {
   const [location, setLocation] = useState(null);
   const [nearestSpot, setNearestSpot] = useState(null);
   const [nearestSpotName, setNearestSpotName] = useState(null);
+  const [nearbySpots, setNearbySpots] = useState([]);
   const [isDetecting, setIsDetecting] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!enabled) return;
-
     let cancelled = false;
     setIsDetecting(true);
 
@@ -22,22 +22,22 @@ export default function useGeoDetect(enabled) {
       .then((data) => {
         if (cancelled) return;
         setLocation(data.location);
-        setNearestSpot(data.nearestSpot);
-        setNearestSpotName(data.nearestSpotName);
+        setNearbySpots(data.nearbySpots || []);
+        if (autoSelect) {
+          setNearestSpot(data.nearestSpot);
+          setNearestSpotName(data.nearestSpotName);
+        }
       })
       .catch((err) => {
         if (cancelled) return;
         setError(err);
-        // Fallback to default spot
-        setNearestSpot('netanya_kontiki');
-        setNearestSpotName('Netanya Kontiki');
       })
       .finally(() => {
         if (!cancelled) setIsDetecting(false);
       });
 
     return () => { cancelled = true; };
-  }, [enabled]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { location, nearestSpot, nearestSpotName, isDetecting, error };
+  return { location, nearestSpot, nearestSpotName, nearbySpots, isDetecting, error };
 }

@@ -1,0 +1,74 @@
+[
+  { "id": "herzliya_marina", "name": "Herzliya Marina", "lat": 32.1667, "lon": 34.8000, "country": "Israel" },
+  { "id": "netanya_kontiki", "name": "Netanya Kontiki", "lat": 32.3275, "lon": 34.8556, "country": "Israel" },
+  { "id": "tel_aviv_maaravi", "name": "Tel Aviv Maaravi", "lat": 32.0602, "lon": 34.7588, "country": "Israel" },
+  { "id": "bat_yam", "name": "Bat Yam", "lat": 32.0167, "lon": 34.7500, "country": "Israel" },
+  { "id": "ashkelon", "name": "Ashkelon", "lat": 31.6658, "lon": 34.5505, "country": "Israel" },
+  { "id": "haifa_dado", "name": "Haifa Dado Beach", "lat": 32.8047, "lon": 34.9583, "country": "Israel" },
+  { "id": "caesarea", "name": "Caesarea", "lat": 32.4996, "lon": 34.8878, "country": "Israel" },
+  { "id": "ashdod", "name": "Ashdod", "lat": 31.8000, "lon": 34.6333, "country": "Israel" },
+
+  { "id": "pipeline", "name": "Pipeline", "lat": 21.6641, "lon": -158.0534, "country": "USA" },
+  { "id": "sunset_beach", "name": "Sunset Beach", "lat": 21.6786, "lon": -158.0428, "country": "USA" },
+  { "id": "waimea_bay", "name": "Waimea Bay", "lat": 21.6422, "lon": -158.0658, "country": "USA" },
+  { "id": "honolua_bay", "name": "Honolua Bay", "lat": 21.0142, "lon": -156.6381, "country": "USA" },
+
+  { "id": "ocean_beach_sf", "name": "Ocean Beach SF", "lat": 37.7604, "lon": -122.5107, "country": "USA" },
+  { "id": "mavericks", "name": "Mavericks", "lat": 37.4937, "lon": -122.4963, "country": "USA" },
+  { "id": "steamer_lane", "name": "Steamer Lane", "lat": 36.9514, "lon": -122.0264, "country": "USA" },
+  { "id": "trestles", "name": "Trestles", "lat": 33.3822, "lon": -117.5889, "country": "USA" },
+  { "id": "huntington_beach", "name": "Huntington Beach", "lat": 33.6553, "lon": -117.9988, "country": "USA" },
+  { "id": "rincon", "name": "Rincon", "lat": 34.3731, "lon": -119.4781, "country": "USA" },
+  { "id": "blacks_beach", "name": "Blacks Beach", "lat": 32.8867, "lon": -117.2536, "country": "USA" },
+  { "id": "malibu_surfrider", "name": "Malibu Surfrider", "lat": 34.0361, "lon": -118.6778, "country": "USA" },
+
+  { "id": "cocoa_beach", "name": "Cocoa Beach", "lat": 28.3200, "lon": -80.6076, "country": "USA" },
+  { "id": "outer_banks", "name": "Outer Banks", "lat": 35.9082, "lon": -75.6757, "country": "USA" },
+
+  { "id": "nazare", "name": "Nazare", "lat": 39.6024, "lon": -9.0712, "country": "Portugal" },
+  { "id": "peniche_supertubos", "name": "Peniche Supertubos", "lat": 39.3474, "lon": -9.3675, "country": "Portugal" },
+  { "id": "ericeira", "name": "Ericeira", "lat": 38.9631, "lon": -9.4207, "country": "Portugal" },
+  { "id": "sagres", "name": "Sagres", "lat": 37.0092, "lon": -8.9400, "country": "Portugal" },
+
+  { "id": "mundaka", "name": "Mundaka", "lat": 43.4072, "lon": -2.6981, "country": "Spain" },
+  { "id": "san_sebastian_zurriola", "name": "San Sebastian Zurriola", "lat": 43.3256, "lon": -1.9761, "country": "Spain" },
+  { "id": "barcelona_barceloneta", "name": "Barcelona Barceloneta", "lat": 41.3784, "lon": 2.1925, "country": "Spain" },
+
+  { "id": "hossegor", "name": "Hossegor", "lat": 43.6644, "lon": -1.4419, "country": "France" },
+  { "id": "biarritz", "name": "Biarritz Grande Plage", "lat": 43.4832, "lon": -1.5586, "country": "France" },
+  { "id": "lacanau", "name": "Lacanau", "lat": 45.0000, "lon": -1.2000, "country": "France" },
+
+  { "id": "fistral_beach", "name": "Fistral Beach", "lat": 50.4150, "lon": -5.0975, "country": "UK" },
+  { "id": "bundoran", "name": "Bundoran", "lat": 54.4750, "lon": -8.2819, "country": "Ireland" },
+
+  { "id": "bells_beach", "name": "Bells Beach", "lat": -38.3686, "lon": 144.2811, "country": "Australia" },
+  { "id": "snapper_rocks", "name": "Snapper Rocks", "lat": -28.1650, "lon": 153.5483, "country": "Australia" },
+  { "id": "margaret_river", "name": "Margaret River", "lat": -33.9608, "lon": 114.9906, "country": "Australia" },
+  { "id": "bondi_beach", "name": "Bondi Beach", "lat": -33.8908, "lon": 151.2743, "country": "Australia" },
+  { "id": "noosa_heads", "name": "Noosa Heads", "lat": -26.3867, "lon": 153.0900, "country": "Australia" },
+
+  { "id": "uluwatu", "name": "Uluwatu", "lat": -8.8156, "lon": 115.0847, "country": "Indonesia" },
+  { "id": "padang_padang", "name": "Padang Padang", "lat": -8.8119, "lon": 115.0950, "country": "Indonesia" },
+  { "id": "desert_point", "name": "Desert Point", "lat": -8.7467, "lon": 115.8417, "country": "Indonesia" },
+  { "id": "g_land", "name": "G-Land", "lat": -8.6833, "lon": 114.3667, "country": "Indonesia" },
+
+  { "id": "jeffreys_bay", "name": "Jeffreys Bay", "lat": -34.0400, "lon": 24.9300, "country": "South Africa" },
+  { "id": "dungeons", "name": "Dungeons", "lat": -34.0833, "lon": 18.3333, "country": "South Africa" },
+  { "id": "taghazout", "name": "Taghazout", "lat": 30.5444, "lon": -9.7117, "country": "Morocco" },
+
+  { "id": "puerto_escondido", "name": "Puerto Escondido", "lat": 15.8619, "lon": -97.0725, "country": "Mexico" },
+  { "id": "playa_hermosa", "name": "Playa Hermosa", "lat": 9.5583, "lon": -84.5750, "country": "Costa Rica" },
+  { "id": "witchs_rock", "name": "Witchs Rock", "lat": 10.8375, "lon": -85.7958, "country": "Costa Rica" },
+
+  { "id": "punta_de_lobos", "name": "Punta de Lobos", "lat": -34.4208, "lon": -72.0403, "country": "Chile" },
+  { "id": "florianopolis", "name": "Florianopolis", "lat": -27.6042, "lon": -48.4897, "country": "Brazil" },
+
+  { "id": "teahupoo", "name": "Teahupoo", "lat": -17.8368, "lon": -149.2556, "country": "French Polynesia" },
+  { "id": "cloudbreak", "name": "Cloudbreak", "lat": -17.8833, "lon": 177.1833, "country": "Fiji" },
+
+  { "id": "shonan", "name": "Shonan", "lat": 35.3192, "lon": 139.4900, "country": "Japan" },
+  { "id": "chiba", "name": "Chiba", "lat": 35.1356, "lon": 140.3286, "country": "Japan" },
+
+  { "id": "siargao_cloud_9", "name": "Siargao Cloud 9", "lat": 9.8136, "lon": 126.1536, "country": "Philippines" },
+  { "id": "arugam_bay", "name": "Arugam Bay", "lat": 6.8417, "lon": 81.8361, "country": "Sri Lanka" }
+]

@@ -120,7 +120,9 @@
 
 /* Spot option */
 .spot-option {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
   text-align: left;
   background: none;
@@ -131,6 +133,14 @@
   padding: 7px 14px;
   cursor: pointer;
   transition: background 0.1s ease, color 0.1s ease;
+}
+
+.spot-option-distance {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: #a0aec0;
+  margin-left: 12px;
+  flex-shrink: 0;
 }
 
 .spot-option:hover,

@@ -38,7 +38,8 @@ Thumbs.db
 .cache/
 .parcel-cache/
 
-# User-generated data (persisted spots)
-backend/data/
+# User-generated data (persisted spots, feedback)
+backend/data/userSpots.json
+backend/data/spotFeedback.json
 
 .vercel

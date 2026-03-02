@@ -1,6 +1,6 @@
 import './ProgressScreen.css';
 
-const TOTAL_SCRAPERS = 7;
+const TOTAL_SCRAPERS = 4;
 
 // Pre-defined step labels shown while waiting for real progress events
 const DEFAULT_STEPS = [

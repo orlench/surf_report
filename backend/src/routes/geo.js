@@ -28,12 +28,21 @@ router.get('/', (req, res) => {
 
   if (!geo || !geo.ll) {
     logger.warn(`[Geo] Could not geolocate IP: ${ip}`);
+    const allSpots = getAllSpots();
+    const fallbackNearby = allSpots.slice(0, 6).map(s => ({
+      id: s.id,
+      name: s.name,
+      country: s.country || '',
+      distance: null,
+    }));
+    const first = allSpots[0];
     return res.json({
       success: true,
       detected: false,
       location: null,
-      nearestSpot: 'netanya_kontiki',
-      nearestSpotName: 'Netanya Kontiki',
+      nearestSpot: first ? first.id : null,
+      nearestSpotName: first ? first.name : null,
+      nearbySpots: fallbackNearby,
     });
   }
 
@@ -44,24 +53,28 @@ router.get('/', (req, res) => {
   logger.info(`[Geo] Resolved: ${city}, ${country} (${userLat}, ${userLon})`);
 
   const spots = getAllSpots();
-  let nearest = null;
-  let minDist = Infinity;
+  const withDist = spots.map(spot => ({
+    spot,
+    distance: haversine(userLat, userLon, spot.location.lat, spot.location.lon),
+  }));
+  withDist.sort((a, b) => a.distance - b.distance);
 
-  for (const spot of spots) {
-    const dist = haversine(userLat, userLon, spot.location.lat, spot.location.lon);
-    if (dist < minDist) {
-      minDist = dist;
-      nearest = spot;
-    }
-  }
+  const nearest = withDist[0];
+  const nearbySpots = withDist.slice(0, 6).map(s => ({
+    id: s.spot.id,
+    name: s.spot.name,
+    country: s.spot.country || '',
+    distance: Math.round(s.distance),
+  }));
 
   res.json({
     success: true,
     detected: true,
     location: { city, country },
-    nearestSpot: nearest.id,
-    nearestSpotName: nearest.name,
-    distance: Math.round(minDist),
+    nearestSpot: nearest.spot.id,
+    nearestSpotName: nearest.spot.name,
+    distance: Math.round(nearest.distance),
+    nearbySpots,
   });
 });
 
