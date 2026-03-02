@@ -59,7 +59,7 @@ export default function useSSEProgress() {
     es.addEventListener('error', (e) => {
       // Ignore error events that fire after a successful complete
       // (browser fires error when server closes the SSE connection)
-      if (completed || es.readyState === EventSource.CLOSED) return;
+      if (completed) return;
       try {
         const data = JSON.parse(e.data);
         setError(data.message || 'Stream failed');
@@ -71,7 +71,7 @@ export default function useSSEProgress() {
     });
 
     es.onerror = () => {
-      if (completed || es.readyState === EventSource.CLOSED) return;
+      if (completed) return;
       setError('Connection lost');
       setIsStreaming(false);
       es.close();
