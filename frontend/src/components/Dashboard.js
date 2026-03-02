@@ -74,6 +74,7 @@ function Dashboard() {
     url.searchParams.set('spot', nearestSpot);
     window.history.replaceState({}, '', url);
     startStream(nearestSpot);
+    isFirstVisitRef.current = false;
   }, [nearestSpot, isDetecting, startStream]);
 
   // When SSE completes, seed React Query cache and dismiss progress screen
