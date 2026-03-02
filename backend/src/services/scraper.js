@@ -15,21 +15,55 @@ const logger = require('../utils/logger');
  * @param {string} spotId - Spot identifier
  * @returns {Promise<Array>} - Array of scraped data from different sources
  */
-async function fetchSurfData(spotId) {
+async function fetchSurfData(spotId, onProgress) {
   logger.info(`[Scraper] Fetching surf data for ${spotId}`);
 
-  // Run all scrapers in parallel - use all available data even if partial
-  const scrapers = [
-    // Free JSON API sources (no auth)
-    scrapeOpenMeteoWrapper(spotId),         // Wave + swell data (Open-Meteo Marine)
-    scrapeMetNoWrapper(spotId),             // Wind/weather data (MET.NO)
-    scrapeOpenMeteoForecastWrapper(spotId), // Wind data (Open-Meteo ECMWF atmospheric)
-    // Web scrapers via Bright Data MCP
-    scrapeBeachCamWrapper(spotId),          // Israeli beach conditions (beachcam.co.il)
-    scrapeSurfForecastWrapper(spotId),      // surf-forecast.com - processed surf data
-    scrapeWindFinderWrapper(spotId),        // windfinder.com - wind specialist
-    scrapeMagicseaweedWrapper(spotId),      // magicseaweed.com - surf forecast
+  // Scraper definitions with labels for progress reporting
+  const scraperDefs = [
+    { name: 'open-meteo',          label: 'Checking wave height',         category: 'waves',    fn: () => scrapeOpenMeteoWrapper(spotId) },
+    { name: 'met-no',              label: 'Reading wind conditions',      category: 'wind',     fn: () => scrapeMetNoWrapper(spotId) },
+    { name: 'open-meteo-forecast', label: 'Measuring water temperature',  category: 'weather',  fn: () => scrapeOpenMeteoForecastWrapper(spotId) },
+    { name: 'beachcam',            label: 'Scanning beachcam.co.il',      category: 'visual',   fn: () => scrapeBeachCamWrapper(spotId) },
+    { name: 'surf-forecast',       label: 'Scanning surf-forecast.com',   category: 'forecast', fn: () => scrapeSurfForecastWrapper(spotId) },
+    { name: 'windfinder',          label: 'Scanning windfinder.com',      category: 'wind',     fn: () => scrapeWindFinderWrapper(spotId) },
+    { name: 'magicseaweed',        label: 'Scanning magicseaweed.com',    category: 'forecast', fn: () => scrapeMagicseaweedWrapper(spotId) },
   ];
+
+  let completedCount = 0;
+  const total = scraperDefs.length;
+
+  // Create promises, optionally with progress callbacks
+  const scrapers = scraperDefs.map(def => {
+    const promise = def.fn();
+
+    if (onProgress) {
+      promise.then(result => {
+        completedCount++;
+        onProgress({
+          type: 'scraper_complete',
+          name: def.name,
+          label: def.label,
+          success: result !== null,
+          snippet: extractSnippet(result, def.category),
+          completed: completedCount,
+          total,
+        });
+      }).catch(() => {
+        completedCount++;
+        onProgress({
+          type: 'scraper_complete',
+          name: def.name,
+          label: def.label,
+          success: false,
+          snippet: null,
+          completed: completedCount,
+          total,
+        });
+      });
+    }
+
+    return promise;
+  });
 
   // Execute all scrapers in parallel
   const results = await Promise.allSettled(scrapers);
@@ -503,6 +537,28 @@ async function fetchSurfDataByCoords(lat, lon, spotId) {
 
   logger.info(`[Scraper] Custom spot: ${successfulData.length}/${scrapers.length} sources succeeded`);
   return successfulData;
+}
+
+/**
+ * Extract a human-readable snippet from a scraper result for progress display
+ */
+function extractSnippet(result, category) {
+  if (!result || !result.data) return null;
+  const d = result.data;
+  switch (category) {
+    case 'waves':
+      if (d.waves?.height?.avg) return `${d.waves.height.avg}m`;
+      return null;
+    case 'wind':
+      if (d.wind?.speed) return `${d.wind.speed} km/h ${d.wind.direction || ''}`.trim();
+      return null;
+    case 'weather':
+      if (d.weather?.waterTemp) return `${d.weather.waterTemp}C`;
+      if (d.weather?.airTemp) return `${d.weather.airTemp}C`;
+      return null;
+    default:
+      return 'Data received';
+  }
 }
 
 module.exports = {

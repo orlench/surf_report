@@ -1,0 +1,155 @@
+.progress-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 40px 20px;
+}
+
+.progress-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.progress-header h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1a2b3c;
+  margin: 0 0 4px;
+}
+
+.progress-header p {
+  font-size: 0.85rem;
+  color: #718096;
+  margin: 0;
+  font-weight: 500;
+}
+
+.progress-steps {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  opacity: 0;
+  transform: translateY(8px);
+  animation: stepAppear 0.3s ease forwards;
+}
+
+@keyframes stepAppear {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.progress-step-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.progress-step-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-step-icon.done {
+  color: #00c48c;
+}
+
+.progress-step-icon.failed {
+  color: #ff3b30;
+}
+
+.progress-step-icon.loading {
+  color: #3b82f6;
+}
+
+.progress-step-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(59, 130, 246, 0.2);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.progress-step-label {
+  font-size: 0.88rem;
+  color: #1a2b3c;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.progress-step-snippet {
+  font-size: 0.82rem;
+  color: #718096;
+  font-weight: 500;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+/* Progress bar */
+.progress-bar-container {
+  width: 100%;
+  max-width: 420px;
+  margin-top: 24px;
+}
+
+.progress-bar-bg {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.progress-bar-label {
+  font-size: 0.75rem;
+  color: #a0aec0;
+  text-align: center;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+@media (max-width: 480px) {
+  .progress-screen {
+    padding: 24px 16px;
+    min-height: 320px;
+  }
+
+  .progress-step-label {
+    font-size: 0.82rem;
+  }
+
+  .progress-step-snippet {
+    font-size: 0.78rem;
+  }
+}

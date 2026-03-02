@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -55,6 +56,7 @@ app.use('/api/spots', require('./routes/spots'));
 app.use('/api/conditions', require('./routes/conditions'));
 app.use('/api/health', require('./routes/health'));
 app.use('/api/push', require('./routes/push'));
+app.use('/api/nearest-spot', require('./routes/geo'));
 
 // Root endpoint
 app.get('/', (req, res) => {

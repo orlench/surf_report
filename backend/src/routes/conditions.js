@@ -99,6 +99,96 @@ router.get('/custom', async (req, res, next) => {
 });
 
 /**
+ * GET /api/conditions/:spotId/stream
+ * SSE endpoint — streams scraper progress events in real time.
+ * If cache is warm, sends a single 'complete' event immediately.
+ */
+router.get('/:spotId/stream', async (req, res) => {
+  const { spotId } = req.params;
+
+  if (!isValidSpot(spotId)) {
+    return res.status(404).json({ success: false, error: `Invalid spot: ${spotId}` });
+  }
+
+  // SSE headers
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+
+  const sendEvent = (eventType, data) => {
+    res.write(`event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  // Fast path: cache is warm
+  const cached = cache.get(`conditions:${spotId}`);
+  if (cached) {
+    const cacheAge = cache.getAge(`conditions:${spotId}`);
+    sendEvent('complete', {
+      ...cached,
+      boardRecommendation: recommendBoard(cached.conditions),
+      fromCache: true,
+      cacheAge,
+    });
+    return res.end();
+  }
+
+  // Slow path: stream progress as scrapers complete
+  let clientDisconnected = false;
+  req.on('close', () => { clientDisconnected = true; });
+
+  sendEvent('start', {
+    spotId,
+    spotName: getSpotName(spotId),
+  });
+
+  try {
+    const rawData = await fetchSurfData(spotId, (progress) => {
+      if (!clientDisconnected) sendEvent('progress', progress);
+    });
+
+    if (clientDisconnected) return;
+
+    const aggregated = aggregateData(rawData);
+    const score = calculateSurfScore(aggregated, spotId, rawData.length);
+    const hourlyTimeline = aggregateHourlyData(rawData);
+    let trend = null;
+    try {
+      trend = generateTrend(hourlyTimeline, spotId, score.overall);
+    } catch (e) {
+      logger.warn(`[SSE] Trend analysis failed: ${e.message}`);
+    }
+
+    const response = {
+      spotId,
+      spotName: getSpotName(spotId),
+      timestamp: new Date().toISOString(),
+      score,
+      weights: WEIGHTS,
+      conditions: aggregated,
+      trend,
+      boardRecommendation: recommendBoard(aggregated),
+      sources: rawData.map(d => ({
+        name: d.source, status: 'success', timestamp: d.timestamp, url: d.url,
+      })),
+      fromCache: false,
+    };
+
+    cache.set(`conditions:${spotId}`, response, 600);
+    sendEvent('complete', response);
+  } catch (error) {
+    logger.error(`[SSE] Error streaming ${spotId}:`, error);
+    if (!clientDisconnected) {
+      sendEvent('error', { message: 'Failed to fetch conditions' });
+    }
+  } finally {
+    if (!clientDisconnected) res.end();
+  }
+});
+
+/**
  * GET /api/conditions/:spotId
  * Get current surf conditions and score for a specific spot
  *

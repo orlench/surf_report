@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchSpots, fetchConditions, fetchConditionsByCoords, createSpot } from '../api/surfApi';
+import useGeoDetect from '../hooks/useGeoDetect';
+import useSSEProgress from '../hooks/useSSEProgress';
 import ScoreDisplay from './ScoreDisplay';
 import SpotSelector from './SpotSelector';
 import SpotMap from './SpotMap';
 import SpotFeedback from './SpotFeedback';
 import NotificationBell from './NotificationBell';
+import ProgressScreen from './ProgressScreen';
 import './Dashboard.css';
 
 const LOADING_MESSAGES = [
@@ -24,7 +27,7 @@ function getInitialSpot() {
   const params = new URLSearchParams(window.location.search);
   const urlSpot = params.get('spot');
   if (urlSpot) return urlSpot;
-  return localStorage.getItem('selectedSpot') || 'netanya_kontiki';
+  return localStorage.getItem('selectedSpot') || null;
 }
 
 /**
@@ -49,6 +52,7 @@ function getRecentCustomSpots() {
 }
 
 function Dashboard() {
+  const queryClient = useQueryClient();
   const [selectedSpot, setSelectedSpot] = useState(getInitialSpot);
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [showErrorMap, setShowErrorMap] = useState(false);
@@ -60,6 +64,47 @@ function Dashboard() {
   const [userSkill, setUserSkill] = useState(
     () => localStorage.getItem('userSkill') || ''
   );
+
+  // First-visit progress screen flow
+  const isFirstVisit = selectedSpot === null;
+  const [showProgressScreen, setShowProgressScreen] = useState(isFirstVisit);
+  const { location, nearestSpot, nearestSpotName, isDetecting } = useGeoDetect(isFirstVisit);
+  const { steps: sseSteps, isStreaming, finalData, startStream, cleanup } = useSSEProgress();
+
+  // When geo resolves, set spot + start SSE stream
+  useEffect(() => {
+    if (!isFirstVisit || !nearestSpot || isDetecting) return;
+    setSelectedSpot(nearestSpot);
+    localStorage.setItem('selectedSpot', nearestSpot);
+    const url = new URL(window.location);
+    url.searchParams.set('spot', nearestSpot);
+    window.history.replaceState({}, '', url);
+    startStream(nearestSpot);
+  }, [isFirstVisit, nearestSpot, isDetecting, startStream]);
+
+  // When SSE completes, seed React Query cache and dismiss progress screen
+  useEffect(() => {
+    if (!finalData) return;
+    queryClient.setQueryData(
+      ['conditions', finalData.spotId, userWeight, userSkill],
+      finalData
+    );
+    const timer = setTimeout(() => {
+      setShowProgressScreen(false);
+      cleanup();
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [finalData, queryClient, userWeight, userSkill, cleanup]);
+
+  // Build geo/spot steps for ProgressScreen
+  const geoStep = showProgressScreen ? {
+    status: isDetecting ? 'loading' : 'done',
+    snippet: location ? `${location.city || ''}, ${location.country || ''}`.replace(/^, |, $/g, '') : null,
+  } : null;
+  const spotStep = showProgressScreen && !isDetecting ? {
+    status: nearestSpot ? 'done' : 'loading',
+    snippet: nearestSpotName || null,
+  } : null;
 
   const handleSpotChange = useCallback((spotId) => {
     setSelectedSpot(spotId);
@@ -112,6 +157,7 @@ function Dashboard() {
       });
     },
     refetchInterval: 10 * 60 * 1000,
+    enabled: !!selectedSpot && !showProgressScreen,
   });
 
   useEffect(() => {
@@ -135,7 +181,7 @@ function Dashboard() {
   const currentSpotName = conditions?.spotName
     || spots?.find(s => s.id === selectedSpot)?.name
     || getCustomSpotMeta(selectedSpot)?.name
-    || selectedSpot.replace(/_/g, ' ');
+    || (selectedSpot ? selectedSpot.replace(/_/g, ' ') : '');
 
   const is404 = error?.response?.status === 404 || error?.message?.includes('404');
 
@@ -260,8 +306,18 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Loading State */}
-      {isLoading && (
+      {/* First-visit progress screen */}
+      {showProgressScreen && (
+        <ProgressScreen
+          geoStep={geoStep}
+          spotStep={spotStep}
+          steps={sseSteps}
+          isStreaming={isStreaming}
+        />
+      )}
+
+      {/* Loading State (returning users) */}
+      {isLoading && !showProgressScreen && (
         <div className="loading">
           <div className="loader-wave">
             <span></span><span></span><span></span><span></span><span></span>
@@ -271,7 +327,7 @@ function Dashboard() {
       )}
 
       {/* Main Content */}
-      {conditions && !isLoading && (
+      {conditions && !isLoading && !showProgressScreen && (
         <>
           <ScoreDisplay
             score={adjustedScore !== null ? adjustedScore : conditions.score.overall}

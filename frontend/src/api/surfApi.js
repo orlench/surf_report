@@ -73,6 +73,14 @@ export async function fetchFeedback(spotId) {
 }
 
 /**
+ * Fetch nearest spot based on visitor IP geolocation
+ */
+export async function fetchNearestSpot() {
+  const response = await axios.get(`${API_BASE}/nearest-spot`);
+  return response.data;
+}
+
+/**
  * Fetch API health status
  */
 export async function fetchHealth() {
