@@ -345,6 +345,47 @@ function Dashboard() {
             </div>
           )}
 
+          {/* Forecast Timeline */}
+          {conditions.trend?.blocks && conditions.trend.blocks.length > 0 && (
+            <div className="forecast-section">
+              <h3>Forecast</h3>
+
+              {conditions.trend.message && (
+                <div className="forecast-summary">
+                  <span className="forecast-trend-arrow">
+                    {conditions.trend.trend === 'improving' ? '↗' : conditions.trend.trend === 'declining' ? '↘' : '→'}
+                  </span>
+                  <span className="forecast-trend-message">{conditions.trend.message}</span>
+                </div>
+              )}
+
+              <div className="forecast-timeline">
+                {conditions.trend.blocks.map((block, i) => {
+                  const isBest = conditions.trend.bestWindow && block.label === conditions.trend.bestWindow.label;
+                  return (
+                    <div
+                      key={i}
+                      className={`forecast-block ${isBest ? 'forecast-block-best' : ''}`}
+                    >
+                      <span className="forecast-block-label">{block.label}</span>
+                      <span
+                        className="forecast-block-score"
+                        style={{ color: getScoreColor(block.score) }}
+                      >
+                        {block.score}
+                      </span>
+                      <div
+                        className="forecast-block-bar"
+                        style={{ backgroundColor: getScoreColor(block.score), width: `${block.score}%` }}
+                      />
+                      <span className="forecast-block-rating">{block.rating}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Gear Recommendation */}
           {conditions.boardRecommendation && (
             <div className="gear-section">
@@ -416,47 +457,6 @@ function Dashboard() {
                     </select>
                   </label>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Forecast Timeline */}
-          {conditions.trend?.blocks && conditions.trend.blocks.length > 0 && (
-            <div className="forecast-section">
-              <h3>Forecast</h3>
-
-              {conditions.trend.message && (
-                <div className="forecast-summary">
-                  <span className="forecast-trend-arrow">
-                    {conditions.trend.trend === 'improving' ? '↗' : conditions.trend.trend === 'declining' ? '↘' : '→'}
-                  </span>
-                  <span className="forecast-trend-message">{conditions.trend.message}</span>
-                </div>
-              )}
-
-              <div className="forecast-timeline">
-                {conditions.trend.blocks.map((block, i) => {
-                  const isBest = conditions.trend.bestWindow && block.label === conditions.trend.bestWindow.label;
-                  return (
-                    <div
-                      key={i}
-                      className={`forecast-block ${isBest ? 'forecast-block-best' : ''}`}
-                    >
-                      <span className="forecast-block-label">{block.label}</span>
-                      <span
-                        className="forecast-block-score"
-                        style={{ color: getScoreColor(block.score) }}
-                      >
-                        {block.score}
-                      </span>
-                      <div
-                        className="forecast-block-bar"
-                        style={{ backgroundColor: getScoreColor(block.score), width: `${block.score}%` }}
-                      />
-                      <span className="forecast-block-rating">{block.rating}</span>
-                    </div>
-                  );
-                })}
               </div>
             </div>
           )}
