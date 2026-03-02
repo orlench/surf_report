@@ -110,13 +110,12 @@ router.get('/:spotId/stream', async (req, res) => {
     return res.status(404).json({ success: false, error: `Invalid spot: ${spotId}` });
   }
 
-  // SSE headers
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'X-Accel-Buffering': 'no',
-  });
+  // SSE headers (use setHeader to preserve CORS headers from middleware)
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
 
   const sendEvent = (eventType, data) => {
     res.write(`event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`);
