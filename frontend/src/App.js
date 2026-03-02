@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Analytics } from '@vercel/analytics/react';
+
 import Dashboard from './components/Dashboard';
 import './App.css';
 
@@ -21,7 +21,6 @@ function App() {
       <div className="App">
         <Dashboard />
       </div>
-      <Analytics />
     </QueryClientProvider>
   );
 }
