@@ -16,10 +16,10 @@ async function fetchSurfData(spotId, onProgress) {
 
   // Scraper definitions with labels for progress reporting
   const scraperDefs = [
-    { name: 'open-meteo',          label: 'Checking wave height',          category: 'waves',    fn: () => scrapeOpenMeteoWrapper(spotId) },
-    { name: 'met-no',              label: 'Reading wind conditions',       category: 'wind',     fn: () => scrapeMetNoWrapper(spotId) },
-    { name: 'open-meteo-forecast', label: 'Measuring water temperature',   category: 'weather',  fn: () => scrapeOpenMeteoForecastWrapper(spotId) },
-    { name: 'beachcam',            label: 'Checking local beach cameras',  category: 'visual',   fn: () => scrapeBeachCamWrapper(spotId) },
+    { name: 'waves',    label: 'Checking wave height',          category: 'waves',    fn: () => scrapeOpenMeteoWrapper(spotId) },
+    { name: 'wind',     label: 'Reading wind conditions',       category: 'wind',     fn: () => scrapeMetNoWrapper(spotId) },
+    { name: 'weather',  label: 'Measuring water temperature',   category: 'weather',  fn: () => scrapeOpenMeteoForecastWrapper(spotId) },
+    { name: 'visual',   label: 'Checking beach conditions',     category: 'visual',   fn: () => scrapeBeachCamWrapper(spotId) },
   ];
 
   let completedCount = 0;
@@ -459,7 +459,7 @@ function extractSnippet(result, category) {
       if (d.weather?.airTemp) return `${d.weather.airTemp}C`;
       return null;
     default:
-      return 'Data received';
+      return null;
   }
 }
 

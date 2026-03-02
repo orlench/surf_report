@@ -4,6 +4,7 @@ import { fetchSpots, fetchConditions, fetchConditionsByCoords, createSpot } from
 import useGeoDetect from '../hooks/useGeoDetect';
 import useSSEProgress from '../hooks/useSSEProgress';
 import ScoreDisplay from './ScoreDisplay';
+import { getBoardSVG } from './BoardIllustrations';
 import SpotSelector from './SpotSelector';
 import SpotMap from './SpotMap';
 import SpotFeedback from './SpotFeedback';
@@ -37,6 +38,14 @@ function getRecentCustomSpots() {
   try {
     return JSON.parse(localStorage.getItem('customSpots') || '[]');
   } catch { return []; }
+}
+
+function getWetsuitHint(temp) {
+  if (!temp) return null;
+  if (temp >= 24) return { label: 'Boardshorts', icon: 'shorts' };
+  if (temp >= 20) return { label: 'Spring Suit', icon: 'suit' };
+  if (temp >= 16) return { label: '3/2 Wetsuit', icon: 'suit' };
+  return { label: '4/3 Wetsuit', icon: 'suit' };
 }
 
 function Dashboard() {
@@ -314,19 +323,128 @@ function Dashboard() {
             score={adjustedScore !== null ? adjustedScore : conditions.score.overall}
             rating={adjustedRating !== null ? adjustedRating : conditions.score.rating}
             explanation={conditions.score.explanation}
-            breakdown={conditions.score.breakdown}
             timestamp={conditions.timestamp}
             fromCache={conditions.fromCache}
             cacheAge={conditions.cacheAge}
             conditions={conditions.conditions}
-            trend={conditions.trend}
-            boardRecommendation={conditions.boardRecommendation}
             onRefresh={handleRefresh}
-            userWeight={userWeight}
-            userSkill={userSkill}
-            onWeightChange={(val) => { setUserWeight(val); localStorage.setItem('userWeight', val); }}
-            onSkillChange={(val) => { setUserSkill(val); localStorage.setItem('userSkill', val); }}
           />
+
+          {/* Gear Recommendation */}
+          {conditions.boardRecommendation && (
+            <div className="gear-section">
+              <h3>Gear</h3>
+              <div className="gear-grid">
+                <div className="gear-card">
+                  <div className="gear-card-icon board-icon-wrap">
+                    {getBoardSVG(conditions.boardRecommendation.boardType)}
+                  </div>
+                  <div className="gear-card-body">
+                    <span className="gear-card-title">{conditions.boardRecommendation.boardName}</span>
+                    <span className="gear-card-desc">{conditions.boardRecommendation.reason}</span>
+                    {conditions.boardRecommendation.volume && (
+                      <span className="gear-card-volume">~{conditions.boardRecommendation.volume.recommended}L</span>
+                    )}
+                  </div>
+                </div>
+
+                {conditions.conditions?.weather?.waterTemp != null && (() => {
+                  const hint = getWetsuitHint(conditions.conditions.weather.waterTemp);
+                  if (!hint) return null;
+                  return (
+                    <div className="gear-card">
+                      <div className="gear-card-icon wetsuit-icon-wrap">
+                        {hint.icon === 'shorts' ? (
+                          <svg viewBox="0 0 24 24" fill="currentColor" className="gear-wetsuit-svg">
+                            <path d="M4 4H20V7L18 21H13L12 13L11 21H6L4 7Z" opacity="0.85" />
+                          </svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" fill="currentColor" className="gear-wetsuit-svg">
+                            <path d="M9 2H15L17 5H21V9H17L16 21H13L12 14L11 21H8L7 9H3V5H7Z" opacity="0.85" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="gear-card-body">
+                        <span className="gear-card-title">{hint.label}</span>
+                        <span className="gear-card-desc">{conditions.conditions.weather.waterTemp}°C water</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="gear-personalize">
+                <span className="gear-personalize-title">Personalize</span>
+                <div className="gear-personalize-fields">
+                  <label className="gear-field">
+                    <span>Weight (kg)</span>
+                    <input
+                      type="number"
+                      value={userWeight}
+                      onChange={(e) => { setUserWeight(e.target.value); localStorage.setItem('userWeight', e.target.value); }}
+                      placeholder="75"
+                      min="30"
+                      max="150"
+                    />
+                  </label>
+                  <label className="gear-field">
+                    <span>Skill</span>
+                    <select
+                      value={userSkill}
+                      onChange={(e) => { setUserSkill(e.target.value); localStorage.setItem('userSkill', e.target.value); }}
+                    >
+                      <option value="">--</option>
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
+                      <option value="expert">Expert</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Forecast Timeline */}
+          {conditions.trend?.blocks && conditions.trend.blocks.length > 0 && (
+            <div className="forecast-section">
+              <h3>Forecast</h3>
+
+              {conditions.trend.message && (
+                <div className="forecast-summary">
+                  <span className="forecast-trend-arrow">
+                    {conditions.trend.trend === 'improving' ? '↗' : conditions.trend.trend === 'declining' ? '↘' : '→'}
+                  </span>
+                  <span className="forecast-trend-message">{conditions.trend.message}</span>
+                </div>
+              )}
+
+              <div className="forecast-timeline">
+                {conditions.trend.blocks.map((block, i) => {
+                  const isBest = conditions.trend.bestWindow && block.label === conditions.trend.bestWindow.label;
+                  return (
+                    <div
+                      key={i}
+                      className={`forecast-block ${isBest ? 'forecast-block-best' : ''}`}
+                    >
+                      <span className="forecast-block-label">{block.label}</span>
+                      <span
+                        className="forecast-block-score"
+                        style={{ color: getScoreColor(block.score) }}
+                      >
+                        {block.score}
+                      </span>
+                      <div
+                        className="forecast-block-bar"
+                        style={{ backgroundColor: getScoreColor(block.score), width: `${block.score}%` }}
+                      />
+                      <span className="forecast-block-rating">{block.rating}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Score Breakdown */}
           {conditions.score.breakdown && (
@@ -350,6 +468,7 @@ function Dashboard() {
               breakdown={conditions.score.breakdown}
               weights={conditions.weights}
               originalScore={conditions.score.overall}
+              adjustedScore={adjustedScore}
               onScoreAdjusted={(score, rating) => {
                 setAdjustedScore(score);
                 setAdjustedRating(rating);

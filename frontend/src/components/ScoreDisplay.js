@@ -1,10 +1,53 @@
-import { useState } from 'react';
-import { getBoardSVG } from './BoardIllustrations';
 import './ScoreDisplay.css';
 
-function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheAge, conditions, trend, boardRecommendation, onRefresh, userWeight, userSkill, onWeightChange, onSkillChange }) {
-  const [showPersonalize, setShowPersonalize] = useState(false);
+function ScoreMeter({ score, rating }) {
+  const radius = 50;
+  const circumference = Math.PI * radius;
+  const fillLength = (score / 100) * circumference;
+  const emptyLength = circumference - fillLength;
 
+  const getGaugeColor = (s) => {
+    if (s >= 85) return '#00c48c';
+    if (s >= 75) return '#28d278';
+    if (s >= 65) return '#4cd964';
+    if (s >= 50) return '#f5a623';
+    if (s >= 35) return '#e67e22';
+    if (s >= 20) return '#ff6b35';
+    return '#ff3b30';
+  };
+
+  return (
+    <div className="score-meter">
+      <svg viewBox="0 0 120 70" className="score-meter-svg">
+        <path
+          d="M 10,60 A 50,50 0 0,1 110,60"
+          fill="none"
+          stroke="rgba(255,255,255,0.2)"
+          strokeWidth="8"
+          strokeLinecap="round"
+        />
+        <path
+          d="M 10,60 A 50,50 0 0,1 110,60"
+          fill="none"
+          stroke={getGaugeColor(score)}
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={`${fillLength} ${emptyLength}`}
+          style={{ transition: 'stroke-dasharray 0.6s ease' }}
+        />
+        <text x="60" y="52" textAnchor="middle" className="score-meter-number">
+          {score}
+        </text>
+        <text x="60" y="64" textAnchor="middle" className="score-meter-max">
+          / 100
+        </text>
+      </svg>
+      <div className="score-meter-rating">{rating}</div>
+    </div>
+  );
+}
+
+function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheAge, conditions, onRefresh }) {
   const getColorClass = (score) => {
     if (score >= 85) return 'epic';
     if (score >= 75) return 'great';
@@ -57,15 +100,6 @@ function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheA
     return 'Very windy';
   };
 
-  // Friendly wetsuit hint based on water temp (Mediterranean)
-  const getWetsuitHint = (temp) => {
-    if (!temp) return null;
-    if (temp >= 24) return { label: 'Boardshorts', short: 'boardshorts' };
-    if (temp >= 20) return { label: 'Spring Suit', short: 'spring suit' };
-    if (temp >= 16) return { label: '3/2 Wetsuit', short: '3/2 wetsuit' };
-    return { label: '4/3 Wetsuit', short: '4/3 wetsuit' };
-  };
-
   // Friendly period quality
   const getPeriodDesc = (period) => {
     if (!period) return '';
@@ -79,14 +113,13 @@ function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheA
   const windText = wind?.speed
     ? `${windDesc} ${wind.direction ? wind.direction + ' ' : ''}${wind.speed} km/h${wind.gusts ? ` (gusts ${wind.gusts})` : ''}`
     : null;
-  const wetsuitHint = getWetsuitHint(weather?.waterTemp);
   const periodDesc = getPeriodDesc(waves?.period);
 
   return (
     <div className={`hero ${colorClass}`}>
       <div className="hero-question">Should I go?</div>
       <div className="hero-verdict">{getVerdict(score)}</div>
-      <span className={`rating-badge ${colorClass}`}>{rating} {score}/100</span>
+      <ScoreMeter score={score} rating={rating} />
 
       {explanation && (
         <div className="hero-explanation">{explanation}</div>
@@ -103,82 +136,6 @@ function ScoreDisplay({ score, rating, explanation, timestamp, fromCache, cacheA
         {weather?.airTemp != null && <span className="hero-detail">{weather.airTemp}°C air</span>}
         {weather?.waterTemp != null && <span className="hero-detail">{weather.waterTemp}°C water</span>}
       </div>
-
-      {boardRecommendation && (
-        <div className="hero-board-rec">
-          <div className="board-svg-wrap">
-            {getBoardSVG(boardRecommendation.boardType)}
-          </div>
-          <div className="board-rec-text">
-            <span className="board-rec-name">{boardRecommendation.boardName}</span>
-            <span className="board-rec-reason">{boardRecommendation.reason}</span>
-            {boardRecommendation.volume && (
-              <span className="board-rec-volume">~{boardRecommendation.volume.recommended}L</span>
-            )}
-          </div>
-          {wetsuitHint && weather?.waterTemp != null && (
-            <div className="board-rec-wetsuit">
-              {wetsuitHint.short === 'boardshorts' ? (
-                <svg className="wetsuit-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M4 4H20V7L18 21H13L12 13L11 21H6L4 7Z" opacity="0.85" />
-                </svg>
-              ) : (
-                <svg className="wetsuit-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M9 2H15L17 5H21V9H17L16 21H13L12 14L11 21H8L7 9H3V5H7Z" opacity="0.85" />
-                </svg>
-              )}
-              <span className="wetsuit-label">{wetsuitHint.label}</span>
-              <span className="wetsuit-temp">{weather.waterTemp}°C</span>
-            </div>
-          )}
-          <button
-            className="board-personalize-toggle"
-            onClick={() => setShowPersonalize(prev => !prev)}
-            type="button"
-          >
-            {showPersonalize ? 'Hide' : 'Personalize volume'}
-          </button>
-          {showPersonalize && (
-            <div className="board-personalize">
-              <label className="board-personalize-label">
-                <span>Weight (kg)</span>
-                <input
-                  type="number"
-                  className="board-personalize-input"
-                  value={userWeight}
-                  onChange={(e) => onWeightChange(e.target.value)}
-                  placeholder="75"
-                  min="30"
-                  max="150"
-                />
-              </label>
-              <label className="board-personalize-label">
-                <span>Skill</span>
-                <select
-                  className="board-personalize-input"
-                  value={userSkill}
-                  onChange={(e) => onSkillChange(e.target.value)}
-                >
-                  <option value="">—</option>
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                  <option value="expert">Expert</option>
-                </select>
-              </label>
-            </div>
-          )}
-        </div>
-      )}
-
-      {trend?.message && (
-        <div className="hero-trend">
-          <span className="trend-arrow">
-            {trend.trend === 'improving' ? '↗' : trend.trend === 'declining' ? '↘' : '→'}
-          </span>
-          <span className="trend-message">{trend.message}</span>
-        </div>
-      )}
 
       <div className="hero-updated">
         Updated {fromCache && cacheAge ? `${Math.floor(cacheAge / 60)} min ago` : formatTime(timestamp)}

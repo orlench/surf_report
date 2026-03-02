@@ -11,10 +11,23 @@
   margin-bottom: 10px;
 }
 
+.spot-feedback-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .spot-feedback-label {
   font-size: 0.82rem;
   font-weight: 600;
   color: #718096;
+}
+
+.spot-feedback-subtitle {
+  font-size: 0.75rem;
+  color: #a0aec0;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 .spot-feedback-badge {
@@ -105,6 +118,43 @@
   color: #d97706;
 }
 
+/* Score change indicator */
+.spot-feedback-score-change {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.12);
+}
+
+.score-change-label {
+  font-size: 0.78rem;
+  color: #718096;
+  font-weight: 500;
+}
+
+.score-change-value {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1a2b3c;
+}
+
+.score-change-delta {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.score-change-delta.up {
+  color: #059669;
+}
+
+.score-change-delta.down {
+  color: #d97706;
+}
+
 /* Recent feedback */
 .spot-feedback-recent {
   margin-top: 14px;
@@ -166,6 +216,16 @@
   .spot-feedback-header {
     flex-wrap: wrap;
     gap: 4px;
+  }
+
+  .spot-feedback-subtitle {
+    font-size: 0.7rem;
+  }
+
+  .spot-feedback-score-change {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px 10px;
   }
 
   .spot-feedback-weights {

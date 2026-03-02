@@ -42,7 +42,7 @@ function getRating(score) {
   return 'FLAT';
 }
 
-function SpotFeedback({ spotId, breakdown, weights, originalScore, onScoreAdjusted }) {
+function SpotFeedback({ spotId, breakdown, weights, originalScore, adjustedScore, onScoreAdjusted }) {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [feedbackCount, setFeedbackCount] = useState(0);
@@ -103,7 +103,12 @@ function SpotFeedback({ spotId, breakdown, weights, originalScore, onScoreAdjust
   return (
     <div className="spot-feedback">
       <div className="spot-feedback-header">
-        <span className="spot-feedback-label">Know this break?</span>
+        <div className="spot-feedback-header-text">
+          <span className="spot-feedback-label">Tune the score for this spot</span>
+          <span className="spot-feedback-subtitle">
+            Describe what matters at this break and we'll adjust how the score is calculated
+          </span>
+        </div>
         {feedbackCount > 0 && (
           <span className="spot-feedback-badge">
             Tuned by {feedbackCount} surfer{feedbackCount !== 1 ? 's' : ''}
@@ -128,7 +133,7 @@ function SpotFeedback({ spotId, breakdown, weights, originalScore, onScoreAdjust
           disabled={!text.trim() || text.trim().length < 10 || loading}
           type="button"
         >
-          {loading ? 'Reading the local knowledge...' : 'Apply'}
+          {loading ? 'Reading the local knowledge...' : 'Adjust Score'}
         </button>
         {multipliers && (
           <div className="spot-feedback-weights">
@@ -142,6 +147,17 @@ function SpotFeedback({ spotId, breakdown, weights, originalScore, onScoreAdjust
                 </span>
               );
             })}
+          </div>
+        )}
+        {multipliers && adjustedScore !== null && adjustedScore !== originalScore && (
+          <div className="spot-feedback-score-change">
+            <span className="score-change-label">Score adjusted:</span>
+            <span className="score-change-value">
+              {originalScore} → {adjustedScore}
+            </span>
+            <span className={`score-change-delta ${adjustedScore > originalScore ? 'up' : 'down'}`}>
+              ({adjustedScore > originalScore ? '+' : ''}{adjustedScore - originalScore})
+            </span>
           </div>
         )}
       </div>
