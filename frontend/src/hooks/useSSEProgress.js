@@ -26,15 +26,15 @@ export default function useSSEProgress() {
 
     const es = new EventSource(`${API_BASE}/conditions/${spotId}/stream`);
     eventSourceRef.current = es;
+    let completed = false;
 
-    es.addEventListener('start', (e) => {
-      // Server acknowledged the stream, nothing to render yet
+    es.addEventListener('start', () => {
+      // Server acknowledged the stream
     });
 
     es.addEventListener('progress', (e) => {
       const data = JSON.parse(e.data);
       setSteps((prev) => {
-        // Avoid duplicates by scraper name
         if (prev.find((s) => s.name === data.name)) return prev;
         return [
           ...prev,
@@ -49,6 +49,7 @@ export default function useSSEProgress() {
     });
 
     es.addEventListener('complete', (e) => {
+      completed = true;
       const data = JSON.parse(e.data);
       setFinalData(data);
       setIsStreaming(false);
@@ -56,7 +57,9 @@ export default function useSSEProgress() {
     });
 
     es.addEventListener('error', (e) => {
-      // SSE 'error' event can be a server-sent error or a connection failure
+      // Ignore error events that fire after a successful complete
+      // (browser fires error when server closes the SSE connection)
+      if (completed || es.readyState === EventSource.CLOSED) return;
       try {
         const data = JSON.parse(e.data);
         setError(data.message || 'Stream failed');
@@ -67,9 +70,8 @@ export default function useSSEProgress() {
       es.close();
     });
 
-    // Browser-level connection error
     es.onerror = () => {
-      if (es.readyState === EventSource.CLOSED) return;
+      if (completed || es.readyState === EventSource.CLOSED) return;
       setError('Connection lost');
       setIsStreaming(false);
       es.close();
