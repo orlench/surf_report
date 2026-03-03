@@ -8,6 +8,7 @@ const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
  */
 export default function useSSEProgress() {
   const [steps, setSteps] = useState([]);
+  const [total, setTotal] = useState(0);
   const [isStreaming, setIsStreaming] = useState(false);
   const [finalData, setFinalData] = useState(null);
   const [error, setError] = useState(null);
@@ -34,6 +35,7 @@ export default function useSSEProgress() {
 
     es.addEventListener('progress', (e) => {
       const data = JSON.parse(e.data);
+      if (data.total) setTotal(data.total);
       setSteps((prev) => {
         if (prev.find((s) => s.name === data.name)) return prev;
         return [
@@ -85,5 +87,5 @@ export default function useSSEProgress() {
     }
   }, []);
 
-  return { steps, isStreaming, finalData, error, startStream, cleanup };
+  return { steps, total, isStreaming, finalData, error, startStream, cleanup };
 }

@@ -65,7 +65,7 @@ function Dashboard() {
   const isFirstVisitRef = useRef(selectedSpot === null);
   const [showProgressScreen, setShowProgressScreen] = useState(true);
   const { location, nearestSpot, nearestSpotName, nearbySpots, isDetecting } = useGeoDetect(isFirstVisitRef.current);
-  const { steps: sseSteps, isStreaming, finalData, error: sseError, startStream, cleanup } = useSSEProgress();
+  const { steps: sseSteps, total: sseTotal, isStreaming, finalData, error: sseError, startStream, cleanup } = useSSEProgress();
 
   // Start SSE for returning users on mount
   useEffect(() => {
@@ -312,6 +312,7 @@ function Dashboard() {
           geoStep={geoStep}
           spotStep={spotStep}
           steps={sseSteps}
+          total={sseTotal}
           isStreaming={isStreaming}
         />
       )}

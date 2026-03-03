@@ -1,7 +1,5 @@
 import './ProgressScreen.css';
 
-const TOTAL_SCRAPERS = 4;
-
 // Pre-defined step labels shown while waiting for real progress events
 const DEFAULT_STEPS = [
   { name: 'geo', label: 'Detecting your location' },
@@ -33,7 +31,7 @@ function XIcon() {
  *   steps     - array from useSSEProgress hook (real scraper progress)
  *   isStreaming - whether SSE is still active
  */
-export default function ProgressScreen({ geoStep, spotStep, steps, isStreaming }) {
+export default function ProgressScreen({ geoStep, spotStep, steps, total, isStreaming }) {
   // Build the unified step list
   const allSteps = [];
 
@@ -64,8 +62,8 @@ export default function ProgressScreen({ geoStep, spotStep, steps, isStreaming }
 
   // Count completed scrapers (not geo/nearest)
   const scrapersCompleted = steps.length;
-  const progressPct = TOTAL_SCRAPERS > 0
-    ? Math.round((scrapersCompleted / TOTAL_SCRAPERS) * 100)
+  const progressPct = total > 0
+    ? Math.round((scrapersCompleted / total) * 100)
     : 0;
 
   return (
@@ -105,9 +103,6 @@ export default function ProgressScreen({ geoStep, spotStep, steps, isStreaming }
               className="progress-bar-fill"
               style={{ width: `${progressPct}%` }}
             />
-          </div>
-          <div className="progress-bar-label">
-            {scrapersCompleted} / {TOTAL_SCRAPERS}
           </div>
         </div>
       )}
