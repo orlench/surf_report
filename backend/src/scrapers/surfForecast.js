@@ -7,11 +7,44 @@ const logger = require('../utils/logger');
  */
 
 const SPOT_URLS = {};
+const coordsMap = {};
+const urlCache = {};
+
+function registerCoords(spotId, lat, lon, name, country) {
+  coordsMap[spotId] = { lat, lon, name, country };
+}
+
+async function resolveUrl(spotId) {
+  if (SPOT_URLS[spotId]) return SPOT_URLS[spotId];
+  if (urlCache[spotId]) return urlCache[spotId];
+
+  const meta = coordsMap[spotId];
+  const query = meta?.name
+    ? `site:surf-forecast.com ${meta.name} ${meta.country || ''} surf forecast`
+    : `site:surf-forecast.com ${spotId} surf forecast`;
+
+  logger.info(`[Surf-forecast] Searching for URL: ${query}`);
+  try {
+    const searchResult = await brightData.searchEngine(query);
+    const parsed = JSON.parse(searchResult);
+    const link = parsed?.organic?.find(r => /surf-forecast\.com\/breaks\//.test(r.link))?.link;
+    if (link) {
+      // Use the six_day forecast URL for more data
+      const sixDay = link.replace(/\/forecasts\/.*/, '/forecasts/latest/six_day');
+      urlCache[spotId] = sixDay;
+      logger.info(`[Surf-forecast] Discovered URL for ${spotId}: ${sixDay}`);
+      return sixDay;
+    }
+  } catch (err) {
+    logger.warn(`[Surf-forecast] Search failed for ${spotId}: ${err.message}`);
+  }
+  return null;
+}
 
 async function scrapeSurfForecast(spotId) {
-  const url = SPOT_URLS[spotId];
+  const url = await resolveUrl(spotId);
   if (!url) {
-    logger.warn(`[Surf-forecast] No URL configured for spot: ${spotId}`);
+    logger.warn(`[Surf-forecast] Could not resolve URL for spot: ${spotId}`);
     return null;
   }
 
@@ -217,5 +250,6 @@ function parseSurfForecastHourly(markdown) {
 
 module.exports = {
   scrapeSurfForecast,
+  registerCoords,
   SPOT_URLS
 };

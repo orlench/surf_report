@@ -2,7 +2,7 @@ const { scrapeBeachCam } = require('../scrapers/beachcam');
 const { scrapeOpenMeteo } = require('../scrapers/openMeteo');
 const { scrapeMetNo } = require('../scrapers/metNo');
 const { scrapeOpenMeteoForecast } = require('../scrapers/openMeteoForecast');
-const { scrapeWindguru, registerCoords: regWindguru } = require('../scrapers/windguru');
+const { scrapeSurfForecast, registerCoords: regSurfForecast } = require('../scrapers/surfForecast');
 const { scrapeWindFinder, registerCoords: regWindFinder } = require('../scrapers/windFinder');
 const logger = require('../utils/logger');
 
@@ -22,8 +22,8 @@ async function fetchSurfData(spotId, onProgress) {
     { name: 'wind',       label: 'Reading wind conditions',       category: 'wind',    fn: () => scrapeMetNoWrapper(spotId) },
     { name: 'weather',    label: 'Measuring water temperature',   category: 'weather', fn: () => scrapeOpenMeteoForecastWrapper(spotId) },
     { name: 'visual',     label: 'Checking beach conditions',     category: 'visual',  fn: () => scrapeBeachCamWrapper(spotId) },
-    { name: 'windguru',   label: 'Fetching Windguru forecast',    category: 'wind',    fn: () => scrapeWindguruWrapper(spotId) },
-    { name: 'windfinder', label: 'Fetching Windfinder report',    category: 'wind',    fn: () => scrapeWindFinderWrapper(spotId) },
+    { name: 'surf-forecast', label: 'Reading surf-forecast.com',   category: 'waves',   fn: () => scrapeSurfForecastWrapper(spotId) },
+    { name: 'windfinder',   label: 'Fetching Windfinder report',  category: 'wind',    fn: () => scrapeWindFinderWrapper(spotId) },
   ];
 
   let completedCount = 0;
@@ -98,14 +98,14 @@ async function fetchSurfData(spotId, onProgress) {
  * This allows us to use partial data from successful sources
  */
 
-async function scrapeWindguruWrapper(spotId) {
+async function scrapeSurfForecastWrapper(spotId) {
   try {
-    logger.info(`[Scraper] Scraping Windguru for ${spotId}`);
-    const data = await scrapeWindguru(spotId);
+    logger.info(`[Scraper] Scraping surf-forecast.com for ${spotId}`);
+    const data = await scrapeSurfForecast(spotId);
     if (!data) return null;
-    return { source: 'windguru', data, timestamp: new Date().toISOString(), url: 'https://www.windguru.cz' };
+    return { source: 'surf-forecast', data, timestamp: new Date().toISOString(), url: 'https://www.surf-forecast.com' };
   } catch (error) {
-    logger.error(`[Scraper] Windguru failed:`, error.message);
+    logger.error(`[Scraper] surf-forecast.com failed:`, error.message);
     return null;
   }
 }
@@ -464,7 +464,7 @@ async function fetchSurfDataByCoords(lat, lon, spotId, onProgress) {
   regOpenMeteo(spotId, lat, lon);
   regMetNo(spotId, lat, lon);
   regForecast(spotId, lat, lon);
-  regWindguru(spotId, lat, lon);
+  regSurfForecast(spotId, lat, lon);
   regWindFinder(spotId, lat, lon);
 
   // Delegate to main fetch path (coords are now registered)
