@@ -21,6 +21,18 @@ function compassToVec(deg) {
   return { x: Math.cos(rad), y: Math.sin(rad) };
 }
 
+// ─── Clip nodes to within radiusKm of center ────────────────────────────────
+function clipToRadius(nodes, centerLat, centerLon, radiusKm) {
+  const R = 6371, toRad = d => d * Math.PI / 180;
+  return nodes.filter(n => {
+    const dlat = toRad(n.lat - centerLat);
+    const dlon = toRad(n.lon - centerLon);
+    const a = Math.sin(dlat / 2) ** 2
+      + Math.cos(toRad(centerLat)) * Math.cos(toRad(n.lat)) * Math.sin(dlon / 2) ** 2;
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) <= radiusKm;
+  });
+}
+
 // ─── Overpass API fetch ──────────────────────────────────────────────────────
 async function fetchOSMBeach(lat, lon, signal) {
   const q = `[out:json][timeout:12];`
@@ -39,6 +51,15 @@ async function fetchOSMBeach(lat, lon, signal) {
 
   const way = ways.reduce((a, b) => (a.geometry.length > b.geometry.length ? a : b));
   let nodes = way.geometry;
+
+  // For coastline ways (not beach area polygons), clip to the local segment.
+  // Coastline ways in OSM can span hundreds of km (e.g. the entire California
+  // coast), which makes the projection useless. Clip to ~1 km around the spot.
+  if (beaches.length === 0) {
+    const local = clipToRadius(nodes, lat, lon, 1.0);
+    nodes = local.length >= 3 ? local : clipToRadius(nodes, lat, lon, 1.5);
+    if (nodes.length < 3) return null;
+  }
 
   if (nodes.length > 80) {
     const step = Math.ceil(nodes.length / 80);
