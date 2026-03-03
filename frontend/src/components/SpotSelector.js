@@ -186,9 +186,6 @@ function SpotSelector({ spots, value, onChange, nearbySpots = [] }) {
                       type="button"
                     >
                       <span>{spot.name}</span>
-                      {spot.distance != null && (
-                        <span className="spot-option-distance">{spot.distance} km</span>
-                      )}
                     </button>
                   );
                 })}

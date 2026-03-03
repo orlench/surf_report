@@ -1,0 +1,109 @@
+.beach-sketch-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 20px 20px 14px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.beach-sketch-title {
+  font-size: 0.8rem;
+  margin-bottom: 14px;
+  color: #718096;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.beach-sketch-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  background: #f7f3ec; /* aged paper / nautical chart */
+}
+
+.beach-sketch-svg--hidden {
+  display: none;
+}
+
+/* Wave lines: opacity pulse simulates motion toward shore */
+.beach-wave-line {
+  animation: wavePulse 2.4s ease-in-out infinite;
+}
+
+@keyframes wavePulse {
+  0%, 100% { opacity: 0.2; }
+  50%       { opacity: 0.7; }
+}
+
+/* Loading skeleton */
+.beach-sketch-loading {
+  height: 160px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: sketchShimmer 1.5s infinite;
+}
+
+@keyframes sketchShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Footer labels */
+.beach-sketch-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.beach-sketch-break {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.beach-sketch-wind {
+  font-size: 0.78rem;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.beach-sketch-note {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+@media (max-width: 480px) {
+  .beach-sketch-card {
+    padding: 14px 12px 10px;
+  }
+
+  .beach-sketch-loading {
+    height: 130px;
+  }
+
+  .beach-sketch-footer {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .beach-sketch-wind {
+    font-size: 0.74rem;
+    padding: 2px 7px;
+  }
+}
+
+@media (max-width: 360px) {
+  .beach-sketch-card {
+    padding: 12px 10px 8px;
+  }
+}

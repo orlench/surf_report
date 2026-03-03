@@ -10,6 +10,7 @@ import SpotMap from './SpotMap';
 import SpotFeedback from './SpotFeedback';
 import NotificationBell from './NotificationBell';
 import ProgressScreen from './ProgressScreen';
+import BeachSketch from './BeachSketch';
 import './Dashboard.css';
 
 function getInitialSpot() {
@@ -185,6 +186,15 @@ function Dashboard() {
     || spots?.find(s => s.id === selectedSpot)?.name
     || getCustomSpotMeta(selectedSpot)?.name
     || (selectedSpot ? selectedSpot.replace(/_/g, ' ') : '');
+
+  // Resolve spot coordinates for beach sketch (works for both hardcoded and custom spots)
+  const spotObj = spots?.find(s => s.id === selectedSpot);
+  const customMeta = getCustomSpotMeta(selectedSpot);
+  const sketchSpot = spotObj
+    ? spotObj
+    : customMeta
+      ? { id: customMeta.id, location: { lat: customMeta.lat, lon: customMeta.lon } }
+      : null;
 
   const is404 = error?.response?.status === 404 || error?.message?.includes('404');
 
@@ -460,6 +470,15 @@ function Dashboard() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Beach Sketch */}
+          {sketchSpot && (
+            <BeachSketch
+              spot={sketchSpot}
+              waveDirection={conditions.conditions?.waves?.direction}
+              windDirection={conditions.conditions?.wind?.direction}
+            />
           )}
 
           {/* Surfer Feedback */}

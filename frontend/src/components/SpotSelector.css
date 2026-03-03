@@ -135,13 +135,6 @@
   transition: background 0.1s ease, color 0.1s ease;
 }
 
-.spot-option-distance {
-  font-size: 0.72rem;
-  font-weight: 400;
-  color: #a0aec0;
-  margin-left: 12px;
-  flex-shrink: 0;
-}
 
 .spot-option:hover,
 .spot-option.highlighted {
