@@ -22,8 +22,8 @@ async function fetchSurfData(spotId, onProgress) {
     { name: 'wind',       label: 'Reading wind conditions',       category: 'wind',    fn: () => scrapeMetNoWrapper(spotId) },
     { name: 'weather',    label: 'Measuring water temperature',   category: 'weather', fn: () => scrapeOpenMeteoForecastWrapper(spotId) },
     { name: 'visual',     label: 'Checking beach conditions',     category: 'visual',  fn: () => scrapeBeachCamWrapper(spotId) },
-    { name: 'surf-forecast', label: 'Reading surf-forecast.com',   category: 'waves',   fn: () => scrapeSurfForecastWrapper(spotId) },
-    { name: 'windfinder',   label: 'Fetching Windfinder report',  category: 'wind',    fn: () => scrapeWindFinderWrapper(spotId) },
+    { name: 'surf-forecast', label: 'Checking surf conditions',     category: 'waves',   fn: () => scrapeSurfForecastWrapper(spotId) },
+    { name: 'windfinder',   label: 'Analyzing wind patterns',     category: 'wind',    fn: () => scrapeWindFinderWrapper(spotId) },
   ];
 
   let completedCount = 0;

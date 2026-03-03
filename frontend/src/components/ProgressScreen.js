@@ -70,7 +70,7 @@ export default function ProgressScreen({ geoStep, spotStep, steps, total, isStre
     <div className="progress-screen">
       <div className="progress-header">
         <h2>Getting your surf report</h2>
-        <p>Gathering data from multiple sources</p>
+        <p>Gathering real time data from multiple sources, might take a few seconds</p>
       </div>
 
       <div className="progress-steps">
