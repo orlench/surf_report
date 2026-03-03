@@ -2,6 +2,8 @@ const { scrapeBeachCam } = require('../scrapers/beachcam');
 const { scrapeOpenMeteo } = require('../scrapers/openMeteo');
 const { scrapeMetNo } = require('../scrapers/metNo');
 const { scrapeOpenMeteoForecast } = require('../scrapers/openMeteoForecast');
+const { scrapeWindguru, registerCoords: regWindguru } = require('../scrapers/windguru');
+const { scrapeWindFinder, registerCoords: regWindFinder } = require('../scrapers/windFinder');
 const logger = require('../utils/logger');
 
 /**
@@ -16,10 +18,12 @@ async function fetchSurfData(spotId, onProgress) {
 
   // Scraper definitions with labels for progress reporting
   const scraperDefs = [
-    { name: 'waves',    label: 'Checking wave height',          category: 'waves',    fn: () => scrapeOpenMeteoWrapper(spotId) },
-    { name: 'wind',     label: 'Reading wind conditions',       category: 'wind',     fn: () => scrapeMetNoWrapper(spotId) },
-    { name: 'weather',  label: 'Measuring water temperature',   category: 'weather',  fn: () => scrapeOpenMeteoForecastWrapper(spotId) },
-    { name: 'visual',   label: 'Checking beach conditions',     category: 'visual',   fn: () => scrapeBeachCamWrapper(spotId) },
+    { name: 'waves',      label: 'Checking wave height',          category: 'waves',   fn: () => scrapeOpenMeteoWrapper(spotId) },
+    { name: 'wind',       label: 'Reading wind conditions',       category: 'wind',    fn: () => scrapeMetNoWrapper(spotId) },
+    { name: 'weather',    label: 'Measuring water temperature',   category: 'weather', fn: () => scrapeOpenMeteoForecastWrapper(spotId) },
+    { name: 'visual',     label: 'Checking beach conditions',     category: 'visual',  fn: () => scrapeBeachCamWrapper(spotId) },
+    { name: 'windguru',   label: 'Fetching Windguru forecast',    category: 'wind',    fn: () => scrapeWindguruWrapper(spotId) },
+    { name: 'windfinder', label: 'Fetching Windfinder report',    category: 'wind',    fn: () => scrapeWindFinderWrapper(spotId) },
   ];
 
   let completedCount = 0;
@@ -93,6 +97,30 @@ async function fetchSurfData(spotId, onProgress) {
  * Wrapper functions for each scraper - return null on failure instead of throwing
  * This allows us to use partial data from successful sources
  */
+
+async function scrapeWindguruWrapper(spotId) {
+  try {
+    logger.info(`[Scraper] Scraping Windguru for ${spotId}`);
+    const data = await scrapeWindguru(spotId);
+    if (!data) return null;
+    return { source: 'windguru', data, timestamp: new Date().toISOString(), url: 'https://www.windguru.cz' };
+  } catch (error) {
+    logger.error(`[Scraper] Windguru failed:`, error.message);
+    return null;
+  }
+}
+
+async function scrapeWindFinderWrapper(spotId) {
+  try {
+    logger.info(`[Scraper] Scraping WindFinder for ${spotId}`);
+    const data = await scrapeWindFinder(spotId);
+    if (!data) return null;
+    return { source: 'windfinder', data, timestamp: new Date().toISOString(), url: 'https://www.windfinder.com' };
+  } catch (error) {
+    logger.error(`[Scraper] WindFinder failed:`, error.message);
+    return null;
+  }
+}
 
 async function scrapeBeachCamWrapper(spotId) {
   try {
@@ -436,6 +464,8 @@ async function fetchSurfDataByCoords(lat, lon, spotId, onProgress) {
   regOpenMeteo(spotId, lat, lon);
   regMetNo(spotId, lat, lon);
   regForecast(spotId, lat, lon);
+  regWindguru(spotId, lat, lon);
+  regWindFinder(spotId, lat, lon);
 
   // Delegate to main fetch path (coords are now registered)
   return fetchSurfData(spotId, onProgress);

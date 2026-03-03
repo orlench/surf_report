@@ -7,11 +7,44 @@ const logger = require('../utils/logger');
  */
 
 const SPOT_URLS = {};
+const coordsMap = {};
+const urlCache = {}; // cache discovered URLs per spotId
+
+function registerCoords(spotId, lat, lon) {
+  coordsMap[spotId] = { lat, lon };
+}
+
+async function resolveUrl(spotId) {
+  // Static URL takes priority
+  if (SPOT_URLS[spotId]) return SPOT_URLS[spotId];
+  // Return cached URL from previous search
+  if (urlCache[spotId]) return urlCache[spotId];
+
+  // Use Bright Data search to find the Windfinder forecast page
+  const coords = coordsMap[spotId];
+  const query = coords
+    ? `windfinder forecast site:windfinder.com ${coords.lat},${coords.lon}`
+    : `windfinder forecast ${spotId} site:windfinder.com`;
+
+  logger.info(`[WindFinder] Searching for spot URL: ${query}`);
+  try {
+    const searchResult = await brightData.searchEngine(query);
+    const urlMatch = searchResult.match(/https?:\/\/(?:www\.)?windfinder\.com\/(?:forecast|report)\/[\w-]+/);
+    if (urlMatch) {
+      urlCache[spotId] = urlMatch[0];
+      logger.info(`[WindFinder] Discovered URL for ${spotId}: ${urlMatch[0]}`);
+      return urlMatch[0];
+    }
+  } catch (err) {
+    logger.warn(`[WindFinder] Search failed for ${spotId}: ${err.message}`);
+  }
+  return null;
+}
 
 async function scrapeWindFinder(spotId) {
-  const url = SPOT_URLS[spotId];
+  const url = await resolveUrl(spotId);
   if (!url) {
-    logger.warn(`[WindFinder] No URL configured for spot: ${spotId}`);
+    logger.warn(`[WindFinder] Could not resolve URL for spot: ${spotId}`);
     return null;
   }
 
@@ -170,5 +203,6 @@ function parseWindFinderHourly(markdown) {
 
 module.exports = {
   scrapeWindFinder,
+  registerCoords,
   SPOT_URLS
 };

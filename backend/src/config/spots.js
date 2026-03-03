@@ -19,6 +19,8 @@ function getOrCreateSpot(id, { lat, lon, name, country }) {
   const { registerCoords: regOpenMeteo } = require('../scrapers/openMeteo');
   const { registerCoords: regMetNo } = require('../scrapers/metNo');
   const { registerCoords: regForecast } = require('../scrapers/openMeteoForecast');
+  const { registerCoords: regWindguru } = require('../scrapers/windguru');
+  const { registerCoords: regWindFinder } = require('../scrapers/windFinder');
 
   dynamicSpots[id] = {
     id,
@@ -37,6 +39,8 @@ function getOrCreateSpot(id, { lat, lon, name, country }) {
   regOpenMeteo(id, lat, lon);
   regMetNo(id, lat, lon);
   regForecast(id, lat, lon);
+  regWindguru(id, lat, lon);
+  regWindFinder(id, lat, lon);
 
   return dynamicSpots[id];
 }
@@ -77,6 +81,8 @@ function loadPersistedSpots(spotsArray) {
   const { registerCoords: regOpenMeteo } = require('../scrapers/openMeteo');
   const { registerCoords: regMetNo } = require('../scrapers/metNo');
   const { registerCoords: regForecast } = require('../scrapers/openMeteoForecast');
+  const { registerCoords: regWindguru } = require('../scrapers/windguru');
+  const { registerCoords: regWindFinder } = require('../scrapers/windFinder');
 
   for (const s of spotsArray) {
     if (!SPOTS[s.id] && !dynamicSpots[s.id]) {
@@ -96,6 +102,8 @@ function loadPersistedSpots(spotsArray) {
       regOpenMeteo(s.id, s.lat, s.lon);
       regMetNo(s.id, s.lat, s.lon);
       regForecast(s.id, s.lat, s.lon);
+      regWindguru(s.id, s.lat, s.lon);
+      regWindFinder(s.id, s.lat, s.lon);
     }
   }
 }
