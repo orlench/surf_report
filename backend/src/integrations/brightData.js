@@ -272,7 +272,7 @@ async function scrapeWithBrowser(url) {
   const results = await callMcpToolsInSession([
     { name: 'scraping_browser_navigate', arguments: { url } },
     { name: 'scraping_browser_snapshot', arguments: {} }
-  ], {}, 120000);
+  ], {}, 45000);
 
   const content = results[1]; // snapshot is the second call
 
@@ -295,7 +295,7 @@ async function scrapeAsMarkdown(url) {
 
   // Try Web Unlocker first (scrape_as_markdown)
   try {
-    const result = await callMcpTool('scrape_as_markdown', { url }, 90000);
+    const result = await callMcpTool('scrape_as_markdown', { url }, 25000);
     if (result && !result.includes('execution failed') && !result.includes('status code 401') && !result.includes('status code 403')) {
       logger.info(`[Bright Data] Scraped ${url} via Web Unlocker (${result.length} chars)`);
       return result;
@@ -314,7 +314,7 @@ async function scrapeAsMarkdown(url) {
  */
 async function searchEngine(query, engine = 'google') {
   logger.info(`[Bright Data] Searching ${engine} for: ${query}`);
-  const result = await callMcpTool('search_engine', { query, engine }, 60000);
+  const result = await callMcpTool('search_engine', { query, engine }, 20000);
   logger.info(`[Bright Data] Search complete (${result.length} chars)`);
   return result;
 }
