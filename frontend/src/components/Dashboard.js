@@ -10,6 +10,7 @@ import SpotMap from './SpotMap';
 import SpotFeedback from './SpotFeedback';
 import NotificationBell from './NotificationBell';
 import ProgressScreen from './ProgressScreen';
+import SkeletonDashboard from './SkeletonDashboard';
 import BeachSketch from './BeachSketch';
 import './Dashboard.css';
 
@@ -65,6 +66,7 @@ function Dashboard() {
   // Progress screen flow
   const isFirstVisitRef = useRef(selectedSpot === null);
   const [showProgressScreen, setShowProgressScreen] = useState(true);
+  const [showSkeleton, setShowSkeleton] = useState(false);
   const { location, nearestSpot, nearestSpotName, nearbySpots, isDetecting } = useGeoDetect(isFirstVisitRef.current);
   const { steps: sseSteps, total: sseTotal, isStreaming, finalData, error: sseError, startStream, cleanup } = useSSEProgress();
 
@@ -94,6 +96,7 @@ function Dashboard() {
       ['conditions', finalData.spotId, userWeight, userSkill],
       finalData
     );
+    setShowSkeleton(false); // dismiss skeleton immediately when data arrives
     const timer = setTimeout(() => {
       setShowProgressScreen(false);
       cleanup();
@@ -105,8 +108,19 @@ function Dashboard() {
   useEffect(() => {
     if (!sseError) return;
     setShowProgressScreen(false);
+    setShowSkeleton(false);
     cleanup();
   }, [sseError, cleanup]);
+
+  // After 3s still loading: drop ProgressScreen, show skeleton layout instead
+  useEffect(() => {
+    if (!isStreaming) return;
+    const timer = setTimeout(() => {
+      setShowSkeleton(true);
+      setShowProgressScreen(false);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [isStreaming]);
 
   // Build geo/spot steps for ProgressScreen (only on first visit)
   const geoStep = isFirstVisitRef.current && showProgressScreen ? {
@@ -123,6 +137,7 @@ function Dashboard() {
     setAdjustedScore(null);
     setAdjustedRating(null);
     setShowProgressScreen(true);
+    setShowSkeleton(false);
     startStream(spotId);
     localStorage.setItem('selectedSpot', spotId);
     const url = new URL(window.location);
@@ -179,6 +194,7 @@ function Dashboard() {
     if (now - lastRefresh.current < 5000) return;
     lastRefresh.current = now;
     setShowProgressScreen(true);
+    setShowSkeleton(false);
     startStream(selectedSpot);
   }, [startStream, selectedSpot]);
 
@@ -316,7 +332,7 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Progress screen */}
+      {/* Progress screen (first 3s) */}
       {showProgressScreen && (
         <ProgressScreen
           geoStep={geoStep}
@@ -325,6 +341,11 @@ function Dashboard() {
           total={sseTotal}
           isStreaming={isStreaming}
         />
+      )}
+
+      {/* Skeleton layout (after 3s, still waiting for data) */}
+      {showSkeleton && !conditions && (
+        <SkeletonDashboard spotName={currentSpotName} />
       )}
 
       {/* Main Content */}

@@ -1,0 +1,206 @@
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.sk {
+  background: linear-gradient(90deg, #edf0f5 25%, #e2e6ed 50%, #edf0f5 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 6px;
+}
+
+/* Hero skeleton */
+.skeleton-hero {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 36px 24px 28px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sk-hero-label {
+  width: 120px;
+  height: 14px;
+}
+
+.sk-hero-verdict {
+  width: 180px;
+  height: 28px;
+}
+
+.sk-hero-gauge {
+  width: 140px;
+  height: 80px;
+  border-radius: 80px 80px 0 0;
+}
+
+.sk-hero-explanation {
+  width: 260px;
+  height: 14px;
+}
+
+.sk-hero-wave {
+  width: 100px;
+  height: 22px;
+}
+
+.sk-hero-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.sk-hero-pill {
+  width: 90px;
+  height: 12px;
+}
+
+/* Section card shared */
+.skeleton-section {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sk-section-title {
+  width: 120px;
+  height: 11px;
+  margin-bottom: 20px;
+}
+
+/* Breakdown bars */
+.sk-breakdown-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sk-breakdown-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sk-breakdown-top {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.sk-breakdown-grade {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.sk-breakdown-label {
+  width: 90px;
+  height: 12px;
+}
+
+.sk-breakdown-bar {
+  height: 6px;
+  border-radius: 3px;
+}
+
+/* Forecast blocks */
+.sk-forecast-summary {
+  width: 200px;
+  height: 13px;
+  margin-bottom: 16px;
+}
+
+.sk-forecast-timeline {
+  display: flex;
+  gap: 10px;
+}
+
+.sk-forecast-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  background: #f8f9fb;
+  border-radius: 10px;
+  padding: 14px 8px;
+}
+
+.sk-forecast-block .sk-label {
+  width: 56px;
+  height: 11px;
+}
+
+.sk-forecast-block .sk-score {
+  width: 32px;
+  height: 20px;
+}
+
+.sk-forecast-block .sk-bar {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.sk-forecast-block .sk-rating {
+  width: 40px;
+  height: 11px;
+}
+
+/* Gear cards */
+.sk-gear-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 500px) {
+  .sk-gear-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sk-gear-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #f8f9fb;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.sk-gear-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.sk-gear-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sk-gear-title {
+  width: 100px;
+  height: 13px;
+}
+
+.sk-gear-desc {
+  width: 70px;
+  height: 11px;
+}
