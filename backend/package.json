@@ -27,10 +27,12 @@
     "express-rate-limit": "^8.2.1",
     "geoip-lite": "^2.0.0",
     "helmet": "^7.1.0",
-    "node-apn": "^3.0.0",
     "node-cache": "^5.1.2",
     "web-push": "^3.6.7",
     "winston": "^3.11.0"
+  },
+  "optionalDependencies": {
+    "node-apn": "^3.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"
