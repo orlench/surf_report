@@ -5,9 +5,28 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import spotData from '../data/surfSpots.json';
 import './SpotMap.css';
 
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 
 const DEFAULT_VIEW = { latitude: 30, longitude: 0, zoom: 2 };
+
+// Force English labels on every symbol layer by preferring name:en over the
+// local-language name field (which shows Hebrew, Arabic, etc. based on location).
+function forceEnglishLabels(style) {
+  if (!style?.layers) return style;
+  return {
+    ...style,
+    layers: style.layers.map(layer => {
+      if (layer.type !== 'symbol' || !layer.layout?.['text-field']) return layer;
+      return {
+        ...layer,
+        layout: {
+          ...layer.layout,
+          'text-field': ['coalesce', ['get', 'name:en'], ['get', 'name:latin'], ['get', 'name']],
+        },
+      };
+    }),
+  };
+}
 
 // Convert spots to GeoJSON for clustering
 function spotsToGeoJSON(spots) {
@@ -35,9 +54,18 @@ function SpotMap({ onSelect, onClose, initialSearch = '' }) {
   const [searchResults, setSearchResults] = useState([]);
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [geolocated, setGeolocated] = useState(false);
+  const [mapStyle, setMapStyle] = useState(MAP_STYLE_URL);
 
   const allSpots = spotData.spots;
   const geojson = useMemo(() => spotsToGeoJSON(allSpots), [allSpots]);
+
+  // Fetch map style and force English labels
+  useEffect(() => {
+    fetch(MAP_STYLE_URL)
+      .then(r => r.json())
+      .then(style => setMapStyle(forceEnglishLabels(style)))
+      .catch(() => {}); // fallback: keep the URL string already set as default
+  }, []);
 
   // Geolocate on mount
   useEffect(() => {
@@ -232,7 +260,7 @@ function SpotMap({ onSelect, onClose, initialSearch = '' }) {
         {/* Search results dropdown */}
         {searchResults.length > 0 && (
           <div className="spot-map-results">
-            {searchResults.map((spot, i) => (
+            {searchResults.map((spot) => (
               <button
                 key={`${spot.name}-${spot.lat}-${spot.lon}`}
                 className="spot-map-result"
@@ -255,7 +283,7 @@ function SpotMap({ onSelect, onClose, initialSearch = '' }) {
         {...viewState}
         onMove={e => setViewState(e.viewState)}
         onClick={handleMapClick}
-        mapStyle={MAP_STYLE}
+        mapStyle={mapStyle}
         style={{ width: '100%', height: '100%' }}
         cursor="pointer"
         attributionControl={false}
