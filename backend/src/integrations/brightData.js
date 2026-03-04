@@ -12,67 +12,92 @@ const logger = require('../utils/logger');
 
 const MCP_ENDPOINT = 'https://mcp.brightdata.com/mcp';
 
-async function callRemoteMcp(toolName, toolArgs, timeoutMs = 25000) {
-  const apiKey = process.env.BRIGHT_DATA_API_KEY;
-  if (!apiKey) throw new Error('BRIGHT_DATA_API_KEY not set');
-
-  let response;
+async function post(url, body, headers = {}, timeoutMs = 10000) {
   try {
-    response = await axios.post(
-      `${MCP_ENDPOINT}?token=${apiKey}&pro=1`,
-      {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'tools/call',
-        params: { name: toolName, arguments: toolArgs }
-      },
-      {
-        timeout: timeoutMs,
-        responseType: 'text',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json, text/event-stream'
-        }
+    return await axios.post(url, body, {
+      timeout: timeoutMs,
+      responseType: 'text',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
+        ...headers
       }
-    );
+    });
   } catch (err) {
     if (err.response) {
-      throw new Error(`Remote MCP HTTP ${err.response.status}: ${String(err.response.data).substring(0, 200)}`);
+      throw new Error(`MCP HTTP ${err.response.status}: ${String(err.response.data).substring(0, 300)}`);
     }
     throw err;
   }
-
-  return parseResponse(response);
 }
 
-function parseResponse(response) {
-  const contentType = response.headers['content-type'] || '';
-  let msg;
+function extractResult(msg) {
+  if (!msg) throw new Error('No MCP response message');
+  if (msg.error) throw new Error(`MCP error: ${msg.error.message || JSON.stringify(msg.error)}`);
+  const content = msg.result?.content;
+  return Array.isArray(content) ? content.map(c => c.text || '').join('\n') : '';
+}
 
-  if (contentType.includes('text/event-stream')) {
-    // SSE format: find "data: {...}" line with a result or error
+function parseResponse(response, targetId) {
+  const ct = response.headers['content-type'] || '';
+
+  const findById = (parsed) => {
+    const arr = Array.isArray(parsed) ? parsed : [parsed];
+    return arr.find(m => m.id === targetId) || (arr.length === 1 ? arr[0] : null);
+  };
+
+  if (ct.includes('text/event-stream')) {
     for (const line of response.data.split('\n')) {
       if (!line.startsWith('data: ')) continue;
       const raw = line.slice(6).trim();
       if (!raw || raw === '[DONE]') continue;
       try {
-        const parsed = JSON.parse(raw);
-        if (parsed.result !== undefined || parsed.error) { msg = parsed; break; }
+        const found = findById(JSON.parse(raw));
+        if (found) return extractResult(found);
       } catch (_) {}
     }
-  } else {
-    try {
-      msg = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-    } catch (_) {
-      throw new Error(`Failed to parse MCP response: ${String(response.data).substring(0, 200)}`);
-    }
+    throw new Error(`MCP: id:${targetId} not found in SSE stream`);
   }
 
-  if (!msg) throw new Error('Empty response from remote MCP');
-  if (msg.error) throw new Error(`MCP tool error: ${msg.error.message || JSON.stringify(msg.error)}`);
+  try {
+    const parsed = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+    const found = findById(parsed);
+    return extractResult(found);
+  } catch (e) {
+    if (e.message.startsWith('MCP')) throw e;
+    throw new Error(`MCP parse error: ${String(response.data).substring(0, 300)}`);
+  }
+}
 
-  const content = msg.result?.content;
-  return Array.isArray(content) ? content.map(c => c.text || '').join('\n') : '';
+async function callRemoteMcp(toolName, toolArgs, timeoutMs = 25000) {
+  const apiKey = process.env.BRIGHT_DATA_API_KEY;
+  if (!apiKey) throw new Error('BRIGHT_DATA_API_KEY not set');
+
+  const url = `${MCP_ENDPOINT}?token=${apiKey}`;
+
+  // Step 1: Initialize (required by MCP protocol before tools/call)
+  const initResp = await post(url, {
+    jsonrpc: '2.0', id: 1, method: 'initialize',
+    params: {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'surf-report', version: '1.0.0' }
+    }
+  }, {}, 10000);
+
+  const sessionId = initResp.headers['mcp-session-id'];
+  const sessionHeaders = sessionId ? { 'Mcp-Session-Id': sessionId } : {};
+
+  // Step 2: Notify initialized (fire-and-forget)
+  post(url, { jsonrpc: '2.0', method: 'notifications/initialized', params: {} }, sessionHeaders, 5000).catch(() => {});
+
+  // Step 3: Call the tool
+  const toolResp = await post(url, {
+    jsonrpc: '2.0', id: 2, method: 'tools/call',
+    params: { name: toolName, arguments: toolArgs }
+  }, sessionHeaders, timeoutMs);
+
+  return parseResponse(toolResp, 2);
 }
 
 /**
