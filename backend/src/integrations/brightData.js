@@ -1,322 +1,101 @@
-const { spawn } = require('child_process');
+const axios = require('axios');
 const logger = require('../utils/logger');
 
-// Limit concurrent MCP child processes to avoid OOM on Railway.
-// Each npx @brightdata/mcp process uses ~100-150 MB. Cap at 2 concurrent.
-const MCP_CONCURRENCY = 2;
-let _mcpActive = 0;
-const _mcpQueue = [];
-
-function acquireMcp() {
-  return new Promise(resolve => {
-    if (_mcpActive < MCP_CONCURRENCY) {
-      _mcpActive++;
-      resolve();
-    } else {
-      _mcpQueue.push(resolve);
-    }
-  });
-}
-
-function releaseMcp() {
-  _mcpActive--;
-  if (_mcpQueue.length > 0) {
-    _mcpActive++;
-    _mcpQueue.shift()();
-  }
-}
-
 /**
- * Bright Data MCP Integration - Direct MCP client
+ * Bright Data Remote MCP Integration
  *
- * Communicates with the @brightdata/mcp server directly via JSON-RPC over stdio.
- * Uses two products:
- *   - Web Unlocker (scrape_as_markdown) for simple sites
- *   - Scraping Browser (navigate + snapshot) for sites that block Web Unlocker
+ * Calls Bright Data's hosted MCP server over HTTP — no child processes,
+ * no semaphore, all scrapers run fully in parallel.
  *
  * Required env var: BRIGHT_DATA_API_KEY
  */
 
-function sendMessage(stdin, obj) {
-  stdin.write(JSON.stringify(obj) + '\n');
-}
+const MCP_ENDPOINT = 'https://mcp.brightdata.com/mcp';
 
-/**
- * Spawn an MCP server and run a single tool call.
- */
-async function callMcpTool(toolName, toolArgs, timeoutMs = 60000) {
-  await acquireMcp();
-  return new Promise((resolve, reject) => {
-    const apiKey = process.env.BRIGHT_DATA_API_KEY;
-    if (!apiKey) return reject(new Error('BRIGHT_DATA_API_KEY not set'));
+async function callRemoteMcp(toolName, toolArgs, timeoutMs = 25000) {
+  const apiKey = process.env.BRIGHT_DATA_API_KEY;
+  if (!apiKey) throw new Error('BRIGHT_DATA_API_KEY not set');
 
-    const isWindows = process.platform === 'win32';
-    const cmd = isWindows ? 'npx.cmd' : 'npx';
-    // Only pass necessary env vars to child process
-    const childEnv = {
-      PATH: process.env.PATH,
-      NODE_ENV: process.env.NODE_ENV,
-      API_TOKEN: apiKey,
-      PRO_MODE: 'true'
-    };
-    // Windows needs additional env vars for npx to work
-    if (process.platform === 'win32') {
-      childEnv.APPDATA = process.env.APPDATA;
-      childEnv.LOCALAPPDATA = process.env.LOCALAPPDATA;
-      childEnv.SystemRoot = process.env.SystemRoot;
-      childEnv.TEMP = process.env.TEMP;
-      childEnv.TMP = process.env.TMP;
-    }
-
-    const mcpServer = spawn(cmd, ['@brightdata/mcp'], {
-      env: childEnv,
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-
-    let stdoutBuffer = '';
-    let initDone = false;
-    let settled = false;
-
-    const finish = (err, result) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      try { mcpServer.kill('SIGTERM'); } catch (_) {}
-      releaseMcp();
-      if (err) reject(err);
-      else resolve(result);
-    };
-
-    const timer = setTimeout(() => {
-      finish(new Error(`MCP tool call timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-
-    mcpServer.on('error', (err) => finish(new Error(`Spawn failed: ${err.message}`)));
-    mcpServer.on('close', (code) => {
-      if (!settled) finish(new Error(`MCP server exited with code ${code}`));
-    });
-
-    mcpServer.stdout.on('data', (chunk) => {
-      stdoutBuffer += chunk.toString();
-      const lines = stdoutBuffer.split('\n');
-      stdoutBuffer = lines.pop();
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        let msg;
-        try { msg = JSON.parse(trimmed); } catch (_) { continue; }
-
-        if (msg.id === 1 && msg.result && !initDone) {
-          initDone = true;
-          sendMessage(mcpServer.stdin, { jsonrpc: '2.0', method: 'notifications/initialized', params: {} });
-          sendMessage(mcpServer.stdin, {
-            jsonrpc: '2.0', id: 2, method: 'tools/call',
-            params: { name: toolName, arguments: toolArgs }
-          });
-        } else if (msg.id === 2) {
-          if (msg.error) {
-            finish(new Error(`MCP tool error: ${msg.error.message || JSON.stringify(msg.error)}`));
-          } else {
-            const content = msg.result?.content;
-            const text = Array.isArray(content) ? content.map(c => c.text || '').join('\n') : '';
-            finish(null, text);
-          }
-        } else if (msg.error) {
-          finish(new Error(`MCP error: ${msg.error.message || JSON.stringify(msg.error)}`));
-        }
-      }
-    });
-
-    mcpServer.stderr.on('data', (chunk) => {
-      const text = chunk.toString().trim();
-      if (text) logger.debug(`[Bright Data MCP stderr] ${text}`);
-    });
-
-    sendMessage(mcpServer.stdin, {
-      jsonrpc: '2.0', id: 1, method: 'initialize',
-      params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'surf-report', version: '1.0.0' } }
-    });
-  });
-}
-
-/**
- * Spawn an MCP server and run multiple tool calls sequentially in one session.
- * Needed for Scraping Browser: navigate → snapshot.
- */
-async function callMcpToolsInSession(toolCalls, extraEnv = {}, timeoutMs = 120000) {
-  await acquireMcp();
-  return new Promise((resolve, reject) => {
-    const apiKey = process.env.BRIGHT_DATA_API_KEY;
-    if (!apiKey) return reject(new Error('BRIGHT_DATA_API_KEY not set'));
-
-    const isWindows = process.platform === 'win32';
-    const cmd = isWindows ? 'npx.cmd' : 'npx';
-
-    // Only pass necessary env vars to child process
-    const childEnv = {
-      PATH: process.env.PATH,
-      NODE_ENV: process.env.NODE_ENV,
-      API_TOKEN: apiKey,
-      PRO_MODE: 'true',
-      ...extraEnv
-    };
-    if (process.platform === 'win32') {
-      childEnv.APPDATA = process.env.APPDATA;
-      childEnv.LOCALAPPDATA = process.env.LOCALAPPDATA;
-      childEnv.SystemRoot = process.env.SystemRoot;
-      childEnv.TEMP = process.env.TEMP;
-      childEnv.TMP = process.env.TMP;
-    }
-
-    const mcpServer = spawn(cmd, ['@brightdata/mcp'], {
-      env: childEnv,
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-
-    let stdoutBuffer = '';
-    let initDone = false;
-    let settled = false;
-    let currentIdx = 0;
-    const results = [];
-
-    const finish = (err, result) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      try { mcpServer.kill('SIGTERM'); } catch (_) {}
-      releaseMcp();
-      if (err) reject(err);
-      else resolve(result);
-    };
-
-    const timer = setTimeout(() => {
-      finish(new Error(`MCP session timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-
-    mcpServer.on('error', (err) => finish(new Error(`Spawn failed: ${err.message}`)));
-    mcpServer.on('close', (code) => {
-      if (!settled) finish(new Error(`MCP server exited with code ${code}`));
-    });
-
-    function sendNextToolCall() {
-      sendMessage(mcpServer.stdin, {
+  let response;
+  try {
+    response = await axios.post(
+      `${MCP_ENDPOINT}?token=${apiKey}&pro=1`,
+      {
         jsonrpc: '2.0',
-        id: 10 + currentIdx,
+        id: 1,
         method: 'tools/call',
-        params: {
-          name: toolCalls[currentIdx].name,
-          arguments: toolCalls[currentIdx].arguments || {}
-        }
-      });
-    }
-
-    mcpServer.stdout.on('data', (chunk) => {
-      stdoutBuffer += chunk.toString();
-      const lines = stdoutBuffer.split('\n');
-      stdoutBuffer = lines.pop();
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        let msg;
-        try { msg = JSON.parse(trimmed); } catch (_) { continue; }
-
-        // Initialize response
-        if (msg.id === 1 && msg.result && !initDone) {
-          initDone = true;
-          sendMessage(mcpServer.stdin, { jsonrpc: '2.0', method: 'notifications/initialized', params: {} });
-          sendNextToolCall();
-        }
-        // Tool call response
-        else if (msg.id >= 10 && msg.id < 10 + toolCalls.length) {
-          if (msg.error) {
-            finish(new Error(`Tool '${toolCalls[msg.id - 10].name}' error: ${msg.error.message || JSON.stringify(msg.error)}`));
-            return;
-          }
-          const content = msg.result?.content;
-          const text = Array.isArray(content) ? content.map(c => c.text || '').join('\n') : '';
-          results.push(text);
-
-          currentIdx++;
-          if (currentIdx < toolCalls.length) {
-            sendNextToolCall();
-          } else {
-            finish(null, results);
-          }
-        }
-        else if (msg.error) {
-          finish(new Error(`MCP error: ${msg.error.message || JSON.stringify(msg.error)}`));
+        params: { name: toolName, arguments: toolArgs }
+      },
+      {
+        timeout: timeoutMs,
+        responseType: 'text',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json, text/event-stream'
         }
       }
-    });
-
-    mcpServer.stderr.on('data', (chunk) => {
-      const text = chunk.toString().trim();
-      if (text) logger.debug(`[Bright Data MCP stderr] ${text}`);
-    });
-
-    sendMessage(mcpServer.stdin, {
-      jsonrpc: '2.0', id: 1, method: 'initialize',
-      params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'surf-report', version: '1.0.0' } }
-    });
-  });
-}
-
-/**
- * Scrape a URL using the Scraping Browser (navigate + snapshot).
- * Used for sites that block Web Unlocker.
- */
-async function scrapeWithBrowser(url) {
-  logger.info(`[Bright Data] Browser scraping: ${url}`);
-  const results = await callMcpToolsInSession([
-    { name: 'scraping_browser_navigate', arguments: { url } },
-    { name: 'scraping_browser_snapshot', arguments: {} }
-  ], {}, 45000);
-
-  const content = results[1]; // snapshot is the second call
-
-  // Check if the result is actually an error message from the MCP tool
-  if (content && (content.includes('execution failed') || content.includes('status code 401') || content.includes('status code 403'))) {
-    logger.error(`[Bright Data] Browser scrape returned error for ${url}: ${content.substring(0, 200)}`);
-    throw new Error(`Browser scrape failed for ${url}: ${content.substring(0, 200)}`);
+    );
+  } catch (err) {
+    if (err.response) {
+      throw new Error(`Remote MCP HTTP ${err.response.status}: ${String(err.response.data).substring(0, 200)}`);
+    }
+    throw err;
   }
 
-  logger.info(`[Bright Data] Browser scraped ${url} (${content.length} chars)`);
-  return content;
+  return parseResponse(response);
+}
+
+function parseResponse(response) {
+  const contentType = response.headers['content-type'] || '';
+  let msg;
+
+  if (contentType.includes('text/event-stream')) {
+    // SSE format: find "data: {...}" line with a result or error
+    for (const line of response.data.split('\n')) {
+      if (!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
+      if (!raw || raw === '[DONE]') continue;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.result !== undefined || parsed.error) { msg = parsed; break; }
+      } catch (_) {}
+    }
+  } else {
+    try {
+      msg = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+    } catch (_) {
+      throw new Error(`Failed to parse MCP response: ${String(response.data).substring(0, 200)}`);
+    }
+  }
+
+  if (!msg) throw new Error('Empty response from remote MCP');
+  if (msg.error) throw new Error(`MCP tool error: ${msg.error.message || JSON.stringify(msg.error)}`);
+
+  const content = msg.result?.content;
+  return Array.isArray(content) ? content.map(c => c.text || '').join('\n') : '';
 }
 
 /**
  * Scrape a URL and return content as markdown.
- * Tries Web Unlocker first (fast), falls back to Scraping Browser for blocked sites.
  */
 async function scrapeAsMarkdown(url) {
   logger.info(`[Bright Data] Scraping: ${url}`);
-
-  // Try Web Unlocker first (scrape_as_markdown)
-  try {
-    const result = await callMcpTool('scrape_as_markdown', { url }, 25000);
-    if (result && !result.includes('execution failed') && !result.includes('status code 401') && !result.includes('status code 403')) {
-      logger.info(`[Bright Data] Scraped ${url} via Web Unlocker (${result.length} chars)`);
-      return result;
-    }
-    logger.warn(`[Bright Data] Web Unlocker returned error for ${url}: ${result ? result.substring(0, 200) : 'empty'}`);
-  } catch (err) {
-    logger.warn(`[Bright Data] Web Unlocker error for ${url}: ${err.message}, trying Scraping Browser`);
+  const result = await callRemoteMcp('scrape_as_markdown', { url });
+  if (!result || result.includes('execution failed') || result.includes('status code 401') || result.includes('status code 403')) {
+    throw new Error(`Web Unlocker failed for ${url}: ${result ? result.substring(0, 200) : 'empty'}`);
   }
-
-  // Fallback to Scraping Browser (navigate + snapshot)
-  return scrapeWithBrowser(url);
+  logger.info(`[Bright Data] Scraped ${url} (${result.length} chars)`);
+  return result;
 }
 
 /**
- * Search the web and return results
+ * Search the web and return results.
  */
 async function searchEngine(query, engine = 'google') {
   logger.info(`[Bright Data] Searching ${engine} for: ${query}`);
-  const result = await callMcpTool('search_engine', { query, engine }, 20000);
+  const result = await callRemoteMcp('search_engine', { query, engine }, 20000);
   logger.info(`[Bright Data] Search complete (${result.length} chars)`);
   return result;
 }
 
-module.exports = { scrapeAsMarkdown, scrapeWithBrowser, searchEngine };
+module.exports = { scrapeAsMarkdown, searchEngine };
