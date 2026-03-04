@@ -38,8 +38,19 @@ Thumbs.db
 .cache/
 .parcel-cache/
 
-# User-generated data (persisted spots, feedback)
+# User-generated data (persisted spots, feedback, url cache)
 backend/data/userSpots.json
 backend/data/spotFeedback.json
+backend/data/discoveredUrls.json
 
 .vercel
+
+# Xcode / iOS
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+ios/build/
+ios/DerivedData/
+ios/**/*.xccheckout
+ios/**/*.ipa
+ios/**/*.dSYM.zip
+ios/**/*.dSYM

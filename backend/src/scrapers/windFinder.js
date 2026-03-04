@@ -1,5 +1,6 @@
 const brightData = require('../integrations/brightData');
 const logger = require('../utils/logger');
+const urlCache = require('../utils/urlCache');
 
 /**
  * Scrape windfinder.com for wind conditions via Bright Data MCP
@@ -8,7 +9,6 @@ const logger = require('../utils/logger');
 
 const SPOT_URLS = {};
 const coordsMap = {};
-const urlCache = {}; // cache discovered URLs per spotId
 
 function registerCoords(spotId, lat, lon, name, country) {
   coordsMap[spotId] = { lat, lon, name, country };
@@ -17,8 +17,9 @@ function registerCoords(spotId, lat, lon, name, country) {
 async function resolveUrl(spotId) {
   // Static URL takes priority
   if (SPOT_URLS[spotId]) return SPOT_URLS[spotId];
-  // Return cached URL from previous search
-  if (urlCache[spotId]) return urlCache[spotId];
+  // Return cached URL (survives restarts)
+  const cached = urlCache.get('windFinder', spotId);
+  if (cached) return cached;
 
   // Use spot name + country for the search (coords alone return empty results)
   const meta = coordsMap[spotId];
@@ -33,16 +34,15 @@ async function resolveUrl(spotId) {
     const firstResult = parsed?.organic?.[0]?.link;
     const urlMatch = firstResult?.match(/https?:\/\/(?:www\.)?windfinder\.com\/(?:forecast|weatherforecast|report)\/[\w-]+/);
     if (!urlMatch && firstResult) {
-      // Try extracting from any organic result
       const anyLink = parsed.organic?.map(r => r.link).find(l => /windfinder\.com\/(forecast|weatherforecast)\//.test(l));
       if (anyLink) {
-        urlCache[spotId] = anyLink;
+        urlCache.set('windFinder', spotId, anyLink);
         logger.info(`[WindFinder] Discovered URL for ${spotId}: ${anyLink}`);
         return anyLink;
       }
     }
     if (urlMatch) {
-      urlCache[spotId] = urlMatch[0];
+      urlCache.set('windFinder', spotId, urlMatch[0]);
       logger.info(`[WindFinder] Discovered URL for ${spotId}: ${urlMatch[0]}`);
       return urlMatch[0];
     }

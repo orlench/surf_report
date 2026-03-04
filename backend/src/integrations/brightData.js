@@ -88,8 +88,8 @@ async function callRemoteMcp(toolName, toolArgs, timeoutMs = 25000) {
   const sessionId = initResp.headers['mcp-session-id'];
   const sessionHeaders = sessionId ? { 'Mcp-Session-Id': sessionId } : {};
 
-  // Step 2: Notify initialized (fire-and-forget)
-  post(url, { jsonrpc: '2.0', method: 'notifications/initialized', params: {} }, sessionHeaders, 5000).catch(() => {});
+  // Step 2: Notify initialized
+  await post(url, { jsonrpc: '2.0', method: 'notifications/initialized', params: {} }, sessionHeaders, 5000).catch(() => {});
 
   // Step 3: Call the tool
   const toolResp = await post(url, {

@@ -1,5 +1,6 @@
 const brightData = require('../integrations/brightData');
 const logger = require('../utils/logger');
+const urlCache = require('../utils/urlCache');
 
 /**
  * Scrape surf-forecast.com for Israeli surf spots via Bright Data MCP
@@ -8,7 +9,6 @@ const logger = require('../utils/logger');
 
 const SPOT_URLS = {};
 const coordsMap = {};
-const urlCache = {};
 
 function registerCoords(spotId, lat, lon, name, country) {
   coordsMap[spotId] = { lat, lon, name, country };
@@ -16,7 +16,8 @@ function registerCoords(spotId, lat, lon, name, country) {
 
 async function resolveUrl(spotId) {
   if (SPOT_URLS[spotId]) return SPOT_URLS[spotId];
-  if (urlCache[spotId]) return urlCache[spotId];
+  const cached = urlCache.get('surfForecast', spotId);
+  if (cached) return cached;
 
   const meta = coordsMap[spotId];
   const query = meta?.name
@@ -29,9 +30,8 @@ async function resolveUrl(spotId) {
     const parsed = JSON.parse(searchResult);
     const link = parsed?.organic?.find(r => /surf-forecast\.com\/breaks\//.test(r.link))?.link;
     if (link) {
-      // Use the six_day forecast URL for more data
       const sixDay = link.replace(/\/forecasts\/.*/, '/forecasts/latest/six_day');
-      urlCache[spotId] = sixDay;
+      urlCache.set('surfForecast', spotId, sixDay);
       logger.info(`[Surf-forecast] Discovered URL for ${spotId}: ${sixDay}`);
       return sixDay;
     }
