@@ -1,6 +1,31 @@
 const { spawn } = require('child_process');
 const logger = require('../utils/logger');
 
+// Limit concurrent MCP child processes to avoid OOM on Railway.
+// Each npx @brightdata/mcp process uses ~100-150 MB. Cap at 2 concurrent.
+const MCP_CONCURRENCY = 2;
+let _mcpActive = 0;
+const _mcpQueue = [];
+
+function acquireMcp() {
+  return new Promise(resolve => {
+    if (_mcpActive < MCP_CONCURRENCY) {
+      _mcpActive++;
+      resolve();
+    } else {
+      _mcpQueue.push(resolve);
+    }
+  });
+}
+
+function releaseMcp() {
+  _mcpActive--;
+  if (_mcpQueue.length > 0) {
+    _mcpActive++;
+    _mcpQueue.shift()();
+  }
+}
+
 /**
  * Bright Data MCP Integration - Direct MCP client
  *
@@ -19,7 +44,8 @@ function sendMessage(stdin, obj) {
 /**
  * Spawn an MCP server and run a single tool call.
  */
-function callMcpTool(toolName, toolArgs, timeoutMs = 60000) {
+async function callMcpTool(toolName, toolArgs, timeoutMs = 60000) {
+  await acquireMcp();
   return new Promise((resolve, reject) => {
     const apiKey = process.env.BRIGHT_DATA_API_KEY;
     if (!apiKey) return reject(new Error('BRIGHT_DATA_API_KEY not set'));
@@ -56,6 +82,7 @@ function callMcpTool(toolName, toolArgs, timeoutMs = 60000) {
       settled = true;
       clearTimeout(timer);
       try { mcpServer.kill('SIGTERM'); } catch (_) {}
+      releaseMcp();
       if (err) reject(err);
       else resolve(result);
     };
@@ -117,7 +144,8 @@ function callMcpTool(toolName, toolArgs, timeoutMs = 60000) {
  * Spawn an MCP server and run multiple tool calls sequentially in one session.
  * Needed for Scraping Browser: navigate → snapshot.
  */
-function callMcpToolsInSession(toolCalls, extraEnv = {}, timeoutMs = 120000) {
+async function callMcpToolsInSession(toolCalls, extraEnv = {}, timeoutMs = 120000) {
+  await acquireMcp();
   return new Promise((resolve, reject) => {
     const apiKey = process.env.BRIGHT_DATA_API_KEY;
     if (!apiKey) return reject(new Error('BRIGHT_DATA_API_KEY not set'));
@@ -157,6 +185,7 @@ function callMcpToolsInSession(toolCalls, extraEnv = {}, timeoutMs = 120000) {
       settled = true;
       clearTimeout(timer);
       try { mcpServer.kill('SIGTERM'); } catch (_) {}
+      releaseMcp();
       if (err) reject(err);
       else resolve(result);
     };

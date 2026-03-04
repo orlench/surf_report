@@ -8,9 +8,10 @@ const logger = require('../utils/logger');
 
 // Create cache instance with 10-minute default TTL
 const cache = new NodeCache({
-  stdTTL: 600, // 10 minutes
-  checkperiod: 60, // Check for expired keys every 60 seconds
-  useClones: false // Don't clone data (better performance)
+  stdTTL: 600,       // 10 minutes
+  checkperiod: 60,   // Check for expired keys every 60 seconds
+  useClones: false,  // Don't clone data (better performance)
+  maxKeys: 200       // Hard cap — prevents unbounded memory growth
 });
 
 /**
