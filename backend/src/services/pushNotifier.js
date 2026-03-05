@@ -1,4 +1,25 @@
 const webpush = require('web-push');
+let apn;
+let apnProvider;
+
+function initApn() {
+  if (apnProvider) return apnProvider;
+  const keyId = process.env.APNS_KEY_ID;
+  const teamId = process.env.APNS_TEAM_ID;
+  const keyP8 = process.env.APNS_KEY_P8;
+  if (!keyId || !teamId || !keyP8) return null;
+  try {
+    apn = require('node-apn');
+    apnProvider = new apn.Provider({
+      token: { key: Buffer.from(keyP8, 'base64'), keyId, teamId },
+      production: process.env.APNS_PRODUCTION === 'true'
+    });
+    return apnProvider;
+  } catch (e) {
+    logger.warn('[Push] node-apn not installed — APNs notifications disabled');
+    return null;
+  }
+}
 const { fetchSurfData, aggregateData, aggregateHourlyData } = require('./scraper');
 const { calculateSurfScore } = require('./scoring');
 const { generateTrend } = require('./trend');
@@ -127,12 +148,41 @@ async function checkAndNotify() {
       });
 
       try {
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: sub.keys },
-          payload
-        );
-        markNotified(sub.id, qualifyingBlock.label);
-        logger.info(`[Push] Sent notification to ${sub.id} for ${spotId}: ${qualifyingBlock.label} (${qualifyingBlock.score})`);
+        if (sub.type === 'apns' && sub.token) {
+          // Native iOS push via APNs
+          const provider = initApn();
+          if (provider) {
+            const parsedPayload = JSON.parse(payload);
+            const note = new apn.Notification();
+            note.expiry = Math.floor(Date.now() / 1000) + 3600;
+            note.badge = 1;
+            note.sound = 'default';
+            note.alert = { title: parsedPayload.title, body: parsedPayload.body };
+            note.topic = 'surf.shouldigo.app';
+            note.payload = parsedPayload.data || {};
+            const result = await provider.send(note, sub.token);
+            if (result.failed && result.failed.length > 0) {
+              const reason = result.failed[0]?.response?.reason;
+              if (reason === 'Unregistered' || reason === 'BadDeviceToken') {
+                logger.info(`[Push] APNs token invalid (${reason}), removing ${sub.id}`);
+                removeById(sub.id);
+              } else {
+                logger.error(`[Push] APNs failed for ${sub.id}: ${reason}`);
+              }
+            } else {
+              markNotified(sub.id, qualifyingBlock.label);
+              logger.info(`[Push] Sent APNs notification to ${sub.id} for ${spotId}: ${qualifyingBlock.label}`);
+            }
+          }
+        } else {
+          // Web push
+          await webpush.sendNotification(
+            { endpoint: sub.endpoint, keys: sub.keys },
+            payload
+          );
+          markNotified(sub.id, qualifyingBlock.label);
+          logger.info(`[Push] Sent web notification to ${sub.id} for ${spotId}: ${qualifyingBlock.label} (${qualifyingBlock.score})`);
+        }
       } catch (err) {
         if (err.statusCode === 410 || err.statusCode === 404) {
           logger.info(`[Push] Subscription expired (${err.statusCode}), removing ${sub.id}`);

@@ -25,16 +25,26 @@ router.get('/vapid-public-key', (req, res) => {
 /**
  * POST /api/push/subscribe
  * Subscribe to push notifications for a spot.
- * Body: { subscription: { endpoint, keys }, spotId, threshold }
+ *
+ * Web body:   { subscription: { endpoint, keys: { p256dh, auth } }, spotId, threshold }
+ * Native body: { type: 'apns', token: '<hex>', spotId, threshold }
  */
 router.post('/subscribe', (req, res) => {
   try {
-    const { subscription, spotId, threshold } = req.body;
+    const { type, token, subscription, spotId, threshold } = req.body;
+    const isNative = type === 'apns';
 
-    // Validate subscription object
-    if (!subscription || !subscription.endpoint || !subscription.keys ||
-        !subscription.keys.p256dh || !subscription.keys.auth) {
-      return res.status(400).json({ success: false, error: 'Invalid subscription object' });
+    // Validate native APNs token
+    if (isNative) {
+      if (!token || typeof token !== 'string' || !/^[0-9a-f]{40,}$/i.test(token)) {
+        return res.status(400).json({ success: false, error: 'Invalid APNs token' });
+      }
+    } else {
+      // Validate web push subscription object
+      if (!subscription || !subscription.endpoint || !subscription.keys ||
+          !subscription.keys.p256dh || !subscription.keys.auth) {
+        return res.status(400).json({ success: false, error: 'Invalid subscription object' });
+      }
     }
 
     // Validate spotId
@@ -50,8 +60,11 @@ router.post('/subscribe', (req, res) => {
       });
     }
 
+    // For native, use the token as the "endpoint" identifier
+    const identifier = isNative ? `apns:${token}` : subscription.endpoint;
+
     // Check max spots per user
-    const existingSubs = getSubscriptionsByEndpoint(subscription.endpoint);
+    const existingSubs = getSubscriptionsByEndpoint(identifier);
     const alreadySubscribed = existingSubs.some(s => s.spotId === spotId);
     if (!alreadySubscribed && existingSubs.length >= MAX_SPOTS_PER_USER) {
       return res.status(400).json({
@@ -60,8 +73,12 @@ router.post('/subscribe', (req, res) => {
       });
     }
 
-    const { id, count } = upsertSubscription(subscription, spotId, threshold);
-    logger.info(`[Push] Subscription upserted: ${id} for ${spotId} (threshold: ${threshold}, total: ${count})`);
+    const subObj = isNative
+      ? { endpoint: identifier, keys: {}, type: 'apns', token }
+      : { ...subscription, type: 'web' };
+
+    const { id, count } = upsertSubscription(subObj, spotId, threshold);
+    logger.info(`[Push] Subscription upserted: ${id} for ${spotId} (type: ${isNative ? 'apns' : 'web'}, threshold: ${threshold})`);
 
     res.json({ success: true, id, count });
   } catch (error) {
@@ -73,17 +90,20 @@ router.post('/subscribe', (req, res) => {
 /**
  * POST /api/push/unsubscribe
  * Unsubscribe from push notifications for a spot.
- * Body: { endpoint, spotId }
+ *
+ * Web body:    { endpoint, spotId }
+ * Native body: { type: 'apns', token, spotId }
  */
 router.post('/unsubscribe', (req, res) => {
   try {
-    const { endpoint, spotId } = req.body;
+    const { type, token, endpoint, spotId } = req.body;
+    const identifier = type === 'apns' && token ? `apns:${token}` : endpoint;
 
-    if (!endpoint || !spotId) {
-      return res.status(400).json({ success: false, error: 'Missing endpoint or spotId' });
+    if (!identifier || !spotId) {
+      return res.status(400).json({ success: false, error: 'Missing identifier or spotId' });
     }
 
-    const removed = removeSubscription(endpoint, spotId);
+    const removed = removeSubscription(identifier, spotId);
     logger.info(`[Push] Unsubscribed: ${spotId} (removed: ${removed})`);
 
     res.json({ success: true, removed });
