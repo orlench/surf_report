@@ -259,19 +259,14 @@ function SpotSelector({ spots, value, onChange, nearbySpots = [] }) {
           initialSearch={mapInitialSearch}
           onSelect={(spot) => {
             const id = slugify(spot.name);
+            const spotMeta = { id, name: spot.name, lat: spot.lat, lon: spot.lon, country: spot.country, region: spot.region };
             // Save to recent custom spots
             const existing = getRecentCustomSpots();
-            const updated = [
-              { id, name: spot.name, lat: spot.lat, lon: spot.lon, country: spot.country, region: spot.region },
-              ...existing.filter(s => s.id !== id)
-            ].slice(0, 20);
+            const updated = [spotMeta, ...existing.filter(s => s.id !== id)].slice(0, 20);
             localStorage.setItem('customSpots', JSON.stringify(updated));
-            // Also store the active custom spot metadata for Dashboard
-            localStorage.setItem('activeCustomSpot', JSON.stringify({
-              id, name: spot.name, lat: spot.lat, lon: spot.lon, country: spot.country
-            }));
+            localStorage.setItem('activeCustomSpot', JSON.stringify(spotMeta));
             setShowMap(false);
-            onChange(id);
+            onChange(id, spotMeta);
           }}
           onClose={() => setShowMap(false)}
         />

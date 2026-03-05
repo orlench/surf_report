@@ -4,7 +4,7 @@
 }
 
 .sk {
-  background: linear-gradient(90deg, #edf0f5 25%, #e2e6ed 50%, #edf0f5 75%);
+  background: linear-gradient(90deg, #d4dae6 25%, #c5ccd9 50%, #d4dae6 75%);
   background-size: 800px 100%;
   animation: shimmer 1.4s infinite linear;
   border-radius: 6px;
@@ -132,7 +132,7 @@
   flex-direction: column;
   gap: 8px;
   align-items: center;
-  background: #f8f9fb;
+  background: #edf0f5;
   border-radius: 10px;
   padding: 14px 8px;
 }
@@ -176,7 +176,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  background: #f8f9fb;
+  background: #edf0f5;
   border-radius: 10px;
   padding: 14px;
 }

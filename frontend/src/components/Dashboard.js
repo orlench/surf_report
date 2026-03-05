@@ -66,14 +66,32 @@ function Dashboard() {
   // Progress screen flow
   const isFirstVisitRef = useRef(selectedSpot === null);
   const [showProgressScreen, setShowProgressScreen] = useState(true);
-  const [showSkeleton, setShowSkeleton] = useState(false);
+  const skeletonTimerRef = useRef(null);
+  // After 3s still loading: drop ProgressScreen so skeleton auto-shows
+  // (skeleton renders whenever !showProgressScreen && !conditions)
+  const startSkeletonTimer = useCallback(() => {
+    clearTimeout(skeletonTimerRef.current);
+    skeletonTimerRef.current = setTimeout(() => {
+      setShowProgressScreen(false);
+    }, 3000);
+  }, []);
+  const cancelSkeletonTimer = useCallback(() => {
+    clearTimeout(skeletonTimerRef.current);
+  }, []);
   const { location, nearestSpot, nearestSpotName, nearbySpots, isDetecting } = useGeoDetect(isFirstVisitRef.current);
   const { steps: sseSteps, total: sseTotal, isStreaming, finalData, error: sseError, startStream, cleanup } = useSSEProgress();
 
-  // Start SSE for returning users on mount
+  // Start SSE for returning users on mount (skip SSE for custom/map spots)
   useEffect(() => {
     if (isFirstVisitRef.current || !selectedSpot) return;
-    startStream(selectedSpot);
+    const customMeta = getCustomSpotMeta(selectedSpot);
+    if (customMeta) {
+      setShowProgressScreen(false);
+      createSpot(customMeta).catch(() => {});
+    } else {
+      startStream(selectedSpot);
+      startSkeletonTimer();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -86,8 +104,9 @@ function Dashboard() {
     url.searchParams.set('spot', nearestSpot);
     window.history.replaceState({}, '', url);
     startStream(nearestSpot);
+    startSkeletonTimer();
     isFirstVisitRef.current = false;
-  }, [nearestSpot, isDetecting, startStream]);
+  }, [nearestSpot, isDetecting, startStream, startSkeletonTimer]);
 
   // When SSE completes, seed React Query cache and dismiss progress screen
   useEffect(() => {
@@ -96,31 +115,25 @@ function Dashboard() {
       ['conditions', finalData.spotId, userWeight, userSkill],
       finalData
     );
-    setShowSkeleton(false); // dismiss skeleton immediately when data arrives
+    cancelSkeletonTimer();
+    // If response came from cache (no scraper steps were shown), dismiss instantly.
+    // Otherwise hold for 800ms so the user sees the completed step list briefly.
+    const delay = finalData.fromCache ? 0 : 800;
     const timer = setTimeout(() => {
       setShowProgressScreen(false);
       cleanup();
-    }, 800);
+    }, delay);
     return () => clearTimeout(timer);
-  }, [finalData, queryClient, userWeight, userSkill, cleanup]);
+  }, [finalData, queryClient, userWeight, userSkill, cleanup, cancelSkeletonTimer]);
 
-  // SSE error fallback: dismiss progress and let React Query fetch
+  // SSE error fallback: dismiss progress screen so skeleton auto-shows
+  // while React Query fetches the fallback REST endpoint
   useEffect(() => {
     if (!sseError) return;
+    cancelSkeletonTimer();
     setShowProgressScreen(false);
-    setShowSkeleton(false);
     cleanup();
-  }, [sseError, cleanup]);
-
-  // After 3s still loading: drop ProgressScreen, show skeleton layout instead
-  useEffect(() => {
-    if (!isStreaming) return;
-    const timer = setTimeout(() => {
-      setShowSkeleton(true);
-      setShowProgressScreen(false);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [isStreaming]);
+  }, [sseError, cleanup, cancelSkeletonTimer]);
 
   // Build geo/spot steps for ProgressScreen (only on first visit)
   const geoStep = isFirstVisitRef.current && showProgressScreen ? {
@@ -132,24 +145,28 @@ function Dashboard() {
     snippet: nearestSpotName || null,
   } : null;
 
-  const handleSpotChange = useCallback((spotId) => {
+  const handleSpotChange = useCallback((spotId, providedMeta) => {
     setSelectedSpot(spotId);
     setAdjustedScore(null);
     setAdjustedRating(null);
-    setShowProgressScreen(true);
-    setShowSkeleton(false);
-    startStream(spotId);
+
+    const customMeta = providedMeta || getCustomSpotMeta(spotId);
+    if (customMeta) {
+      // Custom/map spot: skip SSE, show inline skeleton immediately
+      setShowProgressScreen(false);
+      createSpot(customMeta).catch(() => {});
+    } else {
+      // Hardcoded spot: full SSE progress flow
+      setShowProgressScreen(true);
+      startStream(spotId);
+      startSkeletonTimer();
+    }
+
     localStorage.setItem('selectedSpot', spotId);
     const url = new URL(window.location);
     url.searchParams.set('spot', spotId);
     window.history.replaceState({}, '', url);
-
-    // If this is a custom spot, fire-and-forget a POST to persist it
-    const customMeta = getCustomSpotMeta(spotId);
-    if (customMeta) {
-      createSpot(customMeta).catch(() => {});
-    }
-  }, [startStream]);
+  }, [startStream, startSkeletonTimer]);
 
   // Keep URL in sync with selected spot
   useEffect(() => {
@@ -168,6 +185,7 @@ function Dashboard() {
   const {
     data: conditions,
     error,
+    isPending: conditionsLoading,
   } = useQuery({
     queryKey: ['conditions', selectedSpot, userWeight, userSkill],
     queryFn: () => {
@@ -194,9 +212,9 @@ function Dashboard() {
     if (now - lastRefresh.current < 5000) return;
     lastRefresh.current = now;
     setShowProgressScreen(true);
-    setShowSkeleton(false);
     startStream(selectedSpot);
-  }, [startStream, selectedSpot]);
+    startSkeletonTimer();
+  }, [startStream, selectedSpot, startSkeletonTimer]);
 
   const currentSpotName = conditions?.spotName
     || spots?.find(s => s.id === selectedSpot)?.name
@@ -211,6 +229,10 @@ function Dashboard() {
     : customMeta
       ? { id: customMeta.id, location: { lat: customMeta.lat, lon: customMeta.lon } }
       : null;
+
+  // Show inline skeleton sections for map/custom spots while React Query is loading
+  // (conditionsLoading is true when query is pending with no data yet)
+  const showSkeletonSections = !!customMeta && !showProgressScreen && conditionsLoading;
 
   const is404 = error?.response?.status === 404 || error?.message?.includes('404');
 
@@ -343,158 +365,218 @@ function Dashboard() {
         />
       )}
 
-      {/* Skeleton layout (after 3s, still waiting for data) */}
-      {showSkeleton && !conditions && (
+      {/* Skeleton layout: shows for hardcoded spots after 3s, while SSE is still running */}
+      {!showProgressScreen && !conditions && !showSkeletonSections && (
         <SkeletonDashboard spotName={currentSpotName} />
       )}
 
-      {/* Main Content */}
-      {conditions && !showProgressScreen && (
+      {/* Main Content
+          - For map/custom spots: renders immediately with inline skeleton blocks while fetching
+          - For hardcoded spots: renders once conditions are available (SSE delivers them) */}
+      {!showProgressScreen && (conditions || showSkeletonSections) && (
         <>
-          <ScoreDisplay
-            score={adjustedScore !== null ? adjustedScore : conditions.score.overall}
-            rating={adjustedRating !== null ? adjustedRating : conditions.score.rating}
-            explanation={conditions.score.explanation}
-            timestamp={conditions.timestamp}
-            fromCache={conditions.fromCache}
-            cacheAge={conditions.cacheAge}
-            conditions={conditions.conditions}
-            onRefresh={handleRefresh}
-          />
+          {/* Hero */}
+          {conditions ? (
+            <ScoreDisplay
+              score={adjustedScore !== null ? adjustedScore : conditions.score.overall}
+              rating={adjustedRating !== null ? adjustedRating : conditions.score.rating}
+              explanation={conditions.score.explanation}
+              timestamp={conditions.timestamp}
+              fromCache={conditions.fromCache}
+              cacheAge={conditions.cacheAge}
+              conditions={conditions.conditions}
+              onRefresh={handleRefresh}
+            />
+          ) : (
+            <div className="skeleton-hero">
+              <div className="sk sk-hero-label" />
+              <div className="sk sk-hero-gauge" />
+              <div className="sk sk-hero-verdict" />
+              <div className="sk sk-hero-explanation" />
+              <div className="sk-hero-pills">
+                <div className="sk sk-hero-pill" />
+                <div className="sk sk-hero-pill" />
+                <div className="sk sk-hero-pill" />
+              </div>
+            </div>
+          )}
 
           {/* Score Breakdown */}
-          {conditions.score.breakdown && (
+          {(conditions?.score.breakdown || showSkeletonSections) && (
             <div className="breakdown-section">
               <h3>Score Breakdown</h3>
-              <div className="breakdown-bars">
-                <BreakdownBar label="Wave Height" value={conditions.score.breakdown.waveHeight} hint={getHint('waveHeight', conditions.score.breakdown.waveHeight)} />
-                <BreakdownBar label="Wave Period" value={conditions.score.breakdown.wavePeriod} hint={getHint('wavePeriod', conditions.score.breakdown.wavePeriod)} />
-                <BreakdownBar label="Swell Quality" value={conditions.score.breakdown.swellQuality} hint={getHint('swellQuality', conditions.score.breakdown.swellQuality)} />
-                <BreakdownBar label="Surface Calm" value={conditions.score.breakdown.windSpeed} hint={getHint('windSpeed', conditions.score.breakdown.windSpeed)} />
-                <BreakdownBar label="Wind Direction" value={conditions.score.breakdown.windDirection} hint={getHint('windDirection', conditions.score.breakdown.windDirection)} />
-                <BreakdownBar label="Wave Direction" value={conditions.score.breakdown.waveDirection} hint={getHint('waveDirection', conditions.score.breakdown.waveDirection)} />
-              </div>
+              {conditions?.score.breakdown ? (
+                <div className="breakdown-bars">
+                  <BreakdownBar label="Wave Height" value={conditions.score.breakdown.waveHeight} hint={getHint('waveHeight', conditions.score.breakdown.waveHeight)} />
+                  <BreakdownBar label="Wave Period" value={conditions.score.breakdown.wavePeriod} hint={getHint('wavePeriod', conditions.score.breakdown.wavePeriod)} />
+                  <BreakdownBar label="Swell Quality" value={conditions.score.breakdown.swellQuality} hint={getHint('swellQuality', conditions.score.breakdown.swellQuality)} />
+                  <BreakdownBar label="Surface Calm" value={conditions.score.breakdown.windSpeed} hint={getHint('windSpeed', conditions.score.breakdown.windSpeed)} />
+                  <BreakdownBar label="Wind Direction" value={conditions.score.breakdown.windDirection} hint={getHint('windDirection', conditions.score.breakdown.windDirection)} />
+                  <BreakdownBar label="Wave Direction" value={conditions.score.breakdown.waveDirection} hint={getHint('waveDirection', conditions.score.breakdown.waveDirection)} />
+                </div>
+              ) : (
+                <div className="sk-breakdown-rows">
+                  {[72, 58, 85, 45, 63, 50].map((w, i) => (
+                    <div key={i} className="sk-breakdown-row">
+                      <div className="sk-breakdown-top">
+                        <div className="sk sk-breakdown-grade" />
+                        <div className="sk sk-breakdown-label" style={{ width: 70 + (i % 3) * 20 }} />
+                      </div>
+                      <div className="sk sk-breakdown-bar" style={{ width: `${w}%` }} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           {/* Forecast Timeline */}
-          {conditions.trend?.blocks && conditions.trend.blocks.length > 0 && (
+          {((conditions?.trend?.blocks && conditions.trend.blocks.length > 0) || showSkeletonSections) && (
             <div className="forecast-section">
               <h3>Forecast</h3>
-
-              {conditions.trend.message && (
-                <div className="forecast-summary">
-                  <span className="forecast-trend-arrow">
-                    {conditions.trend.trend === 'improving' ? '↗' : conditions.trend.trend === 'declining' ? '↘' : '→'}
-                  </span>
-                  <span className="forecast-trend-message">{conditions.trend.message}</span>
+              {conditions?.trend?.blocks?.length > 0 ? (
+                <>
+                  {conditions.trend.message && (
+                    <div className="forecast-summary">
+                      <span className="forecast-trend-arrow">
+                        {conditions.trend.trend === 'improving' ? '↗' : conditions.trend.trend === 'declining' ? '↘' : '→'}
+                      </span>
+                      <span className="forecast-trend-message">{conditions.trend.message}</span>
+                    </div>
+                  )}
+                  <div className="forecast-timeline">
+                    {conditions.trend.blocks.map((block, i) => {
+                      const isBest = conditions.trend.bestWindow && block.label === conditions.trend.bestWindow.label;
+                      return (
+                        <div
+                          key={i}
+                          className={`forecast-block ${isBest ? 'forecast-block-best' : ''}`}
+                        >
+                          <span className="forecast-block-label">{block.label}</span>
+                          <span
+                            className="forecast-block-score"
+                            style={{ color: getScoreColor(block.score) }}
+                          >
+                            {block.score}
+                          </span>
+                          <div
+                            className="forecast-block-bar"
+                            style={{ backgroundColor: getScoreColor(block.score), width: `${block.score}%` }}
+                          />
+                          <span className="forecast-block-rating">{block.rating}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="sk-forecast-timeline">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="sk-forecast-block">
+                      <div className="sk sk-label" />
+                      <div className="sk sk-score" />
+                      <div className="sk sk-bar" />
+                      <div className="sk sk-rating" />
+                    </div>
+                  ))}
                 </div>
               )}
-
-              <div className="forecast-timeline">
-                {conditions.trend.blocks.map((block, i) => {
-                  const isBest = conditions.trend.bestWindow && block.label === conditions.trend.bestWindow.label;
-                  return (
-                    <div
-                      key={i}
-                      className={`forecast-block ${isBest ? 'forecast-block-best' : ''}`}
-                    >
-                      <span className="forecast-block-label">{block.label}</span>
-                      <span
-                        className="forecast-block-score"
-                        style={{ color: getScoreColor(block.score) }}
-                      >
-                        {block.score}
-                      </span>
-                      <div
-                        className="forecast-block-bar"
-                        style={{ backgroundColor: getScoreColor(block.score), width: `${block.score}%` }}
-                      />
-                      <span className="forecast-block-rating">{block.rating}</span>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           )}
 
           {/* Gear Recommendation */}
-          {conditions.boardRecommendation && (
+          {(conditions?.boardRecommendation || showSkeletonSections) && (
             <div className="gear-section">
               <h3>Gear</h3>
-              <div className="gear-grid">
-                <div className="gear-card">
-                  <div className="gear-card-icon board-icon-wrap">
-                    {getBoardSVG(conditions.boardRecommendation.boardType)}
-                  </div>
-                  <div className="gear-card-body">
-                    <span className="gear-card-title">{conditions.boardRecommendation.boardName}</span>
-                    <span className="gear-card-desc">{conditions.boardRecommendation.reason}</span>
-                    {conditions.boardRecommendation.volume && (
-                      <span className="gear-card-volume">~{conditions.boardRecommendation.volume.recommended}L</span>
-                    )}
-                  </div>
-                </div>
-
-                {conditions.conditions?.weather?.waterTemp != null && (() => {
-                  const hint = getWetsuitHint(conditions.conditions.weather.waterTemp);
-                  if (!hint) return null;
-                  return (
+              {conditions?.boardRecommendation ? (
+                <>
+                  <div className="gear-grid">
                     <div className="gear-card">
-                      <div className="gear-card-icon wetsuit-icon-wrap">
-                        {hint.icon === 'shorts' ? (
-                          <svg viewBox="0 0 24 24" fill="currentColor" className="gear-wetsuit-svg">
-                            <path d="M4 4H20V7L18 21H13L12 13L11 21H6L4 7Z" opacity="0.85" />
-                          </svg>
-                        ) : (
-                          <svg viewBox="0 0 24 24" fill="currentColor" className="gear-wetsuit-svg">
-                            <path d="M9 2H15L17 5H21V9H17L16 21H13L12 14L11 21H8L7 9H3V5H7Z" opacity="0.85" />
-                          </svg>
-                        )}
+                      <div className="gear-card-icon board-icon-wrap">
+                        {getBoardSVG(conditions.boardRecommendation.boardType)}
                       </div>
                       <div className="gear-card-body">
-                        <span className="gear-card-title">{hint.label}</span>
-                        <span className="gear-card-desc">{conditions.conditions.weather.waterTemp}°C water</span>
+                        <span className="gear-card-title">{conditions.boardRecommendation.boardName}</span>
+                        <span className="gear-card-desc">{conditions.boardRecommendation.reason}</span>
+                        {conditions.boardRecommendation.volume && (
+                          <span className="gear-card-volume">~{conditions.boardRecommendation.volume.recommended}L</span>
+                        )}
                       </div>
                     </div>
-                  );
-                })()}
-              </div>
 
-              <div className="gear-personalize">
-                <span className="gear-personalize-title">Personalize</span>
-                <div className="gear-personalize-fields">
-                  <label className="gear-field">
-                    <span>Weight (kg)</span>
-                    <input
-                      type="number"
-                      value={userWeight}
-                      onChange={(e) => { setUserWeight(e.target.value); localStorage.setItem('userWeight', e.target.value); }}
-                      placeholder="75"
-                      min="30"
-                      max="150"
-                    />
-                  </label>
-                  <label className="gear-field">
-                    <span>Skill</span>
-                    <select
-                      value={userSkill}
-                      onChange={(e) => { setUserSkill(e.target.value); localStorage.setItem('userSkill', e.target.value); }}
-                    >
-                      <option value="">--</option>
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="advanced">Advanced</option>
-                      <option value="expert">Expert</option>
-                    </select>
-                  </label>
+                    {conditions.conditions?.weather?.waterTemp != null && (() => {
+                      const hint = getWetsuitHint(conditions.conditions.weather.waterTemp);
+                      if (!hint) return null;
+                      return (
+                        <div className="gear-card">
+                          <div className="gear-card-icon wetsuit-icon-wrap">
+                            {hint.icon === 'shorts' ? (
+                              <svg viewBox="0 0 24 24" fill="currentColor" className="gear-wetsuit-svg">
+                                <path d="M4 4H20V7L18 21H13L12 13L11 21H6L4 7Z" opacity="0.85" />
+                              </svg>
+                            ) : (
+                              <svg viewBox="0 0 24 24" fill="currentColor" className="gear-wetsuit-svg">
+                                <path d="M9 2H15L17 5H21V9H17L16 21H13L12 14L11 21H8L7 9H3V5H7Z" opacity="0.85" />
+                              </svg>
+                            )}
+                          </div>
+                          <div className="gear-card-body">
+                            <span className="gear-card-title">{hint.label}</span>
+                            <span className="gear-card-desc">{conditions.conditions.weather.waterTemp}°C water</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="gear-personalize">
+                    <span className="gear-personalize-title">Personalize</span>
+                    <div className="gear-personalize-fields">
+                      <label className="gear-field">
+                        <span>Weight (kg)</span>
+                        <input
+                          type="number"
+                          value={userWeight}
+                          onChange={(e) => { setUserWeight(e.target.value); localStorage.setItem('userWeight', e.target.value); }}
+                          placeholder="75"
+                          min="30"
+                          max="150"
+                        />
+                      </label>
+                      <label className="gear-field">
+                        <span>Skill</span>
+                        <select
+                          value={userSkill}
+                          onChange={(e) => { setUserSkill(e.target.value); localStorage.setItem('userSkill', e.target.value); }}
+                        >
+                          <option value="">--</option>
+                          <option value="beginner">Beginner</option>
+                          <option value="intermediate">Intermediate</option>
+                          <option value="advanced">Advanced</option>
+                          <option value="expert">Expert</option>
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="sk-gear-grid">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="sk-gear-card">
+                      <div className="sk sk-gear-icon" />
+                      <div className="sk-gear-body">
+                        <div className="sk sk-gear-title" />
+                        <div className="sk sk-gear-desc" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
           )}
 
           {/* Beach Sketch */}
-          {sketchSpot && (
+          {conditions && sketchSpot && (
             <BeachSketch
               spot={sketchSpot}
               waveDirection={conditions.conditions?.waves?.direction}
@@ -503,7 +585,7 @@ function Dashboard() {
           )}
 
           {/* Surfer Feedback */}
-          {conditions.score.breakdown && (
+          {conditions?.score.breakdown && (
             <SpotFeedback
               spotId={conditions.spotId || selectedSpot}
               breakdown={conditions.score.breakdown}
@@ -518,26 +600,28 @@ function Dashboard() {
           )}
 
           {/* Site footer */}
-          <div className="site-footer">
-            <p className="site-footer-text">
-              Built between sessions by surfers who should've been in the water
-            </p>
-            <div className="site-footer-links">
-              <a href="mailto:orlench@gmail.com?subject=Yo%20from%20shouldigo.surf" className="site-footer-link">
-                <svg viewBox="0 0 20 20" fill="none" width="14" height="14">
-                  <rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M2 6l8 5 8-5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-                </svg>
-                Drop a message in the bottle
-              </a>
-              <a href="https://github.com/orlench/surf_report" target="_blank" rel="noopener noreferrer" className="site-footer-link">
-                <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
-                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" />
-                </svg>
-                Open source - ride the code
-              </a>
+          {conditions && (
+            <div className="site-footer">
+              <p className="site-footer-text">
+                Built between sessions by surfers who should've been in the water
+              </p>
+              <div className="site-footer-links">
+                <a href="mailto:orlench@gmail.com?subject=Yo%20from%20shouldigo.surf" className="site-footer-link">
+                  <svg viewBox="0 0 20 20" fill="none" width="14" height="14">
+                    <rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M2 6l8 5 8-5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                  </svg>
+                  Drop a message in the bottle
+                </a>
+                <a href="https://github.com/orlench/surf_report" target="_blank" rel="noopener noreferrer" className="site-footer-link">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" />
+                  </svg>
+                  Open source - ride the code
+                </a>
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </div>
