@@ -54,3 +54,4 @@ ios/**/*.xccheckout
 ios/**/*.ipa
 ios/**/*.dSYM.zip
 ios/**/*.dSYM
+*.xcuserstate

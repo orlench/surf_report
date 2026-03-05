@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Should I Go? - Support</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.7;
+            color: #1a1a2e;
+            background: #f8f9fa;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            background: white;
+            padding: 48px 40px;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .hero {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .hero .icon {
+            font-size: 56px;
+            margin-bottom: 12px;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: #0a1628;
+        }
+        .subtitle {
+            color: #6b7280;
+            font-size: 15px;
+        }
+        h2 {
+            font-size: 18px;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            color: #0a1628;
+        }
+        p {
+            font-size: 15px;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+        .faq-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 12px;
+        }
+        .faq-item strong {
+            display: block;
+            margin-bottom: 6px;
+            color: #0a1628;
+            font-size: 15px;
+        }
+        .faq-item p {
+            margin-bottom: 0;
+            font-size: 14px;
+            color: #4b5563;
+        }
+        .contact-card {
+            background: #eff6ff;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            margin-top: 32px;
+        }
+        .contact-card p {
+            color: #1e40af;
+            margin-bottom: 8px;
+        }
+        .contact-card a {
+            color: #2563eb;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 17px;
+        }
+        .contact-card a:hover { text-decoration: underline; }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+        a { color: #2563eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+            <div class="icon">🏄</div>
+            <h1>Should I Go? Support</h1>
+            <p class="subtitle">Real-time surf conditions for any beach</p>
+        </div>
+
+        <h2>Frequently Asked Questions</h2>
+
+        <div class="faq-item">
+            <strong>How does the surf score work?</strong>
+            <p>The score (0-100) combines wave height, wave period, swell quality, wind speed, wind direction, and wave direction. Data is aggregated from multiple ocean weather sources in real-time.</p>
+        </div>
+
+        <div class="faq-item">
+            <strong>Why does my spot say "Couldn't fetch conditions"?</strong>
+            <p>This usually means the data sources are temporarily unavailable. Tap "Try Again" to retry. If the issue persists, the spot may be in an area with limited ocean data coverage.</p>
+        </div>
+
+        <div class="faq-item">
+            <strong>How do surf alerts work?</strong>
+            <p>Set a score threshold for your spot, and we'll send a push notification when conditions reach that level. Alerts are checked periodically and sent at most once every 6 hours.</p>
+        </div>
+
+        <div class="faq-item">
+            <strong>Can I add a spot that's not in the list?</strong>
+            <p>Yes! Tap the map icon in the spot picker, browse to your beach, tap a pin or any location, and hit "Check conditions." The app will fetch data based on the coordinates.</p>
+        </div>
+
+        <div class="faq-item">
+            <strong>What does "Tune the score" do?</strong>
+            <p>Describe what matters at your local break (e.g., "wave period is everything here" or "this spot needs south swell"). The app adjusts the scoring weights for that spot based on local knowledge from all surfers.</p>
+        </div>
+
+        <div class="faq-item">
+            <strong>Does the app track my location?</strong>
+            <p>No. Location is used on-device only for the map feature. Your nearest spot is detected via IP-based geolocation (approximate city-level), not GPS. See our <a href="privacy.html">Privacy Policy</a>.</p>
+        </div>
+
+        <div class="faq-item">
+            <strong>How do I delete my data?</strong>
+            <p>Deleting the app removes all local data. If you subscribed to alerts, unsubscribe first (tap the bell icon, then "Remove Alert") to delete your push token from our server.</p>
+        </div>
+
+        <div class="contact-card">
+            <p>Still need help?</p>
+            <a href="mailto:support@shouldigo.surf">support@shouldigo.surf</a>
+        </div>
+    </div>
+    <footer>
+        <a href="privacy.html">Privacy Policy</a> &middot; Should I Go? &copy; 2026
+    </footer>
+</body>
+</html>
