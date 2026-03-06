@@ -1,6 +1,8 @@
 const webpush = require('web-push');
 let apn;
 let apnProvider;
+let firebaseAdmin;
+let fcmInitialised = false;
 
 function initApn() {
   if (apnProvider) return apnProvider;
@@ -18,6 +20,29 @@ function initApn() {
   } catch (e) {
     logger.warn('[Push] node-apn not installed — APNs notifications disabled');
     return null;
+  }
+}
+
+function initFcm() {
+  if (fcmInitialised) return !!firebaseAdmin;
+  fcmInitialised = true;
+  const serviceAccountB64 = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!serviceAccountB64) {
+    logger.warn('[Push] FIREBASE_SERVICE_ACCOUNT not set — FCM notifications disabled');
+    return false;
+  }
+  try {
+    firebaseAdmin = require('firebase-admin');
+    const serviceAccount = JSON.parse(Buffer.from(serviceAccountB64, 'base64').toString('utf8'));
+    firebaseAdmin.initializeApp({
+      credential: firebaseAdmin.credential.cert(serviceAccount)
+    });
+    logger.info('[Push] Firebase Admin SDK initialised');
+    return true;
+  } catch (e) {
+    logger.warn(`[Push] Firebase Admin init failed: ${e.message}`);
+    firebaseAdmin = null;
+    return false;
   }
 }
 const { fetchSurfData, aggregateData, aggregateHourlyData } = require('./scraper');
@@ -174,6 +199,27 @@ async function checkAndNotify() {
               logger.info(`[Push] Sent APNs notification to ${sub.id} for ${spotId}: ${qualifyingBlock.label}`);
             }
           }
+        } else if (sub.type === 'fcm' && sub.token) {
+          // Android push via FCM
+          if (initFcm()) {
+            const parsedPayload = JSON.parse(payload);
+            const result = await firebaseAdmin.messaging().send({
+              token: sub.token,
+              notification: {
+                title: parsedPayload.title,
+                body: parsedPayload.body
+              },
+              data: { url: parsedPayload.data?.url || `/?spot=${spotId}` },
+              android: {
+                notification: {
+                  sound: 'default',
+                  channelId: 'surf_alerts'
+                }
+              }
+            });
+            markNotified(sub.id, qualifyingBlock.label);
+            logger.info(`[Push] Sent FCM notification to ${sub.id} for ${spotId}: ${qualifyingBlock.label} (msgId: ${result})`);
+          }
         } else {
           // Web push
           await webpush.sendNotification(
@@ -184,8 +230,10 @@ async function checkAndNotify() {
           logger.info(`[Push] Sent web notification to ${sub.id} for ${spotId}: ${qualifyingBlock.label} (${qualifyingBlock.score})`);
         }
       } catch (err) {
-        if (err.statusCode === 410 || err.statusCode === 404) {
-          logger.info(`[Push] Subscription expired (${err.statusCode}), removing ${sub.id}`);
+        const fcmInvalid = err.code === 'messaging/registration-token-not-registered' ||
+                           err.code === 'messaging/invalid-registration-token';
+        if (err.statusCode === 410 || err.statusCode === 404 || fcmInvalid) {
+          logger.info(`[Push] Subscription expired/invalid (${err.statusCode || err.code}), removing ${sub.id}`);
           removeById(sub.id);
         } else {
           logger.error(`[Push] Failed to send to ${sub.id}: ${err.message}`);

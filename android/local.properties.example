@@ -1,0 +1,5 @@
+# SDK path (Android Studio sets this automatically)
+sdk.dir=/Users/YOUR_USERNAME/Library/Android/sdk
+
+# Google Maps API key (required for map feature)
+MAPS_API_KEY=your_google_maps_api_key_here
