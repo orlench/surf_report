@@ -1,0 +1,71 @@
+# Should I Go? -- Surf Conditions
+
+> Real-time surf conditions and scoring for any beach in the world.
+
+## What this does
+
+Should I Go? aggregates data from multiple ocean weather sources (Open-Meteo, MET Norway, Windfinder, and more), scores surf conditions 0-100, and gives a verdict on whether it's worth paddling out. Covers wave height, wave period, swell quality, wind speed, wind direction, and wave direction.
+
+## API for agents
+
+Base URL: https://api.shouldigo.surf
+
+All endpoints return JSON. No authentication required.
+
+### Check conditions for a spot
+
+GET /api/agent/{spotId}
+
+Returns: score, verdict (yes/no/maybe), plain-text summary, conditions breakdown, trend forecast, and board recommendation.
+
+### Find nearest spot
+
+GET /api/agent/nearest
+
+Auto-detects location by IP. Optional query params: ?lat=X&lon=Y for explicit coordinates.
+
+### List all spots
+
+GET /api/spots
+
+Returns all available surf spots with id, name, and country.
+
+### Response schema
+
+GET /api/agent/schema
+
+Machine-readable JSON Schema describing the agent response format.
+
+## Example
+
+```
+GET https://api.shouldigo.surf/api/agent/pipeline
+```
+
+```json
+{
+  "spot": { "id": "pipeline", "name": "Pipeline", "country": "US" },
+  "score": 72,
+  "rating": "GOOD",
+  "verdict": "Yes, go surfing.",
+  "summary": "Solid chest-high waves with a decent swell. Definitely worth a session.",
+  "conditions": {
+    "waveHeight": { "avg": 1.4, "unit": "m" },
+    "wavePeriod": { "value": 12, "unit": "s" },
+    "wind": { "speed": 8, "unit": "kph", "direction": "E" },
+    "waterTemp": { "value": 24, "unit": "C" }
+  },
+  "board": "Shortboard",
+  "trend": { "direction": "improving", "bestWindow": "2:00 PM - 5:00 PM today" }
+}
+```
+
+## Spot IDs
+
+Popular spots: pipeline, bells_beach, hossegor, nazare, trestles, uluwatu, jeffreys_bay, rincon, huntington, tel_aviv
+
+Full list: GET https://api.shouldigo.surf/api/spots
+
+## Contact
+
+support@shouldigo.surf

@@ -58,6 +58,7 @@ app.use('/api/conditions', require('./routes/conditions'));
 app.use('/api/health', require('./routes/health'));
 app.use('/api/push', require('./routes/push'));
 app.use('/api/nearest-spot', require('./routes/geo'));
+app.use('/api/agent', require('./routes/agent'));
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -68,13 +69,14 @@ app.get('/', (req, res) => {
     endpoints: {
       spots: '/api/spots',
       conditions: '/api/conditions/:spotId',
+      agent: '/api/agent/:spotId',
       allConditions: '/api/conditions',
       health: '/api/health',
       pushSubscribe: '/api/push/subscribe',
       pushUnsubscribe: '/api/push/unsubscribe',
       pushVapidKey: '/api/push/vapid-public-key'
     },
-    documentation: 'https://github.com/orlench/surf_report'
+    documentation: 'https://shouldigo.surf'
   });
 });
 

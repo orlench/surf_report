@@ -1,6 +1,6 @@
 # Should I Go? 🏄‍♂️
 
-**[shouldigo.surf](https://shouldigo.surf)** — Open source surf conditions aggregator for any beach in the world.
+**[shouldigo.surf](https://shouldigo.surf)** — Real-time surf conditions aggregator for any beach in the world.
 
 Scrapes multiple surf/weather sources using Bright Data MCP and calculates a surf quality score (0-100) with an actionable rating (EPIC/GOOD/FAIR/POOR/FLAT).
 
@@ -34,7 +34,7 @@ Scrapes multiple surf/weather sources using Bright Data MCP and calculates a sur
 ### Installation
 
 ```bash
-git clone https://github.com/orlench/surf_report.git
+git clone <repo-url>
 cd surf_report
 
 # Install backend dependencies
@@ -77,8 +77,8 @@ npm start
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+Proprietary — see [LICENSE](LICENSE) for details.
 
 ## Author
 
-Built with ❤️ for surfers everywhere
+Built with love for surfers everywhere

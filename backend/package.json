@@ -16,7 +16,7 @@
     "israel"
   ],
   "author": "",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "dependencies": {
     "axios": "^1.13.5",
     "cheerio": "^1.2.0",

@@ -118,4 +118,4 @@ npm run build
 
 ## License
 
-MIT - See LICENSE file
+Proprietary - See LICENSE file
