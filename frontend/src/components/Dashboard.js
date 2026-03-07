@@ -613,6 +613,15 @@ function Dashboard() {
                   </svg>
                   Drop a message in the bottle
                 </a>
+                <a href="/privacy" className="site-footer-link">
+                  <svg viewBox="0 0 20 20" fill="none" width="14" height="14">
+                    <rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                    <line x1="6" y1="7" x2="14" y2="7" stroke="currentColor" strokeWidth="1.2" />
+                    <line x1="6" y1="10" x2="14" y2="10" stroke="currentColor" strokeWidth="1.2" />
+                    <line x1="6" y1="13" x2="11" y2="13" stroke="currentColor" strokeWidth="1.2" />
+                  </svg>
+                  Privacy Policy
+                </a>
               </div>
             </div>
           )}
