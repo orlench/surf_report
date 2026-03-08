@@ -32,12 +32,15 @@ router.get('/vapid-public-key', (req, res) => {
 router.post('/subscribe', (req, res) => {
   try {
     const { type, token, subscription, spotId, threshold } = req.body;
-    const isNative = type === 'apns';
+    const isNative = type === 'apns' || type === 'fcm';
 
-    // Validate native APNs token
+    // Validate native token
     if (isNative) {
-      if (!token || typeof token !== 'string' || !/^[0-9a-f]{40,}$/i.test(token)) {
+      if (type === 'apns' && (!token || typeof token !== 'string' || !/^[0-9a-f]{40,}$/i.test(token))) {
         return res.status(400).json({ success: false, error: 'Invalid APNs token' });
+      }
+      if (type === 'fcm' && (!token || typeof token !== 'string' || token.length < 20)) {
+        return res.status(400).json({ success: false, error: 'Invalid FCM token' });
       }
     } else {
       // Validate web push subscription object
@@ -61,7 +64,7 @@ router.post('/subscribe', (req, res) => {
     }
 
     // For native, use the token as the "endpoint" identifier
-    const identifier = isNative ? `apns:${token}` : subscription.endpoint;
+    const identifier = isNative ? `${type}:${token}` : subscription.endpoint;
 
     // Check max spots per user
     const existingSubs = getSubscriptionsByEndpoint(identifier);
@@ -74,7 +77,7 @@ router.post('/subscribe', (req, res) => {
     }
 
     const subObj = isNative
-      ? { endpoint: identifier, keys: {}, type: 'apns', token }
+      ? { endpoint: identifier, keys: {}, type, token }
       : { ...subscription, type: 'web' };
 
     const { id, count } = upsertSubscription(subObj, spotId, threshold);
@@ -97,7 +100,7 @@ router.post('/subscribe', (req, res) => {
 router.post('/unsubscribe', (req, res) => {
   try {
     const { type, token, endpoint, spotId } = req.body;
-    const identifier = type === 'apns' && token ? `apns:${token}` : endpoint;
+    const identifier = (type === 'apns' || type === 'fcm') && token ? `${type}:${token}` : endpoint;
 
     if (!identifier || !spotId) {
       return res.status(400).json({ success: false, error: 'Missing identifier or spotId' });

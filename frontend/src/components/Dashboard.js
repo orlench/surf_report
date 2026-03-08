@@ -349,6 +349,47 @@ function Dashboard() {
           <span className="top-bar-title">Should I Go?</span>
         </div>
         <div className="top-bar-actions">
+          {conditions && selectedSpot && (
+            <button
+              className="top-bar-action-btn"
+              title="Share"
+              onClick={() => {
+                const score = adjustedScore !== null ? adjustedScore : conditions.score.overall;
+                const rating = adjustedRating !== null ? adjustedRating : conditions.score.rating;
+                const c = conditions.conditions;
+                let waveText = '';
+                if (c.waves?.height?.min != null && c.waves?.height?.max != null)
+                  waveText = `Waves: ${c.waves.height.min.toFixed(1)}–${c.waves.height.max.toFixed(1)}m`;
+                else if (c.waves?.height?.avg != null)
+                  waveText = `Waves: ${c.waves.height.avg.toFixed(1)}m`;
+                const parts = [waveText];
+                if (c.wind?.speed != null) {
+                  let w = `Wind: ${Math.round(c.wind.speed)} km/h`;
+                  if (c.wind.direction) w += ` ${c.wind.direction}`;
+                  parts.push(w);
+                }
+                if (c.weather?.waterTemp != null) parts.push(`Water: ${Math.round(c.weather.waterTemp)}°C`);
+                const details = parts.filter(Boolean).join(' | ');
+                const url = `${window.location.origin}${window.location.pathname}?spot=${selectedSpot}`;
+                const text = `Should I Go? 🏄 ${currentSpotName} — ${score}/100 (${rating})\n${details}\nCheck it out: ${url}`;
+                if (navigator.share) {
+                  navigator.share({ text }).catch(() => {});
+                } else {
+                  navigator.clipboard.writeText(text).then(() => {
+                    const toast = document.createElement('div');
+                    toast.textContent = 'Copied to clipboard!';
+                    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 16px;border-radius:8px;font-size:14px;z-index:9999;';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
+                  });
+                }
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                <path d="M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
           <NotificationBell currentSpotId={selectedSpot} currentSpotName={currentSpotName} />
           <SpotSelector spots={spots} value={selectedSpot} onChange={handleSpotChange} nearbySpots={nearbySpots} />
         </div>

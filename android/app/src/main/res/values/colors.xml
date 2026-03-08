@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="score_epic">#00C48C</color>
+    <color name="score_great">#28D278</color>
+    <color name="score_good">#4CD964</color>
+    <color name="score_fair">#F5A623</color>
+    <color name="score_marginal">#E67E22</color>
+    <color name="score_poor">#FF6B35</color>
+    <color name="score_flat">#FF3B30</color>
+    <color name="background">#F8F9FA</color>
+    <color name="primary_text">#0A1628</color>
+    <color name="secondary_text">#6B7280</color>
+    <color name="ic_launcher_background">#1A73E8</color>
+</resources>
