@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,7 +35,7 @@ fun SpotPickerScreen(
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             trailingIcon = {
                 IconButton(onClick = onOpenMap) {
-                    Icon(Icons.Default.Map, contentDescription = "Open map", tint = Accent)
+                    Icon(Icons.Default.Place, contentDescription = "Open map", tint = Accent)
                 }
             },
             modifier = Modifier

@@ -18,6 +18,7 @@ import surf.shouldigo.app.domain.boardEmoji
 import surf.shouldigo.app.domain.wetsuitRecommendation
 import surf.shouldigo.app.ui.theme.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BoardCard(
     recommendation: BoardRecommendation,

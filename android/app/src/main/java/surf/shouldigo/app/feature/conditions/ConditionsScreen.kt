@@ -19,12 +19,19 @@ import surf.shouldigo.app.ui.theme.SecondaryText
 @Composable
 fun ConditionsScreen(
     spot: Spot,
+    onConditionsLoaded: ((ConditionsResponse) -> Unit)? = null,
     viewModel: ConditionsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
 
     LaunchedEffect(spot.id) {
         viewModel.load(spot)
+    }
+
+    LaunchedEffect(state) {
+        if (state is FetchState.Loaded) {
+            onConditionsLoaded?.invoke((state as FetchState.Loaded).response)
+        }
     }
 
     Box(

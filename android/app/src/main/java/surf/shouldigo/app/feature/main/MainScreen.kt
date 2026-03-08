@@ -1,19 +1,23 @@
 package surf.shouldigo.app.feature.main
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import surf.shouldigo.app.data.model.ConditionsResponse
 import surf.shouldigo.app.data.model.Spot
 import surf.shouldigo.app.feature.conditions.ConditionsScreen
 import surf.shouldigo.app.feature.notifications.NotificationSheet
@@ -30,6 +34,8 @@ fun MainScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showSpotPicker by remember { mutableStateOf(false) }
     var showNotificationSheet by remember { mutableStateOf(false) }
+    var loadedConditions by remember { mutableStateOf<ConditionsResponse?>(null) }
+    val context = LocalContext.current
 
     LaunchedEffect(deepLinkSpotId) {
         deepLinkSpotId?.let { viewModel.handleDeepLink(it) }
@@ -46,6 +52,19 @@ fun MainScreen(
                     )
                 },
                 actions = {
+                    loadedConditions?.let { response ->
+                        IconButton(onClick = {
+                            val spot = uiState.selectedSpot ?: return@IconButton
+                            val text = buildShareText(spot, response)
+                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                putExtra(Intent.EXTRA_TEXT, text)
+                                type = "text/plain"
+                            }
+                            context.startActivity(Intent.createChooser(sendIntent, "Share surf conditions"))
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Share", tint = Accent)
+                        }
+                    }
                     IconButton(onClick = { showSpotPicker = true }) {
                         Icon(Icons.Default.LocationOn, contentDescription = "Change spot", tint = Accent)
                     }
@@ -72,7 +91,10 @@ fun MainScreen(
                     DetectingView()
                 }
                 uiState.selectedSpot != null -> {
-                    ConditionsScreen(spot = uiState.selectedSpot!!)
+                    ConditionsScreen(
+                        spot = uiState.selectedSpot!!,
+                        onConditionsLoaded = { loadedConditions = it }
+                    )
                 }
                 else -> {
                     SplashView(onFindSpot = { showSpotPicker = true })
@@ -131,6 +153,32 @@ private fun DetectingView() {
             color = SecondaryText
         )
     }
+}
+
+private fun buildShareText(spot: Spot, response: ConditionsResponse): String {
+    val score = response.score.overall
+    val rating = response.score.rating
+    val c = response.conditions
+    val parts = mutableListOf<String>()
+    val mn = c.waves?.height?.min
+    val mx = c.waves?.height?.max
+    val avg = c.waves?.height?.avg
+    if (mn != null && mx != null) {
+        parts.add("Waves: ${"%.1f".format(mn)}–${"%.1f".format(mx)}m")
+    } else if (avg != null) {
+        parts.add("Waves: ${"%.1f".format(avg)}m")
+    }
+    c.wind?.speed?.let { ws ->
+        var w = "Wind: ${ws.toInt()} km/h"
+        c.wind?.direction?.let { wd -> w += " $wd" }
+        parts.add(w)
+    }
+    c.weather?.waterTemp?.let { wt ->
+        parts.add("Water: ${wt.toInt()}°C")
+    }
+    val details = parts.joinToString(" | ")
+    val url = "https://shouldigo.surf?spot=${spot.id}"
+    return "Should I Go? \uD83C\uDFC4 ${spot.name} — $score/100 ($rating)\n$details\nCheck it out: $url"
 }
 
 @Composable

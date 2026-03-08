@@ -34,11 +34,19 @@ struct ConditionsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showNotificationSheet = true
-                } label: {
-                    Image(systemName: pushManager.isRegistered ? "bell.fill" : "bell")
-                        .foregroundStyle(.blue)
+                HStack(spacing: 12) {
+                    if case .loaded(let r) = vm.state {
+                        ShareLink(item: buildShareText(spot: spot, response: r)) {
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundStyle(.blue)
+                        }
+                    }
+                    Button {
+                        showNotificationSheet = true
+                    } label: {
+                        Image(systemName: pushManager.isRegistered ? "bell.fill" : "bell")
+                            .foregroundStyle(.blue)
+                    }
                 }
             }
         }
@@ -46,6 +54,30 @@ struct ConditionsView: View {
             NotificationSheet(spot: spot, pushManager: pushManager, isPresented: $showNotificationSheet)
                 .presentationDetents([.medium, .large])
         }
+    }
+
+    private func buildShareText(spot: Spot, response: ConditionsResponse) -> String {
+        let score = response.score.overall
+        let rating = response.score.rating
+        let c = response.conditions
+        var parts: [String] = []
+        if let mn = c.waves?.height?.min, let mx = c.waves?.height?.max {
+            parts.append("Waves: \(String(format: "%.1f", mn))–\(String(format: "%.1f", mx))m")
+        } else if let avg = c.waves?.height?.avg {
+            parts.append("Waves: \(String(format: "%.1f", avg))m")
+        }
+        if let ws = c.wind?.speed {
+            var w = "Wind: \(Int(ws)) km/h"
+            if let wd = c.wind?.direction { w += " \(wd)" }
+            parts.append(w)
+        }
+        if let wt = c.weather?.waterTemp {
+            parts.append("Water: \(Int(wt))°C")
+        }
+        let details = parts.joined(separator: " | ")
+        let spotId = spot.id
+        let url = "https://shouldigo.surf?spot=\(spotId)"
+        return "Should I Go? 🏄 \(spot.name) — \(score)/100 (\(rating))\n\(details)\nCheck it out: \(url)"
     }
 
     // MARK: - Loaded
