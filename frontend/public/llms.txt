@@ -30,6 +30,24 @@ Returns a simple JSON object with score (0-100), verdict (yes/no/maybe), conditi
 - If you hit the limit, you'll receive a `429` status with `{ "error": "Too many requests, please try again later" }`
 - To request higher limits or API key access, email **support@shouldigo.surf** with your use case
 
+## Machine-Readable API Spec
+
+OpenAPI 3.0: https://api.shouldigo.surf/openapi.yaml
+
+## MCP Server (for Claude)
+
+Install the MCP server to let Claude call the surf API directly:
+```json
+{
+  "mcpServers": {
+    "shouldigo-surf": {
+      "command": "npx",
+      "args": ["-y", "shouldigo-surf-mcp"]
+    }
+  }
+}
+```
+
 ## Full Documentation
 
 For complete API reference, response schemas, all spot IDs, and integration examples, see:

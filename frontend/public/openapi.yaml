@@ -1,0 +1,288 @@
+openapi: 3.0.3
+info:
+  title: Should I Go? Surf Conditions API
+  description: |
+    Real-time surf conditions, scoring, and forecasts for 73+ beaches worldwide.
+    Returns a 0-100 score, a yes/no/maybe verdict, wave data, wind, trends, and board recommendations.
+
+    **Rate Limits**: 60 requests per 15-minute window per IP. Standard `RateLimit-*` headers included.
+    To request higher limits, email support@shouldigo.surf with your use case.
+
+    **Documentation**: https://shouldigo.surf/llms-full.txt
+  version: 1.0.0
+  contact:
+    email: support@shouldigo.surf
+    url: https://shouldigo.surf
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.shouldigo.surf
+    description: Production
+
+paths:
+  /api/agent/{spotId}:
+    get:
+      operationId: getConditions
+      summary: Get surf conditions for a spot
+      description: |
+        Returns a concise, agent-optimized response with score, verdict, conditions breakdown,
+        trend forecast, and board recommendation. Cached for 10 minutes; fresh fetches take 15-30 seconds.
+      parameters:
+        - name: spotId
+          in: path
+          required: true
+          description: The spot identifier (e.g. "pipeline", "bells_beach", "tel_aviv_maaravi")
+          schema:
+            type: string
+          examples:
+            pipeline:
+              value: pipeline
+              summary: Pipeline, Hawaii
+            bells_beach:
+              value: bells_beach
+              summary: Bells Beach, Australia
+      responses:
+        '200':
+          description: Surf conditions for the requested spot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+        '404':
+          description: Unknown spot ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Unknown spot: xyz"
+                  hint:
+                    type: string
+                    example: "Use GET /api/spots for a list of valid spot IDs"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
+  /api/agent/nearest:
+    get:
+      operationId: findNearestSpot
+      summary: Find nearest surf spot and return conditions
+      description: |
+        Finds the closest surf spot to the given coordinates (or auto-detects from IP)
+        and returns conditions in the same format as /api/agent/{spotId}.
+      parameters:
+        - name: lat
+          in: query
+          required: false
+          description: Latitude (uses IP geolocation if omitted)
+          schema:
+            type: number
+            example: 21.66
+        - name: lon
+          in: query
+          required: false
+          description: Longitude (uses IP geolocation if omitted)
+          schema:
+            type: number
+            example: -158.05
+      responses:
+        '200':
+          description: Conditions for the nearest spot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
+  /api/spots:
+    get:
+      operationId: listSpots
+      summary: List all available surf spots
+      description: Returns all surf spots with their IDs, names, countries, and coordinates.
+      responses:
+        '200':
+          description: List of all spots
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 73
+                  spots:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Spot'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
+components:
+  schemas:
+    AgentResponse:
+      type: object
+      properties:
+        spot:
+          type: object
+          properties:
+            id:
+              type: string
+              example: pipeline
+            name:
+              type: string
+              example: Pipeline
+            country:
+              type: string
+              example: US
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-03-09T12:00:00.000Z"
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Overall surf score
+          example: 72
+        rating:
+          type: string
+          enum: [EPIC, GREAT, GOOD, FAIR, MARGINAL, POOR, FLAT]
+          example: GOOD
+        verdict:
+          type: string
+          description: Human-readable yes/no/maybe recommendation. Safe to relay directly to users.
+          example: "Yes, go surfing."
+        summary:
+          type: string
+          description: One-sentence natural language summary of conditions.
+          example: "Solid chest-high waves with a decent swell period. Definitely worth a session."
+        conditions:
+          type: object
+          properties:
+            waveHeight:
+              type: object
+              properties:
+                avg:
+                  type: number
+                  example: 1.4
+                unit:
+                  type: string
+                  example: m
+            wavePeriod:
+              type: object
+              properties:
+                value:
+                  type: number
+                  example: 12
+                unit:
+                  type: string
+                  example: s
+            wind:
+              type: object
+              properties:
+                speed:
+                  type: number
+                  example: 8
+                unit:
+                  type: string
+                  example: kph
+                direction:
+                  type: string
+                  nullable: true
+                  example: E
+            waterTemp:
+              type: object
+              properties:
+                value:
+                  type: number
+                  nullable: true
+                  example: 24
+                unit:
+                  type: string
+                  example: C
+        board:
+          type: string
+          nullable: true
+          description: Recommended board type for current conditions
+          example: Shortboard
+        trend:
+          type: object
+          nullable: true
+          properties:
+            direction:
+              type: string
+              nullable: true
+              example: improving
+            bestWindow:
+              type: string
+              nullable: true
+              example: "2:00 PM - 5:00 PM today"
+            message:
+              type: string
+              nullable: true
+              example: "Conditions improving through the afternoon"
+        links:
+          type: object
+          properties:
+            web:
+              type: string
+              format: uri
+              example: "https://shouldigo.surf/?spot=pipeline"
+            full:
+              type: string
+              format: uri
+              example: "https://api.shouldigo.surf/api/conditions/pipeline"
+            schema:
+              type: string
+              format: uri
+              example: "https://api.shouldigo.surf/api/agent/schema"
+
+    Spot:
+      type: object
+      properties:
+        id:
+          type: string
+          example: pipeline
+        name:
+          type: string
+          example: Pipeline
+        country:
+          type: string
+          example: USA
+        location:
+          type: object
+          properties:
+            lat:
+              type: number
+              example: 21.6641
+            lon:
+              type: number
+              example: -158.0534
+
+    RateLimitError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Too many requests, please try again later"

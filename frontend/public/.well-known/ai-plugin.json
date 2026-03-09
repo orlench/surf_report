@@ -9,7 +9,7 @@
   },
   "api": {
     "type": "openapi",
-    "url": "https://api.shouldigo.surf/api/agent/schema"
+    "url": "https://api.shouldigo.surf/openapi.yaml"
   },
   "logo_url": "https://shouldigo.surf/logo192.png",
   "contact_email": "support@shouldigo.surf",

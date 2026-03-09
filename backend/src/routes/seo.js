@@ -1,10 +1,23 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const router = express.Router();
 const { getAllSpots } = require('../config/spots');
 const cache = require('../services/cache');
 const logger = require('../utils/logger');
 
 const FRONTEND_URL = 'https://shouldigo.surf';
+
+/**
+ * GET /openapi.yaml
+ * Serve the OpenAPI 3.0 spec
+ */
+router.get('/openapi.yaml', (req, res) => {
+  const specPath = path.join(__dirname, '..', '..', 'public', 'openapi.yaml');
+  res.set('Content-Type', 'text/yaml');
+  res.set('Access-Control-Allow-Origin', '*');
+  res.sendFile(specPath);
+});
 
 /**
  * GET /sitemap.xml
