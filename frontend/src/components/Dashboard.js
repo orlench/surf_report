@@ -14,6 +14,30 @@ import SkeletonDashboard from './SkeletonDashboard';
 import BeachSketch from './BeachSketch';
 import './Dashboard.css';
 
+function trackUtmCampaign() {
+  const params = new URLSearchParams(window.location.search);
+  const source = params.get('utm_source');
+  if (!source || !window.gtag) return;
+  const medium = params.get('utm_medium') || '';
+  const campaign = params.get('utm_campaign') || '';
+  window.gtag('event', 'campaign_visit', {
+    campaign_source: source,
+    campaign_medium: medium,
+    campaign_name: campaign,
+  });
+  // Store source for conversion attribution
+  sessionStorage.setItem('utm_source', source);
+  sessionStorage.setItem('utm_campaign', campaign);
+}
+
+function trackConversion(action) {
+  if (!window.gtag) return;
+  window.gtag('event', action, {
+    campaign_source: sessionStorage.getItem('utm_source') || 'direct',
+    campaign_name: sessionStorage.getItem('utm_campaign') || '',
+  });
+}
+
 function getInitialSpot() {
   const params = new URLSearchParams(window.location.search);
   const urlSpot = params.get('spot');
@@ -82,6 +106,14 @@ function Dashboard() {
   }, []);
   const { location, nearestSpot, nearestSpotName, nearbySpots, isDetecting } = useGeoDetect(isFirstVisitRef.current);
   const { steps: sseSteps, total: sseTotal, isStreaming, finalData, error: sseError, startStream, cleanup } = useSSEProgress();
+
+  // Track UTM campaign params on first load
+  useEffect(() => {
+    trackUtmCampaign();
+  }, []);
+
+  // Track spot check conversions
+  const spotCheckCount = useRef(0);
 
   // Start SSE for returning users on mount (skip SSE for custom/map spots)
   useEffect(() => {
@@ -175,6 +207,14 @@ function Dashboard() {
         page_location: url.href,
         page_title: `${spotId} — Should I Go?`,
       });
+    }
+
+    // Track spot check conversions for campaign attribution
+    spotCheckCount.current += 1;
+    if (spotCheckCount.current === 1) {
+      trackConversion('first_spot_check');
+    } else if (spotCheckCount.current === 2) {
+      trackConversion('second_spot_check');
     }
   }, [startStream, startSkeletonTimer]);
 
@@ -722,7 +762,10 @@ function Dashboard() {
               onClick={() => {
                 if (installPrompt) {
                   installPrompt.prompt();
-                  installPrompt.userChoice.then(() => {
+                  installPrompt.userChoice.then((choice) => {
+                    if (choice.outcome === 'accepted') {
+                      trackConversion('pwa_install');
+                    }
                     setShowInstallBanner(false);
                     setInstallPrompt(null);
                   });
