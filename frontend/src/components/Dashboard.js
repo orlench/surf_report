@@ -56,6 +56,8 @@ function Dashboard() {
   const [showErrorMap, setShowErrorMap] = useState(false);
   const [adjustedScore, setAdjustedScore] = useState(null);
   const [adjustedRating, setAdjustedRating] = useState(null);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [userWeight, setUserWeight] = useState(
     () => localStorage.getItem('userWeight') || ''
   );
@@ -185,6 +187,18 @@ function Dashboard() {
     }
   }, [selectedSpot]);
 
+  // PWA install prompt
+  useEffect(() => {
+    if (localStorage.getItem('pwaInstallDismissed')) return;
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      setShowInstallBanner(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
   const { data: spots } = useQuery({
     queryKey: ['spots'],
     queryFn: fetchSpots,
@@ -228,6 +242,18 @@ function Dashboard() {
     || spots?.find(s => s.id === selectedSpot)?.name
     || getCustomSpotMeta(selectedSpot)?.name
     || (selectedSpot ? selectedSpot.replace(/_/g, ' ') : '');
+
+  // Dynamic page title for SEO and GA
+  useEffect(() => {
+    if (conditions && currentSpotName) {
+      const score = conditions.score?.overall;
+      document.title = score != null
+        ? `${currentSpotName} Surf Report — ${score}/100 | Should I Go?`
+        : `${currentSpotName} — Should I Go?`;
+    } else {
+      document.title = 'Should I Go? — Real-Time Surf Conditions & Score';
+    }
+  }, [conditions, currentSpotName]);
 
   // Resolve spot coordinates for beach sketch (works for both hardcoded and custom spots)
   const spotObj = spots?.find(s => s.id === selectedSpot);
@@ -675,6 +701,38 @@ function Dashboard() {
             </div>
           )}
         </>
+      )}
+
+      {/* PWA install banner */}
+      {showInstallBanner && (
+        <div className="pwa-install-banner">
+          <span>Add to home screen for quick access</span>
+          <div className="pwa-install-actions">
+            <button
+              className="pwa-install-btn"
+              onClick={() => {
+                if (installPrompt) {
+                  installPrompt.prompt();
+                  installPrompt.userChoice.then(() => {
+                    setShowInstallBanner(false);
+                    setInstallPrompt(null);
+                  });
+                }
+              }}
+            >
+              Install
+            </button>
+            <button
+              className="pwa-dismiss-btn"
+              onClick={() => {
+                setShowInstallBanner(false);
+                localStorage.setItem('pwaInstallDismissed', '1');
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
