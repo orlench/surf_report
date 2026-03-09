@@ -243,7 +243,7 @@ function Dashboard() {
     || getCustomSpotMeta(selectedSpot)?.name
     || (selectedSpot ? selectedSpot.replace(/_/g, ' ') : '');
 
-  // Dynamic page title for SEO and GA
+  // Dynamic page title and canonical URL for SEO
   useEffect(() => {
     if (conditions && currentSpotName) {
       const score = conditions.score?.overall;
@@ -253,7 +253,16 @@ function Dashboard() {
     } else {
       document.title = 'Should I Go? — Real-Time Surf Conditions & Score';
     }
-  }, [conditions, currentSpotName]);
+    let link = document.querySelector('link[rel="canonical"]');
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'canonical';
+      document.head.appendChild(link);
+    }
+    link.href = selectedSpot
+      ? `https://shouldigo.surf/?spot=${selectedSpot}`
+      : 'https://shouldigo.surf';
+  }, [conditions, currentSpotName, selectedSpot]);
 
   // Resolve spot coordinates for beach sketch (works for both hardcoded and custom spots)
   const spotObj = spots?.find(s => s.id === selectedSpot);

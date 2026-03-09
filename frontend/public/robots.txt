@@ -2,5 +2,7 @@
 User-agent: *
 Disallow:
 
+Sitemap: https://api.shouldigo.surf/sitemap.xml
+
 # AI agent documentation
 # See https://shouldigo.surf/llms.txt for agent-friendly API docs

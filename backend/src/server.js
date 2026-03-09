@@ -52,6 +52,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// SEO routes (outside rate limiter — crawlers need unrestricted access)
+app.use('/', require('./routes/seo'));
+
 // Routes
 app.use('/api/spots', require('./routes/spots'));
 app.use('/api/conditions', require('./routes/conditions'));
