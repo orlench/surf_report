@@ -1,0 +1,17 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Should I Go? Surf Conditions",
+  "name_for_model": "shouldigo_surf",
+  "description_for_human": "Check real-time surf conditions, scores, and forecasts for 73+ beaches worldwide.",
+  "description_for_model": "Get real-time surf conditions for any of 73+ surf spots worldwide. Returns a score (0-100), a yes/no/maybe verdict, wave height, wave period, wind speed and direction, water temperature, trend forecast, and board recommendation. Use GET /api/agent/{spotId} for conditions, GET /api/spots for the list of spots, or GET /api/agent/nearest for location-based lookup.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://api.shouldigo.surf/api/agent/schema"
+  },
+  "logo_url": "https://shouldigo.surf/logo192.png",
+  "contact_email": "support@shouldigo.surf",
+  "legal_info_url": "https://shouldigo.surf/privacy"
+}

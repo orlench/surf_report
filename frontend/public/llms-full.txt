@@ -1,0 +1,236 @@
+# Should I Go? — Full API Reference for AI Agents
+
+> Real-time surf conditions and scoring for 73+ beaches worldwide. Aggregates data from Open-Meteo, MET Norway, Windfinder, Surf-Forecast, and more.
+
+## Base URL
+
+```
+https://api.shouldigo.surf
+```
+
+No authentication required. All responses are JSON.
+
+---
+
+## 1. Get Conditions for a Spot
+
+```
+GET /api/agent/{spotId}
+```
+
+Returns a concise, agent-optimized response with score, verdict, conditions, trend, and board recommendation.
+
+### Example Request
+
+```
+GET https://api.shouldigo.surf/api/agent/pipeline
+```
+
+### Example Response
+
+```json
+{
+  "spot": {
+    "id": "pipeline",
+    "name": "Pipeline",
+    "country": "US"
+  },
+  "timestamp": "2026-03-09T12:00:00.000Z",
+  "score": 72,
+  "rating": "GOOD",
+  "verdict": "Yes, go surfing.",
+  "summary": "Solid chest-high waves with a decent swell period. Definitely worth a session.",
+  "conditions": {
+    "waveHeight": { "avg": 1.4, "unit": "m" },
+    "wavePeriod": { "value": 12, "unit": "s" },
+    "wind": { "speed": 8, "unit": "kph", "direction": "E" },
+    "waterTemp": { "value": 24, "unit": "C" }
+  },
+  "board": "Shortboard",
+  "trend": {
+    "direction": "improving",
+    "bestWindow": "2:00 PM - 5:00 PM today",
+    "message": "Conditions improving through the afternoon"
+  },
+  "links": {
+    "web": "https://shouldigo.surf/?spot=pipeline",
+    "full": "https://api.shouldigo.surf/api/conditions/pipeline",
+    "schema": "https://api.shouldigo.surf/api/agent/schema"
+  }
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `spot` | object | Spot ID, display name, and country |
+| `timestamp` | string | ISO 8601 timestamp of when data was collected |
+| `score` | integer | Overall surf score from 0 (flat) to 100 (epic) |
+| `rating` | string | One of: EPIC, GREAT, GOOD, FAIR, MARGINAL, POOR, FLAT |
+| `verdict` | string | Human-readable recommendation: "Yes, go surfing." / "Maybe, conditions are marginal." / "No, not worth it today." |
+| `summary` | string | One-sentence natural language summary of conditions. Safe to relay directly to users. |
+| `conditions.waveHeight` | object | Average wave height in meters |
+| `conditions.wavePeriod` | object | Dominant swell period in seconds |
+| `conditions.wind` | object | Wind speed (kph), direction (compass) |
+| `conditions.waterTemp` | object | Water temperature in Celsius (may be null) |
+| `board` | string | Recommended board type for current conditions |
+| `trend` | object/null | Forecast trend: improving/steady/deteriorating, best time window |
+| `links.web` | string | URL to view this spot on the website |
+| `links.full` | string | URL for the full (non-agent) conditions endpoint with all raw data |
+
+### Error Response
+
+```json
+{
+  "error": "Unknown spot: xyz",
+  "hint": "Use GET /api/spots for a list of valid spot IDs"
+}
+```
+
+---
+
+## 2. Find Nearest Spot
+
+```
+GET /api/agent/nearest
+GET /api/agent/nearest?lat=32.08&lon=34.77
+```
+
+Finds the closest surf spot and returns conditions in the same format as `/api/agent/{spotId}`.
+
+- If `lat` and `lon` are provided, uses those coordinates
+- Otherwise, auto-detects location from the request IP address
+
+---
+
+## 3. List All Spots
+
+```
+GET /api/spots
+```
+
+Returns all available surf spots.
+
+### Example Response
+
+```json
+[
+  { "id": "pipeline", "name": "Pipeline", "country": "US", "location": { "lat": 21.665, "lon": -158.053 } },
+  { "id": "bells_beach", "name": "Bells Beach", "country": "AU", "location": { "lat": -38.368, "lon": 144.281 } },
+  ...
+]
+```
+
+---
+
+## 4. Response Schema
+
+```
+GET /api/agent/schema
+```
+
+Returns a JSON Schema (draft 2020-12) describing the agent response format. Useful for validating responses programmatically.
+
+---
+
+## 5. Full Conditions Endpoint (Advanced)
+
+```
+GET /api/conditions/{spotId}
+```
+
+Returns the complete, unabridged conditions response including:
+- Detailed scoring breakdown by factor (wave height, direction, wind, period, water temp, confidence)
+- Full hourly trend timeline with wave height predictions
+- Detailed board recommendation with volume, width, and thickness
+- Source attribution (which data providers contributed)
+- Cache metadata
+
+Optional query parameters:
+- `weight=75` — Surfer weight in kg (20-250) for personalized board recommendation
+- `skill=intermediate` — Skill level (beginner/intermediate/advanced/expert)
+- `refresh=true` — Bypass cache and fetch fresh data (slower, ~15-30 seconds)
+
+---
+
+## Spot IDs
+
+### Israel
+`herzliya_marina`, `netanya_kontiki`, `tel_aviv_maaravi`, `bat_yam`, `ashkelon`, `haifa_dado`, `caesarea`, `ashdod`
+
+### USA
+`pipeline`, `sunset_beach`, `waimea_bay`, `honolua_bay`, `ocean_beach_sf`, `mavericks`, `steamer_lane`, `trestles`, `huntington`, `rincon`, `blacks_beach`, `malibu`, `cocoa_beach`, `outer_banks`
+
+### Australia
+`bells_beach`, `snapper_rocks`, `margaret_river`, `bondi_beach`, `noosa_heads`
+
+### Europe
+`nazare`, `peniche_supertubos`, `ericeira`, `sagres`, `hossegor`, `biarritz`, `lacanau`, `mundaka`, `san_sebastian_zurriola`, `barceloneta`, `fistral_beach`, `bundoran`
+
+### Indonesia
+`uluwatu`, `padang_padang`, `desert_point`, `g_land`
+
+### South Africa & Morocco
+`jeffreys_bay`, `dungeons`, `taghazout`
+
+### Americas (other)
+`puerto_escondido`, `playa_hermosa`, `witchs_rock`, `punta_de_lobos`, `florianopolis`
+
+### Pacific
+`teahupoo`, `cloudbreak`
+
+### Asia-Pacific
+`shonan`, `chiba`, `siargao_cloud9`, `arugam_bay`
+
+For the complete up-to-date list, use `GET /api/spots`.
+
+---
+
+## Rate Limits
+
+- **60 requests per 15 minutes** per IP address
+- Responses include standard `RateLimit-*` headers:
+  - `RateLimit-Limit`: Maximum requests allowed
+  - `RateLimit-Remaining`: Requests remaining in current window
+  - `RateLimit-Reset`: Seconds until the window resets
+- Exceeding the limit returns HTTP `429`:
+  ```json
+  { "success": false, "error": "Too many requests, please try again later" }
+  ```
+
+### Need Higher Limits?
+
+Email **support@shouldigo.surf** with:
+- Your use case / application name
+- Expected request volume
+- Whether you need real-time or periodic access
+
+We'll set up an API key with custom rate limits for your integration.
+
+---
+
+## Caching
+
+- Conditions are cached for **10 minutes** after first fetch
+- Cached responses return in ~50ms; fresh fetches take 15-30 seconds (multiple sources are scraped in parallel)
+- The `fromCache` field in the full conditions endpoint indicates whether data was served from cache
+- For the agent endpoint, data freshness is indicated by the `timestamp` field
+
+---
+
+## Best Practices for Agents
+
+1. **Start with `/api/agent/{spotId}`** — it's designed for you. The response is concise and every field is useful.
+2. **Use the `verdict` field** to give users a quick yes/no answer, and `summary` for a natural language explanation.
+3. **Cache responses on your side** for at least 10 minutes — the underlying data won't change faster than that.
+4. **Use `/api/spots`** to let users pick from available spots, or `/api/agent/nearest` for automatic location detection.
+5. **Check `trend.bestWindow`** to advise users on the best time to go.
+6. **Link users to the web app** using `links.web` so they can see the full dashboard.
+
+---
+
+## Contact
+
+- Email: support@shouldigo.surf
+- Website: https://shouldigo.surf

@@ -1,71 +1,36 @@
-# Should I Go? -- Surf Conditions
+# Should I Go? — Real-Time Surf Conditions API
 
-> Real-time surf conditions and scoring for any beach in the world.
+> Check surf conditions for 73+ beaches worldwide. Get scores, verdicts, wave data, wind, trends, and board recommendations — all in a single JSON call.
 
-## What this does
+## Quick Start
 
-Should I Go? aggregates data from multiple ocean weather sources (Open-Meteo, MET Norway, Windfinder, and more), scores surf conditions 0-100, and gives a verdict on whether it's worth paddling out. Covers wave height, wave period, swell quality, wind speed, wind direction, and wave direction.
+Base URL: `https://api.shouldigo.surf`
 
-## API for agents
-
-Base URL: https://api.shouldigo.surf
-
-All endpoints return JSON. No authentication required.
-
-### Check conditions for a spot
-
-GET /api/agent/{spotId}
-
-Returns: score, verdict (yes/no/maybe), plain-text summary, conditions breakdown, trend forecast, and board recommendation.
-
-### Find nearest spot
-
-GET /api/agent/nearest
-
-Auto-detects location by IP. Optional query params: ?lat=X&lon=Y for explicit coordinates.
-
-### List all spots
-
-GET /api/spots
-
-Returns all available surf spots with id, name, and country.
-
-### Response schema
-
-GET /api/agent/schema
-
-Machine-readable JSON Schema describing the agent response format.
-
-## Example
+To check if it's worth surfing right now:
 
 ```
 GET https://api.shouldigo.surf/api/agent/pipeline
 ```
 
-```json
-{
-  "spot": { "id": "pipeline", "name": "Pipeline", "country": "US" },
-  "score": 72,
-  "rating": "GOOD",
-  "verdict": "Yes, go surfing.",
-  "summary": "Solid chest-high waves with a decent swell. Definitely worth a session.",
-  "conditions": {
-    "waveHeight": { "avg": 1.4, "unit": "m" },
-    "wavePeriod": { "value": 12, "unit": "s" },
-    "wind": { "speed": 8, "unit": "kph", "direction": "E" },
-    "waterTemp": { "value": 24, "unit": "C" }
-  },
-  "board": "Shortboard",
-  "trend": { "direction": "improving", "bestWindow": "2:00 PM - 5:00 PM today" }
-}
-```
+Returns a simple JSON object with score (0-100), verdict (yes/no/maybe), conditions summary, and a board recommendation. No authentication required.
 
-## Spot IDs
+## Agent Endpoints
 
-Popular spots: pipeline, bells_beach, hossegor, nazare, trestles, uluwatu, jeffreys_bay, rincon, huntington, tel_aviv
+| Endpoint | Description |
+|---|---|
+| `GET /api/agent/{spotId}` | Conditions + score + verdict for a spot |
+| `GET /api/agent/nearest?lat=X&lon=Y` | Find nearest spot and return conditions |
+| `GET /api/spots` | List all 73+ spots with IDs, names, countries |
+| `GET /api/agent/schema` | JSON Schema for the agent response format |
 
-Full list: GET https://api.shouldigo.surf/api/spots
+## Rate Limits
 
-## Contact
+- **60 requests per 15-minute window** per IP address
+- Standard `RateLimit-*` headers are included in every response
+- If you hit the limit, you'll receive a `429` status with `{ "error": "Too many requests, please try again later" }`
+- To request higher limits or API key access, email **support@shouldigo.surf** with your use case
 
-support@shouldigo.surf
+## Full Documentation
+
+For complete API reference, response schemas, all spot IDs, and integration examples, see:
+https://shouldigo.surf/llms-full.txt
