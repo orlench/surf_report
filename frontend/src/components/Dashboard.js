@@ -166,6 +166,14 @@ function Dashboard() {
     const url = new URL(window.location);
     url.searchParams.set('spot', spotId);
     window.history.replaceState({}, '', url);
+
+    // Track spot view in Google Analytics
+    if (window.gtag) {
+      window.gtag('event', 'page_view', {
+        page_location: url.href,
+        page_title: `${spotId} — Should I Go?`,
+      });
+    }
   }, [startStream, startSkeletonTimer]);
 
   // Keep URL in sync with selected spot
