@@ -1,6 +1,9 @@
 package surf.shouldigo.app.feature.main
 
+import android.Manifest
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -14,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -37,6 +41,24 @@ fun MainScreen(
     var loadedConditions by remember { mutableStateOf<ConditionsResponse?>(null) }
     val context = LocalContext.current
 
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions.values.any { it }
+        viewModel.onLocationPermissionResult(granted)
+    }
+
+    LaunchedEffect(uiState.needsLocationPermission) {
+        if (uiState.needsLocationPermission) {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+
     LaunchedEffect(deepLinkSpotId) {
         deepLinkSpotId?.let { viewModel.handleDeepLink(it) }
     }
@@ -48,7 +70,9 @@ fun MainScreen(
                     Text(
                         text = uiState.selectedSpot?.name ?: "Should I Go?",
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp
+                        fontSize = 18.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 },
                 actions = {
@@ -116,7 +140,9 @@ fun MainScreen(
                 },
                 onOpenMap = {
                     showSpotPicker = false
-                    // TODO: navigate to map
+                    onOpenMap?.invoke { spot ->
+                        viewModel.selectSpot(spot)
+                    }
                 }
             )
         }

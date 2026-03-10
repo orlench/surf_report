@@ -1,24 +1,27 @@
 package surf.shouldigo.app.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import surf.shouldigo.app.data.model.Spot
 import surf.shouldigo.app.feature.main.MainScreen
 import surf.shouldigo.app.feature.map.SpotMapScreen
 
 @Composable
 fun AppNavigation(deepLinkSpotId: String? = null) {
     val navController = rememberNavController()
+    // Hold the callback so the map result can reach MainScreen
+    val mapCallback = remember { mutableStateOf<((Spot) -> Unit)?>(null) }
 
     NavHost(navController = navController, startDestination = Routes.Main.route) {
         composable(Routes.Main.route) {
             MainScreen(
                 deepLinkSpotId = deepLinkSpotId,
                 onOpenMap = { onSpotSelected ->
-                    navController.currentBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("mapCallback", true)
+                    mapCallback.value = onSpotSelected
                     navController.navigate(Routes.Map.route)
                 }
             )
@@ -27,22 +30,9 @@ fun AppNavigation(deepLinkSpotId: String? = null) {
         composable(Routes.Map.route) {
             SpotMapScreen(
                 onSpotSelected = { spot ->
-                    navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("selectedSpotId", spot.id)
-                    navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("selectedSpotName", spot.name)
-                    navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("selectedSpotCountry", spot.country)
-                    navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("selectedSpotLat", spot.lat)
-                    navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("selectedSpotLon", spot.lon)
                     navController.popBackStack()
+                    mapCallback.value?.invoke(spot)
+                    mapCallback.value = null
                 },
                 onBack = { navController.popBackStack() }
             )

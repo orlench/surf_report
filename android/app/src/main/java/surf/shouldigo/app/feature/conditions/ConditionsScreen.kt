@@ -23,6 +23,7 @@ fun ConditionsScreen(
     viewModel: ConditionsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     LaunchedEffect(spot.id) {
         viewModel.load(spot)
@@ -49,7 +50,11 @@ fun ConditionsScreen(
             is FetchState.Loaded -> {
                 LoadedContent(
                     response = s.response,
-                    onRefresh = { viewModel.refresh(spot) }
+                    isRefreshing = isRefreshing,
+                    onRefresh = { viewModel.refresh(spot) },
+                    savedWeight = viewModel.savedWeight,
+                    savedSkill = viewModel.savedSkill,
+                    onPersonalize = { w, s -> viewModel.personalize(w, s) }
                 )
             }
 
@@ -66,7 +71,11 @@ fun ConditionsScreen(
 @Composable
 private fun LoadedContent(
     response: ConditionsResponse,
-    onRefresh: () -> Unit
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit,
+    savedWeight: String = "",
+    savedSkill: String = "",
+    onPersonalize: (weight: String?, skill: String?) -> Unit = { _, _ -> }
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -80,6 +89,7 @@ private fun LoadedContent(
                 timestamp = response.timestamp,
                 fromCache = response.fromCache,
                 cacheAge = response.cacheAge,
+                isRefreshing = isRefreshing,
                 onRefresh = onRefresh
             )
         }
@@ -95,7 +105,15 @@ private fun LoadedContent(
         }
 
         response.boardRecommendation?.let { board ->
-            item { BoardCard(recommendation = board, conditions = response.conditions) }
+            item {
+                BoardCard(
+                    recommendation = board,
+                    conditions = response.conditions,
+                    savedWeight = savedWeight,
+                    savedSkill = savedSkill,
+                    onPersonalize = onPersonalize
+                )
+            }
         }
 
         item {

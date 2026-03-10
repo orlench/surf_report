@@ -9,7 +9,10 @@ interface ApiService {
     suspend fun fetchSpots(): SpotListResponse
 
     @GET("nearest-spot")
-    suspend fun fetchNearestSpot(): NearestSpotResponse
+    suspend fun fetchNearestSpot(
+        @Query("lat") lat: Double? = null,
+        @Query("lon") lon: Double? = null
+    ): NearestSpotResponse
 
     @GET("conditions/{spotId}")
     suspend fun fetchConditions(

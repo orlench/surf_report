@@ -58,7 +58,18 @@ class PushViewModel @Inject constructor(
         _uiState.update { it.copy(threshold = threshold) }
     }
 
+    fun onPermissionResult(granted: Boolean, spotId: String) {
+        _uiState.update { it.copy(hasPermission = granted) }
+        if (!granted) {
+            _uiState.update { it.copy(error = "Notification permission denied") }
+        }
+    }
+
     fun subscribe(spotId: String, spotName: String) {
+        if (!_uiState.value.hasPermission) {
+            _uiState.update { it.copy(error = "Please enable notifications first") }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {

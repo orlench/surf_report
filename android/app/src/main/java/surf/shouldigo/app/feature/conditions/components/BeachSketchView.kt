@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -231,7 +232,7 @@ private fun DrawScope.drawSmallLabel(x: Float, y: Float, text: String, color: Co
         x,
         y + 4f,
         android.graphics.Paint().apply {
-            this.color = color.hashCode()
+            this.color = color.toArgb()
             textSize = 20f
             textAlign = android.graphics.Paint.Align.CENTER
             typeface = android.graphics.Typeface.create(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)

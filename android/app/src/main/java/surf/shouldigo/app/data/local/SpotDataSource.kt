@@ -25,8 +25,9 @@ class SpotDataSource @Inject constructor(
 
         val wrapper = gson.fromJson(json, SpotFileWrapper::class.java)
         val spots = wrapper.spots.map { raw ->
+            val id = raw.id ?: raw.name.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
             Spot(
-                id = raw.id,
+                id = id,
                 name = raw.name,
                 country = raw.country ?: "",
                 region = raw.region,
@@ -42,7 +43,7 @@ class SpotDataSource @Inject constructor(
 
     private data class SpotFileWrapper(val spots: List<RawSpot>)
     private data class RawSpot(
-        val id: String,
+        val id: String? = null,
         val name: String,
         val country: String? = null,
         val region: String? = null,

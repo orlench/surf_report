@@ -1,20 +1,26 @@
 package surf.shouldigo.app.feature.conditions.components
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import surf.shouldigo.app.data.model.BoardRecommendation
 import surf.shouldigo.app.data.model.SurfConditions
-import surf.shouldigo.app.domain.boardEmoji
 import surf.shouldigo.app.domain.wetsuitRecommendation
 import surf.shouldigo.app.ui.theme.*
 
@@ -22,19 +28,31 @@ import surf.shouldigo.app.ui.theme.*
 @Composable
 fun BoardCard(
     recommendation: BoardRecommendation,
-    conditions: SurfConditions
+    conditions: SurfConditions,
+    savedWeight: String = "",
+    savedSkill: String = "",
+    onPersonalize: (weight: String?, skill: String?) -> Unit = { _, _ -> }
 ) {
-    var weight by remember { mutableStateOf("") }
-    var skill by remember { mutableStateOf("") }
+    var weight by remember(savedWeight) { mutableStateOf(savedWeight) }
+    var skill by remember(savedSkill) { mutableStateOf(savedSkill) }
     var expanded by remember { mutableStateOf(false) }
+    var showSaved by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
     val skillOptions = listOf("", "beginner", "intermediate", "advanced", "expert")
+
+    LaunchedEffect(showSaved) {
+        if (showSaved) {
+            delay(2000)
+            showSaved = false
+        }
+    }
 
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = CardBackground
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            SectionHeader("Gear")
+            SectionHeader("Suggested Gear for Today")
             Spacer(modifier = Modifier.height(14.dp))
 
             Row(
@@ -52,9 +70,9 @@ fun BoardCard(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = boardEmoji(recommendation.boardType),
-                            fontSize = 32.sp
+                        BoardIllustration(
+                            boardType = recommendation.boardType,
+                            modifier = Modifier.size(width = 28.dp, height = 64.dp)
                         )
                         Text(
                             text = recommendation.boardName
@@ -88,7 +106,10 @@ fun BoardCard(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(text = "\uD83C\uDFC4", fontSize = 28.sp)
+                            WetsuitIllustration(
+                                isShorts = wt >= 24,
+                                modifier = Modifier.size(width = 36.dp, height = 64.dp)
+                            )
                             Text(
                                 text = name,
                                 fontSize = 14.sp,
@@ -107,12 +128,39 @@ fun BoardCard(
 
             // Personalize section
             Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Personalize",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = SecondaryText
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Personalize",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = SecondaryText
+                )
+                AnimatedVisibility(
+                    visible = showSaved,
+                    enter = fadeIn() + slideInHorizontally(),
+                    exit = fadeOut()
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Accent,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "Updating recommendation...",
+                            fontSize = 11.sp,
+                            color = Accent
+                        )
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
@@ -124,9 +172,25 @@ fun BoardCard(
                     Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
                         value = weight,
-                        onValueChange = { weight = it },
+                        onValueChange = { newValue ->
+                            // Only allow digits, max 3 chars
+                            val filtered = newValue.filter { it.isDigit() }.take(3)
+                            weight = filtered
+                        },
                         placeholder = { Text("75") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                focusManager.clearFocus()
+                                if (weight.isNotEmpty()) {
+                                    onPersonalize(weight, skill.ifEmpty { null })
+                                    showSaved = true
+                                }
+                            }
+                        ),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
@@ -161,6 +225,8 @@ fun BoardCard(
                                     onClick = {
                                         skill = option
                                         expanded = false
+                                        onPersonalize(weight.ifEmpty { null }, option.ifEmpty { null })
+                                        showSaved = true
                                     }
                                 )
                             }

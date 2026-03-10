@@ -18,8 +18,8 @@ class SpotRepository @Inject constructor(
         return api.fetchSpots().spots
     }
 
-    suspend fun fetchNearestSpot(): NearestSpotResponse {
-        return api.fetchNearestSpot()
+    suspend fun fetchNearestSpot(lat: Double? = null, lon: Double? = null): NearestSpotResponse {
+        return api.fetchNearestSpot(lat, lon)
     }
 
     suspend fun createSpot(name: String, lat: Double, lon: Double, country: String?) {

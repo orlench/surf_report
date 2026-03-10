@@ -1,5 +1,9 @@
 package surf.shouldigo.app.feature.notifications
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -20,6 +24,12 @@ fun NotificationSheet(
     viewModel: PushViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        viewModel.onPermissionResult(granted, spot.id)
+    }
 
     LaunchedEffect(spot.id) {
         viewModel.loadState(spot.id)
@@ -64,12 +74,29 @@ fun NotificationSheet(
                 shape = RoundedCornerShape(10.dp),
                 color = ScoreFair.copy(alpha = 0.1f)
             ) {
-                Text(
-                    text = "Enable notifications in your device settings to receive alerts",
-                    fontSize = 12.sp,
-                    color = ScoreFair,
-                    modifier = Modifier.padding(12.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Notifications are disabled",
+                        fontSize = 12.sp,
+                        color = ScoreFair,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        TextButton(
+                            onClick = {
+                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        ) {
+                            Text("Enable", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
         }
 
@@ -118,7 +145,13 @@ fun NotificationSheet(
         } else {
             val canSubscribe = uiState.subscriptionCount < 2
             Button(
-                onClick = { viewModel.subscribe(spot.id, spot.name) },
+                onClick = {
+                    if (!uiState.hasPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        viewModel.subscribe(spot.id, spot.name)
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
                 enabled = !uiState.isLoading && canSubscribe

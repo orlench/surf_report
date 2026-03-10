@@ -28,12 +28,14 @@ fun ScoreArc(score: Int, modifier: Modifier = Modifier) {
         label = "score"
     )
 
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+    Box(modifier = modifier, contentAlignment = Alignment.BottomCenter) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val strokeWidth = 14.dp.toPx()
-            val padding = strokeWidth / 2 + 8.dp.toPx()
-            val arcSize = Size(size.width - padding * 2, (size.width - padding * 2))
-            val topLeft = Offset(padding, size.height - arcSize.height / 2 - strokeWidth)
+            val strokeWidth = 12.dp.toPx()
+            val padding = strokeWidth / 2 + 4.dp.toPx()
+            val arcDiameter = size.width - padding * 2
+            val arcSize = Size(arcDiameter, arcDiameter)
+            // Anchor semi-circle to bottom of canvas so it never overflows upward
+            val topLeft = Offset(padding, size.height - arcDiameter / 2)
 
             // Track arc
             drawArc(
@@ -60,10 +62,10 @@ fun ScoreArc(score: Int, modifier: Modifier = Modifier) {
 
         Text(
             text = "$score",
-            fontSize = 52.sp,
+            fontSize = 48.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
-            modifier = Modifier.offset(y = 12.dp)
+            modifier = Modifier.offset(y = (-16).dp)
         )
     }
 }

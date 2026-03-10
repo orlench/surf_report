@@ -8,9 +8,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import surf.shouldigo.app.data.local.CustomSpotStore
+import surf.shouldigo.app.data.local.PreferencesManager
 import surf.shouldigo.app.data.model.Spot
 import surf.shouldigo.app.data.repository.ConditionsRepository
 import surf.shouldigo.app.data.repository.FetchState
+import surf.shouldigo.app.data.repository.ProgressStep
 import surf.shouldigo.app.data.repository.SpotRepository
 import javax.inject.Inject
 
@@ -18,25 +20,53 @@ import javax.inject.Inject
 class ConditionsViewModel @Inject constructor(
     private val conditionsRepo: ConditionsRepository,
     private val spotRepo: SpotRepository,
-    private val customSpotStore: CustomSpotStore
+    private val customSpotStore: CustomSpotStore,
+    private val prefs: PreferencesManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<FetchState>(FetchState.Idle)
     val state: StateFlow<FetchState> = _state
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    val savedWeight: String get() = prefs.userWeight ?: ""
+    val savedSkill: String get() = prefs.userSkill ?: ""
+
     private var currentSpotId: String? = null
+    private var currentSpot: Spot? = null
     private var loadJob: Job? = null
 
     fun load(spot: Spot) {
         if (currentSpotId == spot.id && _state.value is FetchState.Loaded) return
 
         currentSpotId = spot.id
+        currentSpot = spot
         loadJob?.cancel()
 
         // Check if custom spot
         val customMeta = customSpotStore.find(spot.id)
         if (customMeta != null) {
             loadCustomSpot(customMeta)
+            return
+        }
+
+        // Spot picked from the map with coordinates — use custom endpoint
+        val loc = spot.location
+        if (loc != null) {
+            loadJob = viewModelScope.launch {
+                _state.value = FetchState.Streaming(
+                    listOf(ProgressStep("fetch", "Fetching conditions...", "loading"))
+                )
+                try {
+                    val response = conditionsRepo.fetchCustomConditions(
+                        loc.lat, loc.lon, spot.name, spot.country.ifEmpty { null }
+                    )
+                    _state.value = FetchState.Loaded(response)
+                } catch (e: Exception) {
+                    _state.value = FetchState.Error(e.message ?: "Failed to fetch conditions")
+                }
+            }
             return
         }
 
@@ -48,9 +78,36 @@ class ConditionsViewModel @Inject constructor(
     }
 
     fun refresh(spot: Spot) {
-        currentSpotId = null
-        _state.value = FetchState.Idle
-        load(spot)
+        val customMeta = customSpotStore.find(spot.id)
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                val response = if (customMeta != null) {
+                    conditionsRepo.fetchCustomConditions(
+                        customMeta.lat, customMeta.lon, customMeta.name, customMeta.country
+                    )
+                } else if (spot.location != null) {
+                    conditionsRepo.fetchCustomConditions(
+                        spot.location.lat, spot.location.lon, spot.name, spot.country.ifEmpty { null }
+                    )
+                } else {
+                    conditionsRepo.fetchViaREST(spot.id)
+                }
+                currentSpotId = spot.id
+                _state.value = FetchState.Loaded(response)
+            } catch (e: Exception) {
+                _state.value = FetchState.Error(e.message ?: "Failed to refresh")
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+
+    fun personalize(weight: String?, skill: String?) {
+        prefs.userWeight = weight
+        prefs.userSkill = skill
+        val spot = currentSpot ?: return
+        refresh(spot)
     }
 
     private fun loadCustomSpot(meta: surf.shouldigo.app.data.model.CustomSpotMeta) {

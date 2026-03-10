@@ -1,11 +1,20 @@
 package surf.shouldigo.app.feature.main
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import surf.shouldigo.app.data.local.PreferencesManager
 import surf.shouldigo.app.data.model.NearbySpot
 import surf.shouldigo.app.data.model.Spot
@@ -15,11 +24,13 @@ import javax.inject.Inject
 data class MainUiState(
     val selectedSpot: Spot? = null,
     val isAutoDetecting: Boolean = false,
-    val nearbySpots: List<NearbySpot> = emptyList()
+    val nearbySpots: List<NearbySpot> = emptyList(),
+    val needsLocationPermission: Boolean = false
 )
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val spotRepo: SpotRepository,
     private val prefs: PreferencesManager
 ) : ViewModel() {
@@ -33,21 +44,56 @@ class MainViewModel @Inject constructor(
         if (savedId != null && savedName != null) {
             _uiState.value = MainUiState(selectedSpot = Spot(id = savedId, name = savedName))
         } else {
-            autoDetect()
+            // Check if we have location permission already
+            if (hasLocationPermission()) {
+                autoDetect()
+            } else {
+                _uiState.value = _uiState.value.copy(needsLocationPermission = true)
+            }
         }
     }
 
-    fun selectSpot(spot: Spot) {
-        _uiState.value = _uiState.value.copy(selectedSpot = spot)
-        prefs.lastSelectedSpotId = spot.id
-        prefs.lastSelectedSpotName = spot.name
+    private fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    fun onLocationPermissionResult(granted: Boolean) {
+        _uiState.value = _uiState.value.copy(needsLocationPermission = false)
+        autoDetect()
     }
 
     fun autoDetect() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isAutoDetecting = true)
+            _uiState.value = _uiState.value.copy(isAutoDetecting = true, needsLocationPermission = false)
             try {
-                val response = spotRepo.fetchNearestSpot()
+                var lat: Double? = null
+                var lon: Double? = null
+
+                // Try to get GPS coordinates if we have permission
+                if (hasLocationPermission()) {
+                    try {
+                        val fusedClient = LocationServices.getFusedLocationProviderClient(context)
+                        val location = fusedClient.getCurrentLocation(
+                            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                            CancellationTokenSource().token
+                        ).await()
+                        if (location != null) {
+                            lat = location.latitude
+                            lon = location.longitude
+                        }
+                    } catch (_: SecurityException) {
+                        // Permission revoked between check and use
+                    } catch (_: Exception) {
+                        // GPS failed, fall back to IP-based
+                    }
+                }
+
+                val response = spotRepo.fetchNearestSpot(lat, lon)
                 val nearbySpots = response.nearbySpots ?: emptyList()
                 _uiState.value = _uiState.value.copy(nearbySpots = nearbySpots)
 
@@ -64,6 +110,12 @@ class MainViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(isAutoDetecting = false)
             }
         }
+    }
+
+    fun selectSpot(spot: Spot) {
+        _uiState.value = _uiState.value.copy(selectedSpot = spot)
+        prefs.lastSelectedSpotId = spot.id
+        prefs.lastSelectedSpotName = spot.name
     }
 
     fun handleDeepLink(spotId: String) {

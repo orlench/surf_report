@@ -6,9 +6,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
+import androidx.compose.animation.core.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,6 +30,7 @@ fun ScoreMeterCard(
     timestamp: String,
     fromCache: Boolean?,
     cacheAge: Int?,
+    isRefreshing: Boolean = false,
     onRefresh: () -> Unit
 ) {
     val heroColor = ratingColor(score.rating)
@@ -61,7 +65,7 @@ fun ScoreMeterCard(
                 score = score.overall,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(140.dp)
+                    .aspectRatio(2f) // semi-circle: width = 2x height
             )
 
             Text(
@@ -121,23 +125,40 @@ fun ScoreMeterCard(
 
             // Updated + refresh
             val updated = updatedText(fromCache, cacheAge, timestamp)
-            if (updated.isNotEmpty()) {
+            if (updated.isNotEmpty() || isRefreshing) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = updated,
+                        text = if (isRefreshing) "Refreshing..." else updated,
                         fontSize = 12.sp,
                         color = Color.White.copy(alpha = 0.6f)
                     )
-                    IconButton(onClick = onRefresh, modifier = Modifier.size(20.dp)) {
+                    val rotation = if (isRefreshing) {
+                        val infiniteTransition = rememberInfiniteTransition(label = "refresh")
+                        val angle by infiniteTransition.animateFloat(
+                            initialValue = 0f,
+                            targetValue = 360f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(1000, easing = LinearEasing),
+                                repeatMode = RepeatMode.Restart
+                            ),
+                            label = "refreshRotation"
+                        )
+                        angle
+                    } else 0f
+                    IconButton(
+                        onClick = onRefresh,
+                        modifier = Modifier.size(20.dp),
+                        enabled = !isRefreshing
+                    ) {
                         Icon(
                             Icons.Default.Refresh,
                             contentDescription = "Refresh",
                             tint = Color.White.copy(alpha = 0.6f),
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(14.dp).rotate(rotation)
                         )
                     }
                 }
