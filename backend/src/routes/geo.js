@@ -16,39 +16,55 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 /**
  * GET /api/nearest-spot
- * Detect visitor IP, geolocate, return nearest surf spot.
+ * Detect visitor location, return nearest surf spot.
+ * Accepts optional ?lat=X&lon=Y query params for GPS-based detection (mobile apps).
+ * Falls back to IP geolocation if lat/lon not provided.
  */
 router.get('/', (req, res) => {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-    || req.socket.remoteAddress;
+  const queryLat = parseFloat(req.query.lat);
+  const queryLon = parseFloat(req.query.lon);
+  const hasGpsCoords = !isNaN(queryLat) && !isNaN(queryLon);
 
-  logger.info(`[Geo] Looking up IP: ${ip}`);
+  let userLat, userLon, city, country;
 
-  const geo = geoip.lookup(ip);
+  if (hasGpsCoords) {
+    userLat = queryLat;
+    userLon = queryLon;
+    city = '';
+    country = '';
+    logger.info(`[Geo] Using GPS coords: (${userLat}, ${userLon})`);
+  } else {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+      || req.socket.remoteAddress;
 
-  if (!geo || !geo.ll) {
-    logger.warn(`[Geo] Could not geolocate IP: ${ip}`);
-    const allSpots = getAllSpots();
-    const fallbackNearby = allSpots.slice(0, 6).map(s => ({
-      id: s.id,
-      name: s.name,
-      country: s.country || '',
-      distance: null,
-    }));
-    const first = allSpots[0];
-    return res.json({
-      success: true,
-      detected: false,
-      location: null,
-      nearestSpot: first ? first.id : null,
-      nearestSpotName: first ? first.name : null,
-      nearbySpots: fallbackNearby,
-    });
+    logger.info(`[Geo] Looking up IP: ${ip}`);
+
+    const geo = geoip.lookup(ip);
+
+    if (!geo || !geo.ll) {
+      logger.warn(`[Geo] Could not geolocate IP: ${ip}`);
+      const allSpots = getAllSpots();
+      const fallbackNearby = allSpots.slice(0, 6).map(s => ({
+        id: s.id,
+        name: s.name,
+        country: s.country || '',
+        distance: null,
+      }));
+      const first = allSpots[0];
+      return res.json({
+        success: true,
+        detected: false,
+        location: null,
+        nearestSpot: first ? first.id : null,
+        nearestSpotName: first ? first.name : null,
+        nearbySpots: fallbackNearby,
+      });
+    }
+
+    [userLat, userLon] = geo.ll;
+    city = geo.city || '';
+    country = geo.country || '';
   }
-
-  const [userLat, userLon] = geo.ll;
-  const city = geo.city || '';
-  const country = geo.country || '';
 
   logger.info(`[Geo] Resolved: ${city}, ${country} (${userLat}, ${userLon})`);
 
