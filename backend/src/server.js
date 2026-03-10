@@ -14,7 +14,7 @@ app.use(helmet()); // Security headers
 // Rate limiting
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 60, // limit each IP to 60 requests per 15 min window
+  max: 200, // limit each IP to 200 requests per 15 min window
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many requests, please try again later' }
