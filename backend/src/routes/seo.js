@@ -50,7 +50,7 @@ router.get('/sitemap.xml', (req, res) => {
   for (const spot of spots) {
     xml += `
   <url>
-    <loc>${FRONTEND_URL}/?spot=${encodeURIComponent(spot.id)}</loc>
+    <loc>${FRONTEND_URL}/spot/${encodeURIComponent(spot.id)}</loc>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
     <lastmod>${today}</lastmod>
@@ -111,10 +111,10 @@ router.get('/og/:spotId', async (req, res) => {
     description = `Real-time surf conditions for ${spot.name}, ${spot.country || ''}. Check wave height, wind, swell period, and water temp.`.trim();
   }
 
-  const url = `${FRONTEND_URL}/?spot=${encodeURIComponent(spotId)}`;
+  const url = `${FRONTEND_URL}/spot/${encodeURIComponent(spotId)}`;
   const image = `${FRONTEND_URL}/logo512.png`;
 
-  // Minimal HTML with OG tags + instant redirect for real users
+  // HTML with OG tags — serves as the indexable page for social crawlers
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -132,10 +132,12 @@ router.get('/og/:spotId', async (req, res) => {
   <meta name="twitter:description" content="${escapeHtml(description)}" />
   <meta name="twitter:image" content="${image}" />
   <link rel="canonical" href="${escapeHtml(url)}" />
-  <meta http-equiv="refresh" content="0;url=${escapeHtml(url)}" />
 </head>
 <body>
-  <p>Redirecting to <a href="${escapeHtml(url)}">${escapeHtml(spot.name)} surf conditions</a>...</p>
+  <h1>${escapeHtml(spot.name)} Surf Report</h1>
+  <p>${escapeHtml(description)}</p>
+  <p><a href="${escapeHtml(url)}">View live conditions for ${escapeHtml(spot.name)}</a></p>
+  <script>window.location.replace("${escapeHtml(url)}");</script>
 </body>
 </html>`;
 

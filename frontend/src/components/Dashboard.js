@@ -39,6 +39,10 @@ function trackConversion(action) {
 }
 
 function getInitialSpot() {
+  // Support clean /spot/:id path URLs (for SEO + sitemap)
+  const pathMatch = window.location.pathname.match(/^\/spot\/([^/]+)$/);
+  if (pathMatch) return decodeURIComponent(pathMatch[1]);
+
   const params = new URLSearchParams(window.location.search);
   const urlSpot = params.get('spot');
 
@@ -298,25 +302,41 @@ function Dashboard() {
     || getCustomSpotMeta(selectedSpot)?.name
     || (selectedSpot ? selectedSpot.replace(/_/g, ' ') : '');
 
-  // Dynamic page title and canonical URL for SEO
+  // Dynamic page title, canonical URL, and OG tags for SEO
   useEffect(() => {
+    const pageUrl = selectedSpot
+      ? `https://shouldigo.surf/spot/${selectedSpot}`
+      : 'https://shouldigo.surf';
+
     if (conditions && currentSpotName) {
       const score = conditions.score?.overall;
       document.title = score != null
         ? `${currentSpotName} Surf Report — ${score}/100 | Should I Go?`
         : `${currentSpotName} — Should I Go?`;
+
+      // Update OG tags
+      const setMeta = (prop, content) => {
+        let el = document.querySelector(`meta[property="${prop}"]`) || document.querySelector(`meta[name="${prop}"]`);
+        if (el) el.setAttribute('content', content);
+      };
+      setMeta('og:title', document.title);
+      setMeta('og:url', pageUrl);
+      const desc = `Real-time surf conditions for ${currentSpotName}. Wave height, wind, swell period & water temp.`;
+      setMeta('og:description', desc);
+      setMeta('description', desc);
+      setMeta('twitter:title', document.title);
+      setMeta('twitter:description', desc);
     } else {
       document.title = 'Should I Go? — Real-Time Surf Conditions & Score';
     }
+
     let link = document.querySelector('link[rel="canonical"]');
     if (!link) {
       link = document.createElement('link');
       link.rel = 'canonical';
       document.head.appendChild(link);
     }
-    link.href = selectedSpot
-      ? `https://shouldigo.surf/?spot=${selectedSpot}`
-      : 'https://shouldigo.surf';
+    link.href = pageUrl;
   }, [conditions, currentSpotName, selectedSpot]);
 
   // Resolve spot coordinates for beach sketch (works for both hardcoded and custom spots)

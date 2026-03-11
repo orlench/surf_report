@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/spot/:id", "destination": "/index.html" },
+    { "source": "/privacy", "destination": "/index.html" }
+  ]
+}
