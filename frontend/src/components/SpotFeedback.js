@@ -104,9 +104,9 @@ function SpotFeedback({ spotId, breakdown, weights, originalScore, adjustedScore
     <div className="spot-feedback">
       <div className="spot-feedback-header">
         <div className="spot-feedback-header-text">
-          <span className="spot-feedback-label">Tune the score for this spot</span>
+          <span className="spot-feedback-label">Is this score right?</span>
           <span className="spot-feedback-subtitle">
-            Describe what matters at this break and we'll adjust how the score is calculated
+            Share your local knowledge and we'll fine-tune the scoring — e.g. "needs longer period" or "works best on south swell"
           </span>
         </div>
         {feedbackCount > 0 && (

@@ -36,14 +36,14 @@ fun SpotFeedbackCard(
         Column(modifier = Modifier.padding(16.dp)) {
             // Header
             Text(
-                text = "Tune the score for this spot",
+                text = "Is this score right?",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = PrimaryText
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Describe what matters at this break and we'll adjust how the score is calculated",
+                text = "Share your local knowledge and we\u2019ll fine-tune the scoring \u2014 e.g. \u201Cneeds longer period\u201D or \u201Cworks best on south swell\u201D",
                 fontSize = 12.sp,
                 color = SecondaryText
             )

@@ -1,6 +1,6 @@
 package surf.shouldigo.app.feature.conditions.components
 
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -70,47 +70,51 @@ fun ForecastCard(blocks: List<ForecastBlock>, trend: SurfTrend?) {
 @Composable
 private fun ForecastTile(block: ForecastBlock, isBest: Boolean) {
     val color = scoreColor(block.score)
-
-    val modifier = if (isBest) {
-        Modifier.border(1.5.dp, Accent, RoundedCornerShape(12.dp))
-    } else {
-        Modifier
-    }
+    val bgColor = if (isBest) Accent.copy(alpha = 0.08f) else Background
 
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = Background,
-        modifier = modifier.width(100.dp)
+        color = bgColor,
+        modifier = Modifier.width(100.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = block.label,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = SecondaryText,
-                maxLines = 1,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = "${block.score}",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-            Surface(
-                shape = CircleShape,
-                color = color.copy(alpha = 0.15f)
+        Box {
+            Column(
+                modifier = Modifier.padding(vertical = 12.dp).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = block.rating,
-                    fontSize = 10.sp,
+                    text = block.label,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = color,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    color = SecondaryText,
+                    maxLines = 1,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = "${block.score}",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = color
+                )
+                Surface(
+                    shape = CircleShape,
+                    color = color.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = block.rating,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = color,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+            if (isBest) {
+                Text(
+                    text = "\u2B50",
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(4.dp).align(Alignment.TopStart)
                 )
             }
         }

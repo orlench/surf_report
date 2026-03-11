@@ -24,14 +24,14 @@ function generateTrend(hourlyTimeline, spotId, currentScore) {
 
   // Define time blocks
   const blockDefs = [
-    { label: 'This morning', day: todayStr, startHour: 6, endHour: 11, skipIfPast: true },
-    { label: 'Midday', day: todayStr, startHour: 11, endHour: 14, skipIfPast: true },
-    { label: 'This afternoon', day: todayStr, startHour: 14, endHour: 18, skipIfPast: true },
-    { label: 'This evening', day: todayStr, startHour: 18, endHour: 21, skipIfPast: true },
-    { label: 'Tomorrow morning', day: tomorrowStr, startHour: 6, endHour: 11, skipIfPast: false },
-    { label: 'Tomorrow midday', day: tomorrowStr, startHour: 11, endHour: 14, skipIfPast: false },
-    { label: 'Tomorrow afternoon', day: tomorrowStr, startHour: 14, endHour: 18, skipIfPast: false },
-    { label: 'Tomorrow evening', day: tomorrowStr, startHour: 18, endHour: 21, skipIfPast: false }
+    { label: '6–11am', day: todayStr, startHour: 6, endHour: 11, skipIfPast: true },
+    { label: '11am–2pm', day: todayStr, startHour: 11, endHour: 14, skipIfPast: true },
+    { label: '2–6pm', day: todayStr, startHour: 14, endHour: 18, skipIfPast: true },
+    { label: '6–9pm', day: todayStr, startHour: 18, endHour: 21, skipIfPast: true },
+    { label: 'Tmw 6–11am', day: tomorrowStr, startHour: 6, endHour: 11, skipIfPast: false },
+    { label: 'Tmw 11am–2pm', day: tomorrowStr, startHour: 11, endHour: 14, skipIfPast: false },
+    { label: 'Tmw 2–6pm', day: tomorrowStr, startHour: 14, endHour: 18, skipIfPast: false },
+    { label: 'Tmw 6–9pm', day: tomorrowStr, startHour: 18, endHour: 21, skipIfPast: false }
   ];
 
   const blocks = [];

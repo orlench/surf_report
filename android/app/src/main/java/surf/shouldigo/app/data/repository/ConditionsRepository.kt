@@ -57,13 +57,13 @@ class ConditionsRepository @Inject constructor(
                     }
                     is SSEEvent.Error -> {
                         if (!completed) {
-                            // Fallback to REST
+                            // Silently fallback to REST — don't show SSE error to user
                             try {
                                 val response = fetchViaREST(spotId)
                                 emit(FetchState.Loaded(response))
                                 completed = true
                             } catch (e: Exception) {
-                                emit(FetchState.Error(event.message))
+                                emit(FetchState.Error(e.message ?: "Failed to fetch conditions"))
                             }
                         }
                     }

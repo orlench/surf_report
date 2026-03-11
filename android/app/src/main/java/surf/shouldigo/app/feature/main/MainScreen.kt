@@ -203,7 +203,8 @@ private fun buildShareText(spot: Spot, response: ConditionsResponse): String {
         parts.add("Water: ${wt.toInt()}°C")
     }
     val details = parts.joinToString(" | ")
-    val url = "https://shouldigo.surf?spot=${spot.id}"
+    val encodedName = java.net.URLEncoder.encode(spot.name, "UTF-8")
+    val url = "https://shouldigo.surf?lat=${spot.lat}&lon=${spot.lon}&name=$encodedName"
     return "Should I Go? \uD83C\uDFC4 ${spot.name} — $score/100 ($rating)\n$details\nCheck it out: $url"
 }
 

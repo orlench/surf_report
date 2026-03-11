@@ -41,6 +41,21 @@ function trackConversion(action) {
 function getInitialSpot() {
   const params = new URLSearchParams(window.location.search);
   const urlSpot = params.get('spot');
+
+  // Support shared links with coordinates: ?lat=XX&lon=YY&name=SpotName
+  const lat = params.get('lat');
+  const lon = params.get('lon');
+  const name = params.get('name');
+  if (lat && lon && name) {
+    const id = slugify(name);
+    const customSpots = JSON.parse(localStorage.getItem('customSpots') || '[]');
+    if (!customSpots.find(s => s.id === id)) {
+      customSpots.push({ id, name, lat: parseFloat(lat), lon: parseFloat(lon), country: params.get('country') || '' });
+      localStorage.setItem('customSpots', JSON.stringify(customSpots));
+    }
+    return id;
+  }
+
   if (urlSpot) return urlSpot;
   return localStorage.getItem('selectedSpot') || null;
 }
@@ -453,7 +468,13 @@ function Dashboard() {
                 }
                 if (c.weather?.waterTemp != null) parts.push(`Water: ${Math.round(c.weather.waterTemp)}°C`);
                 const details = parts.filter(Boolean).join(' | ');
-                const url = `${window.location.origin}${window.location.pathname}?spot=${selectedSpot}`;
+                const customMeta = getCustomSpotMeta(selectedSpot);
+                const spotObj = spots?.find(s => s.id === selectedSpot);
+                const lat = customMeta?.lat || spotObj?.location?.lat;
+                const lon = customMeta?.lon || spotObj?.location?.lon;
+                const url = lat && lon
+                  ? `${window.location.origin}?lat=${lat}&lon=${lon}&name=${encodeURIComponent(currentSpotName)}`
+                  : `${window.location.origin}${window.location.pathname}?spot=${selectedSpot}`;
                 const text = `Should I Go? 🏄 ${currentSpotName} — ${score}/100 (${rating})\n${details}\nCheck it out: ${url}`;
                 if (navigator.share) {
                   navigator.share({ text }).catch(() => {});

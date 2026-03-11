@@ -282,9 +282,17 @@
 }
 
 .forecast-block-best {
-  border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.04);
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15);
+  background: rgba(59, 130, 246, 0.06);
+  position: relative;
+}
+
+.forecast-block-best::before {
+  content: '\2B50';
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-size: 10px;
+  line-height: 1;
 }
 
 .forecast-block-label {
