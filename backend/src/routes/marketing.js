@@ -28,6 +28,41 @@ function requireMeta(req, res, next) {
 }
 
 router.use(requireAdmin);
+
+// --- Analytics routes (no Meta required) ---
+
+/**
+ * GET /api/marketing/analytics
+ * Full analytics dashboard (overview, sources, pages, campaigns, devices, countries)
+ * Query params: ?range=last7days (today|yesterday|last7days|last28days|last90days)
+ */
+router.get('/analytics', async (req, res) => {
+  try {
+    const range = req.query.range || 'last7days';
+    const data = await analytics.getDashboard(range);
+    res.json({ success: true, range, ...data });
+  } catch (err) {
+    logger.error(`[Analytics] Dashboard failed: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/marketing/analytics/trend
+ * Daily trend data
+ * Query params: ?range=last28days
+ */
+router.get('/analytics/trend', async (req, res) => {
+  try {
+    const range = req.query.range || 'last28days';
+    const data = await analytics.getDailyTrend(range);
+    res.json({ success: true, range, ...data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Meta routes (require Meta credentials) ---
 router.use(requireMeta);
 
 /**
@@ -121,37 +156,6 @@ router.post('/resume', async (req, res) => {
   try {
     await resumeCampaign();
     res.json({ success: true, message: 'Campaign resumed' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/**
- * GET /api/marketing/analytics
- * Full analytics dashboard (overview, sources, pages, campaigns, devices, countries)
- * Query params: ?range=last7days (today|yesterday|last7days|last28days|last90days)
- */
-router.get('/analytics', async (req, res) => {
-  try {
-    const range = req.query.range || 'last7days';
-    const data = await analytics.getDashboard(range);
-    res.json({ success: true, range, ...data });
-  } catch (err) {
-    logger.error(`[Analytics] Dashboard failed: ${err.message}`);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/**
- * GET /api/marketing/analytics/trend
- * Daily trend data
- * Query params: ?range=last28days
- */
-router.get('/analytics/trend', async (req, res) => {
-  try {
-    const range = req.query.range || 'last28days';
-    const data = await analytics.getDailyTrend(range);
-    res.json({ success: true, range, ...data });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
