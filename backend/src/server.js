@@ -62,6 +62,7 @@ app.use('/api/health', require('./routes/health'));
 app.use('/api/push', require('./routes/push'));
 app.use('/api/nearest-spot', require('./routes/geo'));
 app.use('/api/agent', require('./routes/agent'));
+app.use('/api/marketing', require('./routes/marketing'));
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -124,6 +125,12 @@ app.listen(PORT, () => {
   // Start push notification scheduler
   const { startNotificationScheduler } = require('./services/pushNotifier');
   startNotificationScheduler();
+
+  // Start Instagram marketing scheduler (token refresh + weekly creative rotation)
+  const { startTokenRefresh } = require('./services/instagram/tokenManager');
+  const { startMarketingScheduler } = require('./services/instagram/scheduler');
+  startTokenRefresh();
+  startMarketingScheduler();
 });
 
 // Graceful shutdown
