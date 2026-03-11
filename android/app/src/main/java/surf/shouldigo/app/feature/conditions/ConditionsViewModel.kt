@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import surf.shouldigo.app.data.local.CustomSpotStore
 import surf.shouldigo.app.data.local.PreferencesManager
+import surf.shouldigo.app.data.local.SpotDataSource
 import surf.shouldigo.app.data.model.Spot
 import surf.shouldigo.app.data.repository.ConditionsRepository
 import surf.shouldigo.app.data.repository.FetchState
@@ -21,6 +22,7 @@ class ConditionsViewModel @Inject constructor(
     private val conditionsRepo: ConditionsRepository,
     private val spotRepo: SpotRepository,
     private val customSpotStore: CustomSpotStore,
+    private val spotDataSource: SpotDataSource,
     private val prefs: PreferencesManager
 ) : ViewModel() {
 
@@ -73,6 +75,21 @@ class ConditionsViewModel @Inject constructor(
         loadJob = viewModelScope.launch {
             conditionsRepo.streamConditions(spot.id).collect { fetchState ->
                 _state.value = fetchState
+            }
+            // If stream ended with an error, try fallback via coordinates from local DB
+            if (_state.value is FetchState.Error) {
+                val localSpot = spotDataSource.loadAllSpots().find { it.id == spot.id }
+                if (localSpot?.location != null) {
+                    try {
+                        val response = conditionsRepo.fetchCustomConditions(
+                            localSpot.location.lat, localSpot.location.lon,
+                            spot.name, localSpot.country.ifEmpty { null }
+                        )
+                        _state.value = FetchState.Loaded(response)
+                    } catch (_: Exception) {
+                        // Keep the original error
+                    }
+                }
             }
         }
     }

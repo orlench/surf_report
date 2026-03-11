@@ -18,6 +18,7 @@ import kotlinx.coroutines.tasks.await
 import surf.shouldigo.app.data.local.PreferencesManager
 import surf.shouldigo.app.data.model.NearbySpot
 import surf.shouldigo.app.data.model.Spot
+import surf.shouldigo.app.data.model.SpotLocation
 import surf.shouldigo.app.data.repository.SpotRepository
 import javax.inject.Inject
 
@@ -42,7 +43,11 @@ class MainViewModel @Inject constructor(
         val savedId = prefs.lastSelectedSpotId
         val savedName = prefs.lastSelectedSpotName
         if (savedId != null && savedName != null) {
-            _uiState.value = MainUiState(selectedSpot = Spot(id = savedId, name = savedName))
+            val savedLat = prefs.lastSelectedSpotLat
+            val savedLon = prefs.lastSelectedSpotLon
+            val savedCountry = prefs.lastSelectedSpotCountry ?: ""
+            val location = if (savedLat != null && savedLon != null) SpotLocation(savedLat, savedLon) else null
+            _uiState.value = MainUiState(selectedSpot = Spot(id = savedId, name = savedName, country = savedCountry, location = location))
         } else {
             // Check if we have location permission already
             if (hasLocationPermission()) {
@@ -116,6 +121,9 @@ class MainViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(selectedSpot = spot)
         prefs.lastSelectedSpotId = spot.id
         prefs.lastSelectedSpotName = spot.name
+        prefs.lastSelectedSpotLat = spot.location?.lat
+        prefs.lastSelectedSpotLon = spot.location?.lon
+        prefs.lastSelectedSpotCountry = spot.country.ifEmpty { null }
     }
 
     fun handleDeepLink(spotId: String) {

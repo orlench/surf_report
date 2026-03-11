@@ -68,10 +68,49 @@ function getSpotName(spotId) {
 }
 
 /**
- * Check if spot ID is valid (hardcoded only for legacy route)
+ * Check if spot ID is valid. If not found in memory, tries to auto-register
+ * from the full surf spots database (surfSpots.json).
  */
 function isValidSpot(spotId) {
-  return spotId in SPOTS || spotId in dynamicSpots;
+  if (spotId in SPOTS || spotId in dynamicSpots) return true;
+  // Try to find and auto-register from the full spots DB
+  return !!tryAutoRegister(spotId);
+}
+
+/**
+ * Try to find a spot by ID in the full surfSpots.json and auto-register it.
+ * Handles both underscore and hyphen ID formats.
+ */
+function tryAutoRegister(spotId) {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const spotsPath = path.join(__dirname, '../../data/surfSpots.json');
+    if (!fs.existsSync(spotsPath)) return null;
+
+    const data = JSON.parse(fs.readFileSync(spotsPath, 'utf8'));
+    const spots = data.spots || data;
+
+    // Normalize ID for matching (both _ and - formats)
+    const normalizedId = spotId.toLowerCase();
+    const match = spots.find(s => {
+      const nameId = s.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      const nameIdHyphen = s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      return nameId === normalizedId || nameIdHyphen === normalizedId || (s.id && s.id === normalizedId);
+    });
+
+    if (match && match.lat && match.lon) {
+      return getOrCreateSpot(spotId, {
+        lat: match.lat,
+        lon: match.lon,
+        name: match.name,
+        country: match.country || ''
+      });
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
 }
 
 /**

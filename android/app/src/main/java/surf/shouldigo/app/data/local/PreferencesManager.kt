@@ -16,6 +16,30 @@ class PreferencesManager @Inject constructor(
         get() = prefs.getString("last_selected_spot_name", null)
         set(value) = prefs.edit().putString("last_selected_spot_name", value).apply()
 
+    var lastSelectedSpotLat: Double?
+        get() {
+            val v = prefs.getFloat("last_selected_spot_lat", Float.MIN_VALUE)
+            return if (v == Float.MIN_VALUE) null else v.toDouble()
+        }
+        set(value) {
+            if (value != null) prefs.edit().putFloat("last_selected_spot_lat", value.toFloat()).apply()
+            else prefs.edit().remove("last_selected_spot_lat").apply()
+        }
+
+    var lastSelectedSpotLon: Double?
+        get() {
+            val v = prefs.getFloat("last_selected_spot_lon", Float.MIN_VALUE)
+            return if (v == Float.MIN_VALUE) null else v.toDouble()
+        }
+        set(value) {
+            if (value != null) prefs.edit().putFloat("last_selected_spot_lon", value.toFloat()).apply()
+            else prefs.edit().remove("last_selected_spot_lon").apply()
+        }
+
+    var lastSelectedSpotCountry: String?
+        get() = prefs.getString("last_selected_spot_country", null)
+        set(value) = prefs.edit().putString("last_selected_spot_country", value).apply()
+
     var userWeight: String?
         get() = prefs.getString("user_weight", null)
         set(value) = prefs.edit().putString("user_weight", value).apply()
