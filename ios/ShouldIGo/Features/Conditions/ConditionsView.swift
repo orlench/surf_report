@@ -75,8 +75,13 @@ struct ConditionsView: View {
             parts.append("Water: \(Int(wt))°C")
         }
         let details = parts.joined(separator: " | ")
-        let spotId = spot.id
-        let url = "https://shouldigo.surf?spot=\(spotId)"
+        let encodedName = spot.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? spot.name
+        let url: String
+        if let loc = spot.location {
+            url = "https://shouldigo.surf?lat=\(loc.lat)&lon=\(loc.lon)&name=\(encodedName)"
+        } else {
+            url = "https://shouldigo.surf?spot=\(spot.id)"
+        }
         return "Should I Go? 🏄 \(spot.name) — \(score)/100 (\(rating))\n\(details)\nCheck it out: \(url)"
     }
 
@@ -540,28 +545,35 @@ struct ForecastTile: View {
     private var color: Color { scoreColor(block.score) }
 
     var body: some View {
-        VStack(spacing: 6) {
-            Text(block.label)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Text("\(block.score)")
-                .font(.title3.bold())
-                .foregroundStyle(color)
-            Text(block.rating)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(color)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(color.opacity(0.15), in: Capsule())
+        ZStack(alignment: .topLeading) {
+            VStack(spacing: 6) {
+                Text(block.label)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Text("\(block.score)")
+                    .font(.title3.bold())
+                    .foregroundStyle(color)
+                Text(block.rating)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(color)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(color.opacity(0.15), in: Capsule())
+            }
+            .frame(width: 100)
+            .padding(.vertical, 12)
+            .background(
+                isBest ? Color.blue.opacity(0.06) : Color("background"),
+                in: RoundedRectangle(cornerRadius: 12)
+            )
+
+            if isBest {
+                Text("⭐")
+                    .font(.system(size: 10))
+                    .padding(4)
+            }
         }
-        .frame(width: 100)
-        .padding(.vertical, 12)
-        .background(Color("background"), in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            isBest ? RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(red: 0.23, green: 0.51, blue: 0.96), lineWidth: 1.5) : nil  // #3b82f6
-        )
     }
 }
 
@@ -608,7 +620,8 @@ struct BoardCard: View {
                         Text(reason)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                            .lineLimit(2)
+                            .lineLimit(4)
+                            .truncationMode(.tail)
                             .multilineTextAlignment(.center)
                     }
                 }
@@ -707,10 +720,10 @@ struct SpotFeedbackCard: View {
         VStack(alignment: .leading, spacing: 14) {
             // Header
             VStack(alignment: .leading, spacing: 4) {
-                Text("Tune the score for this spot")
+                Text("Is this score right?")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
-                Text("Describe what matters at this break and we'll adjust how the score is calculated")
+                Text("Share your local knowledge and we\u{2019}ll fine-tune the scoring \u{2014} e.g. \u{201C}needs longer period\u{201D} or \u{201C}works best on south swell\u{201D}")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
