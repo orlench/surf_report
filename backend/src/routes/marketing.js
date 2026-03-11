@@ -62,6 +62,21 @@ router.get('/analytics/trend', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/marketing/analytics/errors
+ * JS errors from users
+ * Query params: ?range=last7days
+ */
+router.get('/analytics/errors', async (req, res) => {
+  try {
+    const range = req.query.range || 'last7days';
+    const data = await analytics.getErrors(range);
+    res.json({ success: true, range, ...data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- Meta routes (require Meta credentials) ---
 router.use(requireMeta);
 

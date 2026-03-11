@@ -162,6 +162,45 @@ async function getCountries(dateRange = 'last7days') {
 }
 
 /**
+ * Get JS errors tracked via gtag
+ */
+async function getErrors(dateRange = 'last7days') {
+  const analyticsClient = getClient();
+
+  const dateRanges = {
+    today: { startDate: 'today', endDate: 'today' },
+    yesterday: { startDate: 'yesterday', endDate: 'yesterday' },
+    last7days: { startDate: '7daysAgo', endDate: 'today' },
+    last28days: { startDate: '28daysAgo', endDate: 'today' },
+    last90days: { startDate: '90daysAgo', endDate: 'today' },
+  };
+
+  const range = dateRanges[dateRange] || dateRanges.last7days;
+
+  const [response] = await analyticsClient.runReport({
+    property: `properties/${GA_PROPERTY_ID}`,
+    dateRanges: [range],
+    dimensions: [
+      { name: 'eventName' },
+      { name: 'customEvent:error_message' },
+      { name: 'customEvent:error_source' },
+      { name: 'deviceCategory' },
+      { name: 'operatingSystem' },
+    ],
+    metrics: [{ name: 'eventCount' }],
+    dimensionFilter: {
+      filter: {
+        fieldName: 'eventName',
+        stringFilter: { value: 'js_error' },
+      },
+    },
+    limit: 50,
+  });
+
+  return formatResponse(response);
+}
+
+/**
  * Full dashboard: all reports combined
  */
 async function getDashboard(dateRange = 'last7days') {
@@ -185,5 +224,6 @@ module.exports = {
   getDailyTrend,
   getDevices,
   getCountries,
+  getErrors,
   getDashboard,
 };

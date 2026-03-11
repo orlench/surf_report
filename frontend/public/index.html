@@ -53,6 +53,24 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', 'G-LF7H8BFWM5');
+
+      // Track uncaught JS errors
+      window.addEventListener('error', function(e) {
+        gtag('event', 'js_error', {
+          error_message: (e.message || 'Unknown error').substring(0, 100),
+          error_source: (e.filename || '').split('/').pop(),
+          error_line: e.lineno || 0
+        });
+      });
+
+      // Track unhandled promise rejections
+      window.addEventListener('unhandledrejection', function(e) {
+        gtag('event', 'js_error', {
+          error_message: (e.reason?.message || String(e.reason) || 'Promise rejected').substring(0, 100),
+          error_source: 'promise',
+          error_line: 0
+        });
+      });
     </script>
   </head>
   <body>
