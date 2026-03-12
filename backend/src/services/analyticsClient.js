@@ -182,10 +182,9 @@ async function getErrors(dateRange = 'last7days') {
     dateRanges: [range],
     dimensions: [
       { name: 'eventName' },
-      { name: 'customEvent:error_message' },
-      { name: 'customEvent:error_source' },
       { name: 'deviceCategory' },
       { name: 'operatingSystem' },
+      { name: 'browser' },
     ],
     metrics: [{ name: 'eventCount' }],
     dimensionFilter: {
