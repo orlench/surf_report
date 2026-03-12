@@ -181,9 +181,10 @@ async function getErrors(dateRange = 'last7days') {
     property: `properties/${GA_PROPERTY_ID}`,
     dateRanges: [range],
     dimensions: [
-      { name: 'eventName' },
+      { name: 'customEvent:error_message' },
+      { name: 'customEvent:error_source' },
+      { name: 'customEvent:error_line' },
       { name: 'deviceCategory' },
-      { name: 'operatingSystem' },
       { name: 'browser' },
     ],
     metrics: [{ name: 'eventCount' }],

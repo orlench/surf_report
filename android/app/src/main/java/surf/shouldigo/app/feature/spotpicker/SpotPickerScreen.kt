@@ -63,10 +63,7 @@ fun SpotPickerScreen(
                 items(uiState.nearbySpots) { nearby ->
                     SpotRow(
                         name = nearby.name,
-                        subtitle = buildString {
-                            append(nearby.country)
-                            nearby.distance?.let { append(" \u2022 ${it.toInt()} km") }
-                        },
+                        subtitle = nearby.country,
                         onClick = {
                             onSpotSelected(Spot(id = nearby.id, name = nearby.name, country = nearby.country))
                         }
