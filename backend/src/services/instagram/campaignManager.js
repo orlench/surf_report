@@ -20,8 +20,8 @@ async function createCampaign() {
     {
       name: 'Should I Go Surf — Instagram Traffic',
       objective: 'OUTCOME_TRAFFIC',
-      status: 'PAUSED', // Start paused, activate when ad is ready
-      special_ad_categories: '[]',
+      status: 'PAUSED',
+      special_ad_categories: JSON.stringify([]),
       buying_type: 'AUCTION',
       access_token: token
     }
@@ -179,8 +179,18 @@ async function getCampaignStatus() {
  * Full setup: create campaign → ad set (one-time)
  */
 async function setup() {
-  await createCampaign();
-  await createAdSet();
+  try {
+    await createCampaign();
+  } catch (err) {
+    const msg = err.response?.data?.error?.message || err.message;
+    throw new Error(`Campaign creation failed: ${msg}`);
+  }
+  try {
+    await createAdSet();
+  } catch (err) {
+    const msg = err.response?.data?.error?.message || err.message;
+    throw new Error(`Ad set creation failed: ${msg}`);
+  }
   return { campaignId, adSetId };
 }
 
