@@ -102,9 +102,9 @@ function getLatestReport() {
 
 async function runAndEmail() {
   const report = await generateReport();
-  // Send email (lazy-load to avoid circular deps at startup)
+  // Send email in background (don't block response)
   const { sendDailyReport } = require('./emailSender');
-  await sendDailyReport(report);
+  sendDailyReport(report).catch(err => logger.error(`[DailyReport] Email failed: ${err.message}`));
   return report;
 }
 
