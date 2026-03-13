@@ -123,8 +123,9 @@ router.post('/setup', async (req, res) => {
       message: 'Campaign is live! Ad goes through Meta review (~15-30 min).'
     });
   } catch (err) {
-    logger.error(`[Marketing] Setup failed: ${err.message}`);
-    res.status(500).json({ error: err.message });
+    const metaError = err.response?.data?.error || {};
+    logger.error(`[Marketing] Setup failed: ${metaError.message || err.message}`);
+    res.status(500).json({ error: metaError.message || err.message, code: metaError.code, type: metaError.type });
   }
 });
 
