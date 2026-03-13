@@ -34,5 +34,9 @@ targets:
         SUPPORTS_MACCATALYST: NO
     entitlements:
       path: ShouldIGo/ShouldIGo.entitlements
+      properties:
+        aps-environment: development
     info:
       path: ShouldIGo/Info.plist
+      properties:
+        NSLocationWhenInUseUsageDescription: "Your location helps us find the closest surf spots to you."

@@ -30,7 +30,6 @@ struct ConditionsView: View {
                 await vm.load(spot: spot)
             }
         }
-        .navigationTitle(spot.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -585,15 +584,7 @@ struct BoardCard: View {
 
     @AppStorage("userWeight") private var userWeight = ""
     @AppStorage("userSkill") private var userSkill = ""
-
-    private var boardEmoji: String {
-        switch recommendation.boardType.lowercased() {
-        case let t where t.contains("long"): return "🏄"
-        case let t where t.contains("gun"):  return "🚀"
-        case let t where t.contains("fish"): return "🐟"
-        default: return "🏄‍♂️"
-        }
-    }
+    @State private var showSaved = false
 
     private func wetsuitLabel(for temp: Double) -> String {
         if temp >= 24 { return "Boardshorts" }
@@ -602,16 +593,15 @@ struct BoardCard: View {
         return "4/3 Wetsuit"
     }
 
-    private let skillOptions = ["", "beginner", "intermediate", "advanced", "expert"]
-
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             SectionHeader("Gear")
 
-            HStack(spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 // Board card
                 VStack(spacing: 8) {
-                    Text(boardEmoji).font(.system(size: 32))
+                    BoardIllustration(boardType: recommendation.boardType)
+                        .padding(.top, 4)
                     Text(recommendation.boardName ?? recommendation.boardType.capitalized)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
@@ -624,17 +614,17 @@ struct BoardCard: View {
                             .truncationMode(.tail)
                             .multilineTextAlignment(.center)
                     }
+                    Spacer(minLength: 0)
                 }
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(14)
                 .background(Color("background"), in: RoundedRectangle(cornerRadius: 14))
 
                 // Wetsuit card
                 if let wt = conditions.weather?.waterTemp {
                     VStack(spacing: 8) {
-                        Image(systemName: "figure.surfing")
-                            .font(.system(size: 28))
-                            .foregroundStyle(.blue)
+                        WetsuitIllustration(isShorts: wt >= 24)
+                            .padding(.top, 4)
                         Text(wetsuitLabel(for: wt))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
@@ -642,18 +632,36 @@ struct BoardCard: View {
                         Text(String(format: "%.0f°C water", wt))
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(14)
                     .background(Color("background"), in: RoundedRectangle(cornerRadius: 14))
                 }
             }
+            .fixedSize(horizontal: false, vertical: true)
 
             // Personalize section
             VStack(alignment: .leading, spacing: 8) {
-                Text("Personalize")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text("Personalize")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    if showSaved {
+                        HStack(spacing: 3) {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 10, weight: .semibold))
+                            Text("Saved")
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(Color(red: 0.145, green: 0.388, blue: 0.922))
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .move(edge: .leading)),
+                            removal: .opacity
+                        ))
+                    }
+                }
 
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -665,6 +673,7 @@ struct BoardCard: View {
                             .font(.subheadline)
                             .padding(8)
                             .background(Color("background"), in: RoundedRectangle(cornerRadius: 8))
+                            .onChange(of: userWeight) { triggerSaved() }
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -684,6 +693,7 @@ struct BoardCard: View {
                         .padding(.vertical, 4)
                         .padding(.horizontal, 8)
                         .background(Color("background"), in: RoundedRectangle(cornerRadius: 8))
+                        .onChange(of: userSkill) { triggerSaved() }
                     }
                 }
             }
@@ -691,6 +701,13 @@ struct BoardCard: View {
         }
         .padding(16)
         .background(Color("cardBackground"), in: RoundedRectangle(cornerRadius: 20))
+    }
+
+    private func triggerSaved() {
+        withAnimation(.easeInOut(duration: 0.25)) { showSaved = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation(.easeOut(duration: 0.3)) { showSaved = false }
+        }
     }
 }
 
