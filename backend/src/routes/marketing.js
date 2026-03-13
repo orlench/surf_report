@@ -117,7 +117,7 @@ router.get('/search-console/indexing', async (req, res) => {
     res.json({ success: true, ...data });
   } catch (err) {
     logger.error(`[SearchConsole] Indexing status failed: ${err.message}`);
-    res.status(500).json({ error: 'Failed to load indexing status' });
+    res.status(500).json({ error: 'Failed to load indexing status', detail: err.message });
   }
 });
 
