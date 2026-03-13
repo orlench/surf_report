@@ -39,36 +39,31 @@ async function createAdSet() {
   if (!campaignId) throw new Error('Campaign must be created first');
 
   const adAccountId = process.env.META_AD_ACCOUNT_ID;
-  const pageId = process.env.META_PAGE_ID;
-  const igAccountId = process.env.META_IG_ACCOUNT_ID;
   const token = getToken();
 
   const dailyBudget = process.env.META_AD_DAILY_BUDGET || '1000'; // cents
 
-  // Let Advantage+ handle all targeting — no geo or interest restrictions
+  // Minimal targeting — let Meta's Advantage+ optimize everything
   const targeting = {
     age_min: 18,
     age_max: 65
   };
 
+  const params = {
+    name: 'SIG Surfers — All Placements',
+    campaign_id: campaignId,
+    daily_budget: dailyBudget,
+    billing_event: 'IMPRESSIONS',
+    optimization_goal: 'LINK_CLICKS',
+    bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+    targeting: JSON.stringify(targeting),
+    status: 'PAUSED',
+    access_token: token
+  };
+
   const { data } = await axios.post(
     `${GRAPH_API_BASE}/act_${adAccountId}/adsets`,
-    {
-      name: 'SIG Surfers — Instagram All Placements',
-      campaign_id: campaignId,
-      daily_budget: dailyBudget,
-      billing_event: 'IMPRESSIONS',
-      optimization_goal: 'LINK_CLICKS',
-      bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
-      targeting: JSON.stringify(targeting),
-      promoted_object: JSON.stringify({ page_id: pageId }),
-      publisher_platforms: JSON.stringify(['instagram']),
-      instagram_positions: JSON.stringify(['stream', 'story', 'reels', 'explore']),
-      ...(igAccountId && { instagram_actor_id: igAccountId }),
-      status: 'PAUSED',
-      start_time: new Date().toISOString(),
-      access_token: token
-    }
+    params
   );
 
   adSetId = data.id;
