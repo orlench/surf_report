@@ -5,19 +5,21 @@ const SITE_URL = 'sc-domain:shouldigo.surf';
 
 let auth = null;
 
-function getAuth() {
+async function getAuth() {
   if (auth) return auth;
 
   const serviceAccountB64 = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!serviceAccountB64) throw new Error('FIREBASE_SERVICE_ACCOUNT not set');
 
   const credentials = JSON.parse(Buffer.from(serviceAccountB64, 'base64').toString('utf8'));
-  auth = new google.auth.JWT(
+  const jwtClient = new google.auth.JWT(
     credentials.client_email,
     null,
     credentials.private_key,
     ['https://www.googleapis.com/auth/webmasters.readonly']
   );
+  await jwtClient.authorize();
+  auth = jwtClient;
   return auth;
 }
 
@@ -25,7 +27,7 @@ function getAuth() {
  * Get indexing status — pages indexed, not indexed, and reasons
  */
 async function getIndexingStatus() {
-  const authClient = getAuth();
+  const authClient = await getAuth();
   const searchconsole = google.searchconsole({ version: 'v1', auth: authClient });
 
   // Use URL Inspection API isn't batch-friendly, so use sitemaps endpoint
@@ -55,7 +57,7 @@ async function getIndexingStatus() {
  * Get search analytics — queries, pages, clicks, impressions, CTR, position
  */
 async function getSearchAnalytics({ dimension = 'query', days = 7, limit = 20 } = {}) {
-  const authClient = getAuth();
+  const authClient = await getAuth();
   const webmasters = google.webmasters({ version: 'v3', auth: authClient });
 
   const endDate = new Date();
@@ -90,7 +92,7 @@ async function getSearchAnalytics({ dimension = 'query', days = 7, limit = 20 } 
  * Inspect a specific URL's indexing status
  */
 async function inspectUrl(url) {
-  const authClient = getAuth();
+  const authClient = await getAuth();
   const searchconsole = google.searchconsole({ version: 'v1', auth: authClient });
 
   const { data } = await searchconsole.urlInspection.index.inspect({
