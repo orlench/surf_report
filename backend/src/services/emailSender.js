@@ -1,28 +1,38 @@
-const nodemailer = require('nodemailer');
+const axios = require('axios');
 const logger = require('../utils/logger');
 
-let transporter = null;
+/**
+ * Send email via Gmail API over HTTPS (no SMTP needed).
+ * Uses OAuth2 client credentials + refresh token.
+ *
+ * Required env vars:
+ *   GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN
+ */
 
-function getTransporter() {
-  if (transporter) return transporter;
+let accessToken = null;
+let tokenExpiresAt = 0;
 
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
+async function getAccessToken() {
+  if (accessToken && Date.now() < tokenExpiresAt - 60000) return accessToken;
 
-  if (!user || !pass) {
-    logger.warn('[Email] GMAIL_USER or GMAIL_APP_PASSWORD not set — email disabled');
-    return null;
-  }
+  const clientId = process.env.GMAIL_CLIENT_ID;
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET;
+  const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
 
-  transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
+  const { data } = await axios.post('https://oauth2.googleapis.com/token', {
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: refreshToken,
+    grant_type: 'refresh_token',
   });
 
-  return transporter;
+  accessToken = data.access_token;
+  tokenExpiresAt = Date.now() + data.expires_in * 1000;
+  return accessToken;
+}
+
+function isConfigured() {
+  return !!(process.env.GMAIL_CLIENT_ID && process.env.GMAIL_CLIENT_SECRET && process.env.GMAIL_REFRESH_TOKEN);
 }
 
 function formatNumber(n) {
@@ -188,10 +198,36 @@ function buildHtml(report) {
 </html>`;
 }
 
+/**
+ * Build RFC 2822 email and base64url encode it for Gmail API
+ */
+function buildRawEmail(to, subject, html) {
+  const boundary = 'boundary_' + Date.now();
+  const raw = [
+    `From: "SIG Monitor" <orlench@gmail.com>`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    `MIME-Version: 1.0`,
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(html).toString('base64'),
+    `--${boundary}--`,
+  ].join('\r\n');
+
+  // Gmail API needs base64url encoding
+  return Buffer.from(raw).toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
 async function sendDailyReport(report) {
-  const transport = getTransporter();
-  if (!transport) {
-    logger.warn('[Email] Skipping email — not configured');
+  if (!isConfigured()) {
+    logger.warn('[Email] Gmail OAuth not configured — email disabled');
     return;
   }
 
@@ -201,15 +237,22 @@ async function sendDailyReport(report) {
     : `🏄 Daily Report — All good — ${report.date}`;
 
   try {
-    await transport.sendMail({
-      from: `"SIG Monitor" <${process.env.GMAIL_USER}>`,
-      to: 'orlench@gmail.com',
-      subject,
-      html: buildHtml(report),
-    });
+    const token = await getAccessToken();
+    const raw = buildRawEmail('orlench@gmail.com', subject, buildHtml(report));
+
+    await axios.post(
+      'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
+      { raw },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 15000,
+      }
+    );
+
     logger.info(`[Email] Daily report sent to orlench@gmail.com`);
   } catch (err) {
-    logger.error(`[Email] Failed to send: ${err.message}`);
+    const msg = err.response?.data?.error?.message || err.message;
+    logger.error(`[Email] Failed to send: ${msg}`);
   }
 }
 
