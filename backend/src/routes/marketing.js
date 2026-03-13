@@ -103,6 +103,74 @@ router.post('/daily-report/generate', async (req, res) => {
   }
 });
 
+// --- Search Console routes ---
+
+const searchConsole = require('../services/searchConsole');
+
+/**
+ * GET /api/marketing/search-console/indexing
+ * Sitemap indexing status (submitted vs indexed counts)
+ */
+router.get('/search-console/indexing', async (req, res) => {
+  try {
+    const data = await searchConsole.getIndexingStatus();
+    res.json({ success: true, ...data });
+  } catch (err) {
+    logger.error(`[SearchConsole] Indexing status failed: ${err.message}`);
+    res.status(500).json({ error: 'Failed to load indexing status' });
+  }
+});
+
+/**
+ * GET /api/marketing/search-console/queries
+ * Top search queries — clicks, impressions, CTR, position
+ * Query params: ?days=7&limit=20
+ */
+router.get('/search-console/queries', async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 7;
+    const limit = parseInt(req.query.limit) || 20;
+    const data = await searchConsole.getSearchAnalytics({ dimension: 'query', days, limit });
+    res.json({ success: true, ...data });
+  } catch (err) {
+    logger.error(`[SearchConsole] Queries failed: ${err.message}`);
+    res.status(500).json({ error: 'Failed to load search queries' });
+  }
+});
+
+/**
+ * GET /api/marketing/search-console/pages
+ * Top pages by search performance
+ * Query params: ?days=7&limit=20
+ */
+router.get('/search-console/pages', async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 7;
+    const limit = parseInt(req.query.limit) || 20;
+    const data = await searchConsole.getSearchAnalytics({ dimension: 'page', days, limit });
+    res.json({ success: true, ...data });
+  } catch (err) {
+    logger.error(`[SearchConsole] Pages failed: ${err.message}`);
+    res.status(500).json({ error: 'Failed to load page data' });
+  }
+});
+
+/**
+ * GET /api/marketing/search-console/inspect?url=https://shouldigo.surf/...
+ * Inspect a specific URL's indexing status
+ */
+router.get('/search-console/inspect', async (req, res) => {
+  try {
+    const url = req.query.url;
+    if (!url) return res.status(400).json({ error: 'url query param required' });
+    const data = await searchConsole.inspectUrl(url);
+    res.json({ success: true, ...data });
+  } catch (err) {
+    logger.error(`[SearchConsole] URL inspection failed: ${err.message}`);
+    res.status(500).json({ error: 'Failed to inspect URL' });
+  }
+});
+
 // --- Meta routes (require Meta credentials) ---
 router.use(requireMeta);
 
