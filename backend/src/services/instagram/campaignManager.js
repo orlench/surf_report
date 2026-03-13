@@ -44,10 +44,14 @@ async function createAdSet() {
 
   const dailyBudget = process.env.META_AD_DAILY_BUDGET || '1000'; // cents
 
-  // Minimal targeting — let Meta's Advantage+ optimize everything
+  // Broad targeting across surf countries — let Meta's Advantage+ optimize delivery
   const targeting = {
     age_min: 18,
-    age_max: 65
+    age_max: 65,
+    geo_locations: {
+      location_types: ['home'],
+      countries: ['US', 'AU', 'GB', 'PT', 'ES', 'FR', 'ID', 'ZA', 'BR', 'MX', 'JP', 'NZ', 'CR', 'MA']
+    }
   };
 
   const params = {
