@@ -1,9 +1,11 @@
 const axios = require('axios');
+const FormData = require('form-data');
 const logger = require('../../utils/logger');
 const { getToken, GRAPH_API_BASE } = require('./tokenManager');
 
 /**
  * Upload an image to the Meta Ad Account's image library
+ * Downloads the image first, then uploads as multipart form data
  * @param {string} imageUrl - Public URL of the image
  * @returns {string|null} Image hash for use in creatives
  */
@@ -13,11 +15,21 @@ async function uploadImage(imageUrl) {
   if (!adAccountId || !token) return null;
 
   try {
+    // Download image first
+    const imgResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const filename = imageUrl.split('/').pop() || 'image.png';
+
+    // Upload as multipart form
+    const form = new FormData();
+    form.append('filename', Buffer.from(imgResponse.data), { filename });
+    form.append('access_token', token);
+
     const { data } = await axios.post(
       `${GRAPH_API_BASE}/act_${adAccountId}/adimages`,
-      { url: imageUrl, access_token: token }
+      form,
+      { headers: form.getHeaders() }
     );
-    // Response: { images: { bytes: { hash: "abc123", ... } } }
+
     const images = data.images;
     const firstKey = Object.keys(images)[0];
     const hash = images[firstKey]?.hash;
