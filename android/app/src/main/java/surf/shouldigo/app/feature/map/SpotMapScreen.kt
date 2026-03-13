@@ -37,12 +37,17 @@ fun SpotMapScreen(
     }
 
     var visibleSpots by remember { mutableStateOf<List<Spot>>(emptyList()) }
+    var mapLoaded by remember { mutableStateOf(false) }
 
-    // Update visible spots when camera moves
-    LaunchedEffect(cameraPositionState.isMoving) {
-        if (!cameraPositionState.isMoving) {
-            cameraPositionState.projection?.visibleRegion?.latLngBounds?.let { bounds ->
-                visibleSpots = viewModel.visibleSpots(bounds)
+    // Show all spots once map is loaded, then filter on camera move
+    LaunchedEffect(mapLoaded, cameraPositionState.isMoving) {
+        if (mapLoaded && !cameraPositionState.isMoving) {
+            val bounds = cameraPositionState.projection?.visibleRegion?.latLngBounds
+            visibleSpots = if (bounds != null) {
+                viewModel.visibleSpots(bounds)
+            } else {
+                // Fallback: show all spots if projection not ready yet
+                uiState.allSpots
             }
         }
     }
@@ -54,7 +59,8 @@ fun SpotMapScreen(
             uiSettings = MapUiSettings(
                 zoomControlsEnabled = false,
                 myLocationButtonEnabled = false
-            )
+            ),
+            onMapLoaded = { mapLoaded = true }
         ) {
             visibleSpots.forEach { spot ->
                 spot.location?.let { loc ->
