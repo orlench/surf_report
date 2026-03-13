@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/spot/[id].js": {
-      "includeFiles": "build/index.html"
-    }
-  },
   "rewrites": [
     { "source": "/spot/:id", "destination": "/api/spot/:id" },
     { "source": "/privacy", "destination": "/index.html" }

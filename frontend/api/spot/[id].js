@@ -1,6 +1,3 @@
-const fs = require('fs');
-const path = require('path');
-
 const spots = [
   { id: "herzliya_marina", name: "Herzliya Marina", country: "Israel" },
   { id: "netanya_kontiki", name: "Netanya Kontiki", country: "Israel" },
@@ -63,13 +60,13 @@ const spots = [
 
 const spotsMap = Object.fromEntries(spots.map(s => [s.id, s]));
 
+// Cache the base HTML in memory across invocations
 let cachedHtml = null;
 
-function getHtml() {
+async function getBaseHtml() {
   if (cachedHtml) return cachedHtml;
-  // On Vercel, includeFiles makes build/ available relative to project root
-  const htmlPath = path.join(process.cwd(), 'build', 'index.html');
-  cachedHtml = fs.readFileSync(htmlPath, 'utf8');
+  const res = await fetch('https://shouldigo.surf/index.html');
+  cachedHtml = await res.text();
   return cachedHtml;
 }
 
@@ -77,22 +74,26 @@ function prettifyName(id) {
   return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-module.exports = (req, res) => {
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+module.exports = async (req, res) => {
   const { id } = req.query;
   const spot = spotsMap[id];
   const name = spot ? spot.name : prettifyName(id);
   const country = spot ? spot.country : '';
   const location = country ? ` in ${country}` : '';
 
-  const title = `${name} Surf Report — Real-Time Conditions & Score`;
-  const description = `Should you surf ${name}${location} today? Check real-time wave height, wind, swell period, water temp, and get a surf score from 0-100.`;
-  const url = `https://shouldigo.surf/spot/${id}`;
+  const title = escapeHtml(`${name} Surf Report — Real-Time Conditions & Score`);
+  const description = escapeHtml(`Should you surf ${name}${location} today? Check real-time wave height, wind, swell period, water temp, and get a surf score from 0-100.`);
+  const url = `https://shouldigo.surf/spot/${encodeURIComponent(id)}`;
 
   const structuredData = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "Beach",
     "name": name,
-    "description": description,
+    "description": `Should you surf ${name}${location} today? Check real-time wave height, wind, swell period, water temp, and get a surf score from 0-100.`,
     "url": url,
     "isPartOf": {
       "@type": "WebApplication",
@@ -101,13 +102,10 @@ module.exports = (req, res) => {
     }
   });
 
-  let html = getHtml();
+  let html = await getBaseHtml();
 
   // Replace title
-  html = html.replace(
-    /<title>[^<]*<\/title>/,
-    `<title>${title}</title>`
-  );
+  html = html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`);
 
   // Replace meta description
   html = html.replace(
