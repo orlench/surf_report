@@ -83,6 +83,26 @@ router.get('/analytics/errors', async (req, res) => {
   }
 });
 
+// --- Daily report routes (no Meta required — degrades gracefully) ---
+
+const { generateReport, getLatestReport } = require('../services/dailyReport');
+
+router.get('/daily-report', (req, res) => {
+  const report = getLatestReport();
+  if (!report) return res.status(404).json({ error: 'No report generated yet. POST /daily-report/generate to create one.' });
+  res.json({ success: true, ...report });
+});
+
+router.post('/daily-report/generate', async (req, res) => {
+  try {
+    const report = await generateReport();
+    res.json({ success: true, ...report });
+  } catch (err) {
+    logger.error(`[DailyReport] Manual generation failed: ${err.message}`);
+    res.status(500).json({ error: 'Failed to generate report' });
+  }
+});
+
 // --- Meta routes (require Meta credentials) ---
 router.use(requireMeta);
 

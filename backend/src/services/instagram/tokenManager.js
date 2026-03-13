@@ -73,4 +73,8 @@ function startTokenRefresh() {
   setInterval(() => refreshToken(), FIFTY_DAYS_MS);
 }
 
-module.exports = { getToken, isConfigured, refreshToken, startTokenRefresh, GRAPH_API_BASE };
+function getTokenExpiry() {
+  return tokenExpiresAt;
+}
+
+module.exports = { getToken, getTokenExpiry, isConfigured, refreshToken, startTokenRefresh, GRAPH_API_BASE };

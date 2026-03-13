@@ -141,6 +141,10 @@ app.listen(PORT, () => {
   const { startMarketingScheduler } = require('./services/instagram/scheduler');
   startTokenRefresh();
   startMarketingScheduler();
+
+  // Start daily monitoring report scheduler
+  const { startDailyReportScheduler } = require('./services/dailyReport');
+  startDailyReportScheduler();
 });
 
 // Graceful shutdown
