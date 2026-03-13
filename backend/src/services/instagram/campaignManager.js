@@ -44,23 +44,11 @@ async function createAdSet() {
   const token = getToken();
 
   const dailyBudget = process.env.META_AD_DAILY_BUDGET || '1000'; // cents
-  const countries = (process.env.META_AD_COUNTRIES || 'US,AU,PT,ES,FR,ID,ZA,GB').split(',');
 
+  // Let Advantage+ handle all targeting — no geo or interest restrictions
   const targeting = {
-    geo_locations: {
-      countries: countries.map(c => c.trim())
-    },
-    // Advantage+ audience expands beyond these automatically
-    flexible_spec: [
-      {
-        interests: [
-          { id: '6003107902433', name: 'Surfing' },
-          { id: '6003384425498', name: 'Surf culture' }
-        ]
-      }
-    ],
     age_min: 18,
-    age_max: 45
+    age_max: 65
   };
 
   const { data } = await axios.post(
