@@ -12,14 +12,15 @@ async function getAuth() {
   if (!serviceAccountB64) throw new Error('FIREBASE_SERVICE_ACCOUNT not set');
 
   const credentials = JSON.parse(Buffer.from(serviceAccountB64, 'base64').toString('utf8'));
-  const jwtClient = new google.auth.JWT(
-    credentials.client_email,
-    null,
-    credentials.private_key,
-    ['https://www.googleapis.com/auth/webmasters.readonly']
-  );
-  await jwtClient.authorize();
-  auth = jwtClient;
+  const googleAuth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: credentials.client_email,
+      private_key: credentials.private_key,
+    },
+    projectId: credentials.project_id,
+    scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
+  });
+  auth = await googleAuth.getClient();
   return auth;
 }
 
