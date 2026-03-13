@@ -85,7 +85,7 @@ router.get('/analytics/errors', async (req, res) => {
 
 // --- Daily report routes (no Meta required — degrades gracefully) ---
 
-const { generateReport, getLatestReport } = require('../services/dailyReport');
+const { generateReport, getLatestReport, runAndEmail } = require('../services/dailyReport');
 
 router.get('/daily-report', (req, res) => {
   const report = getLatestReport();
@@ -95,8 +95,8 @@ router.get('/daily-report', (req, res) => {
 
 router.post('/daily-report/generate', async (req, res) => {
   try {
-    const report = await generateReport();
-    res.json({ success: true, ...report });
+    const report = await runAndEmail();
+    res.json({ success: true, ...(report || { message: 'Report generated and emailed' }) });
   } catch (err) {
     logger.error(`[DailyReport] Manual generation failed: ${err.message}`);
     res.status(500).json({ error: 'Failed to generate report' });

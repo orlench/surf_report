@@ -101,14 +101,11 @@ function getLatestReport() {
 }
 
 async function runAndEmail() {
-  try {
-    const report = await generateReport();
-    // Send email (lazy-load to avoid circular deps at startup)
-    const { sendDailyReport } = require('./emailSender');
-    await sendDailyReport(report);
-  } catch (err) {
-    logger.error(`[DailyReport] Scheduled run failed: ${err.message}`);
-  }
+  const report = await generateReport();
+  // Send email (lazy-load to avoid circular deps at startup)
+  const { sendDailyReport } = require('./emailSender');
+  await sendDailyReport(report);
+  return report;
 }
 
 function startDailyReportScheduler() {
@@ -124,9 +121,10 @@ function startDailyReportScheduler() {
   const hoursUntil = (msUntilNext / (1000 * 60 * 60)).toFixed(1);
   logger.info(`[DailyReport] Scheduler started — first run in ${hoursUntil}h (04:00 UTC / 07:00 IST)`);
 
+  const safeRun = () => runAndEmail().catch(err => logger.error(`[DailyReport] Scheduled run failed: ${err.message}`));
   setTimeout(() => {
-    runAndEmail();
-    intervalHandle = setInterval(runAndEmail, TWENTY_FOUR_HOURS);
+    safeRun();
+    intervalHandle = setInterval(safeRun, TWENTY_FOUR_HOURS);
   }, msUntilNext);
 }
 
@@ -138,4 +136,4 @@ function stopDailyReportScheduler() {
   }
 }
 
-module.exports = { generateReport, getLatestReport, startDailyReportScheduler, stopDailyReportScheduler };
+module.exports = { generateReport, getLatestReport, runAndEmail, startDailyReportScheduler, stopDailyReportScheduler };
