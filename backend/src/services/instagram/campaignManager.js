@@ -23,6 +23,7 @@ async function createCampaign() {
       status: 'PAUSED',
       special_ad_categories: JSON.stringify([]),
       buying_type: 'AUCTION',
+      is_adset_budget_sharing_enabled: true,
       access_token: token
     }
   );
