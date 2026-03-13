@@ -49,7 +49,7 @@ async function main() {
   for (const spot of allSpots) {
     xml += `
   <url>
-    <loc>${FRONTEND_URL}/?spot=${encodeURIComponent(spot.id)}</loc>
+    <loc>${FRONTEND_URL}/spot/${encodeURIComponent(spot.id)}</loc>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
     <lastmod>${today}</lastmod>
