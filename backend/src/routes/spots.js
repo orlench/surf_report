@@ -183,7 +183,10 @@ router.post('/:spotId/feedback', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Feedback text must be at least 10 characters' });
     }
 
-    const cleanText = text.slice(0, 500).trim();
+    // Strip control characters and normalize whitespace to prevent prompt injection
+    const cleanText = text.slice(0, 500).trim()
+      .replace(/[\x00-\x1F\x7F]/g, '') // strip control chars
+      .replace(/\s+/g, ' '); // normalize whitespace
     logger.info(`[Feedback] Processing feedback for ${spotId}: "${cleanText.slice(0, 80)}..."`);
 
     const multipliers = await interpretFeedback(cleanText);

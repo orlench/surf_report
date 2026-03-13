@@ -48,7 +48,6 @@ router.get('/', (req, res) => {
         id: s.id,
         name: s.name,
         country: s.country || '',
-        distance: null,
       }));
       const first = allSpots[0];
       return res.json({
@@ -80,7 +79,6 @@ router.get('/', (req, res) => {
     id: s.spot.id,
     name: s.spot.name,
     country: s.spot.country || '',
-    distance: Math.round(s.distance),
   }));
 
   res.json({
@@ -89,7 +87,6 @@ router.get('/', (req, res) => {
     location: { city, country },
     nearestSpot: nearest.spot.id,
     nearestSpotName: nearest.spot.name,
-    distance: Math.round(nearest.distance),
     nearbySpots,
   });
 });

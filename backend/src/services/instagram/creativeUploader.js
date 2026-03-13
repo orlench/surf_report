@@ -3,10 +3,13 @@ const FormData = require('form-data');
 const logger = require('../../utils/logger');
 const { getToken, GRAPH_API_BASE } = require('./tokenManager');
 
+// Only allow image downloads from trusted domains
+const ALLOWED_IMAGE_HOSTS = ['shouldigo.surf', 'www.shouldigo.surf'];
+
 /**
  * Upload an image to the Meta Ad Account's image library
  * Downloads the image first, then uploads as multipart form data
- * @param {string} imageUrl - Public URL of the image
+ * @param {string} imageUrl - Public URL of the image (must be from allowed domains)
  * @returns {string|null} Image hash for use in creatives
  */
 async function uploadImage(imageUrl) {
@@ -15,8 +18,15 @@ async function uploadImage(imageUrl) {
   if (!adAccountId || !token) return null;
 
   try {
+    // Validate URL against allowlist to prevent SSRF
+    const parsed = new URL(imageUrl);
+    if (!['http:', 'https:'].includes(parsed.protocol) || !ALLOWED_IMAGE_HOSTS.includes(parsed.hostname)) {
+      logger.error(`[Marketing] Image upload blocked — untrusted host: ${parsed.hostname}`);
+      return null;
+    }
+
     // Download image first
-    const imgResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const imgResponse = await axios.get(imageUrl, { responseType: 'arraybuffer', timeout: 10000 });
     const filename = imageUrl.split('/').pop() || 'image.png';
 
     // Upload as multipart form

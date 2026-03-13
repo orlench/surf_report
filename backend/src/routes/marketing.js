@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const logger = require('../utils/logger');
 const { isConfigured: isMetaConfigured } = require('../services/instagram/tokenManager');
@@ -7,14 +8,19 @@ const { uploadImage, createCreative } = require('../services/instagram/creativeU
 const { refreshCreatives } = require('../services/instagram/scheduler');
 const analytics = require('../services/analyticsClient');
 
-// Simple admin auth middleware
+// Admin auth middleware with timing-safe comparison
 function requireAdmin(req, res, next) {
   const secret = process.env.ADMIN_SECRET;
   if (!secret) {
     return res.status(503).json({ error: 'ADMIN_SECRET not configured' });
   }
-  const provided = req.headers['x-admin-secret'] || req.query.secret;
-  if (provided !== secret) {
+  const provided = req.headers['x-admin-secret'];
+  if (!provided || typeof provided !== 'string') {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const a = Buffer.from(provided);
+  const b = Buffer.from(secret);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
@@ -43,7 +49,7 @@ router.get('/analytics', async (req, res) => {
     res.json({ success: true, range, ...data });
   } catch (err) {
     logger.error(`[Analytics] Dashboard failed: ${err.message}`);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to load analytics' });
   }
 });
 
@@ -58,7 +64,7 @@ router.get('/analytics/trend', async (req, res) => {
     const data = await analytics.getDailyTrend(range);
     res.json({ success: true, range, ...data });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to load trend data' });
   }
 });
 
@@ -73,7 +79,7 @@ router.get('/analytics/errors', async (req, res) => {
     const data = await analytics.getErrors(range);
     res.json({ success: true, range, ...data });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to load error data' });
   }
 });
 
@@ -125,7 +131,7 @@ router.post('/setup', async (req, res) => {
   } catch (err) {
     const metaError = err.response?.data?.error || {};
     logger.error(`[Marketing] Setup failed: ${metaError.message || err.message}`);
-    res.status(500).json({ error: metaError.message || err.message, code: metaError.code, type: metaError.type });
+    res.status(500).json({ error: 'Campaign setup failed' });
   }
 });
 
@@ -137,7 +143,7 @@ router.post('/refresh-creatives', async (req, res) => {
     await refreshCreatives();
     res.json({ success: true, message: 'Creatives refreshed with latest surf data' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to refresh creatives' });
   }
 });
 
@@ -149,7 +155,7 @@ router.get('/status', async (req, res) => {
     const status = await getCampaignStatus();
     res.json({ success: true, ...status });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to get campaign status' });
   }
 });
 
@@ -161,7 +167,7 @@ router.post('/pause', async (req, res) => {
     await pauseCampaign();
     res.json({ success: true, message: 'Campaign paused' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to pause campaign' });
   }
 });
 
@@ -173,7 +179,7 @@ router.post('/resume', async (req, res) => {
     await resumeCampaign();
     res.json({ success: true, message: 'Campaign resumed' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to resume campaign' });
   }
 });
 

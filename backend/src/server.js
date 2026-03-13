@@ -21,6 +21,16 @@ const apiLimiter = rateLimit({
 });
 app.use('/api/', apiLimiter);
 
+// Stricter rate limit for admin/marketing endpoints (brute-force protection)
+const adminLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 30, // 30 requests per hour per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests, please try again later' }
+});
+app.use('/api/marketing', adminLimiter);
+
 // CORS configuration
 const allowedOrigins = [
   process.env.FRONTEND_URL,
