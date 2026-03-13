@@ -1,14 +1,16 @@
 Fetch the daily monitoring report from the shouldigo.surf backend and summarize it.
 
-Run this curl command to get the report:
+Run this curl command to get the report (read ADMIN_SECRET from the environment or from Railway):
 ```
-curl -s https://shouldigo-surf-production.up.railway.app/api/marketing/daily-report -H "x-admin-secret: 68f7a67c5ac64a6c7341ba4433cb9cdd"
+curl -s https://api.shouldigo.surf/api/marketing/daily-report -H "x-admin-secret: $ADMIN_SECRET"
 ```
 
 If you get a 404 (no report yet), generate one first:
 ```
-curl -s -X POST https://shouldigo-surf-production.up.railway.app/api/marketing/daily-report/generate -H "x-admin-secret: 68f7a67c5ac64a6c7341ba4433cb9cdd"
+curl -s -X POST https://api.shouldigo.surf/api/marketing/daily-report/generate -H "x-admin-secret: $ADMIN_SECRET"
 ```
+
+If ADMIN_SECRET is not set in the environment, check `railway variables` or ask the user.
 
 Then present the results in this format:
 
