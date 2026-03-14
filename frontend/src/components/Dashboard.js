@@ -655,7 +655,11 @@ function Dashboard() {
               <h3>Gear</h3>
               {conditions?.boardRecommendation ? (
                 <>
+                  {userSkill === 'kook' ? (
+                    <div className="gear-kook-message">Stay home, you Kook!</div>
+                  ) : (
                   <div className="gear-grid">
+
                     <div className="gear-card">
                       <div className="gear-card-icon board-icon-wrap">
                         {getBoardSVG(conditions.boardRecommendation.boardType)}
@@ -693,6 +697,7 @@ function Dashboard() {
                       );
                     })()}
                   </div>
+                  )}
 
                   <div className="gear-personalize">
                     <span className="gear-personalize-title">Personalize</span>
@@ -715,6 +720,7 @@ function Dashboard() {
                           onChange={(e) => { setUserSkill(e.target.value); localStorage.setItem('userSkill', e.target.value); }}
                         >
                           <option value="">--</option>
+                          <option value="kook">Kook</option>
                           <option value="beginner">Beginner</option>
                           <option value="intermediate">Intermediate</option>
                           <option value="advanced">Advanced</option>

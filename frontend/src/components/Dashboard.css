@@ -77,6 +77,14 @@
   letter-spacing: 0.5px;
 }
 
+.gear-kook-message {
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  padding: 32px 16px;
+  color: var(--text);
+}
+
 .gear-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

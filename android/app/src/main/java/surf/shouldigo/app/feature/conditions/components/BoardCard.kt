@@ -39,7 +39,7 @@ fun BoardCard(
     var expanded by remember { mutableStateOf(false) }
     var showSaved by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
-    val skillOptions = listOf("", "beginner", "intermediate", "advanced", "expert")
+    val skillOptions = listOf("", "kook", "beginner", "intermediate", "advanced", "expert")
 
     LaunchedEffect(showSaved) {
         if (showSaved) {
@@ -56,48 +56,22 @@ fun BoardCard(
             SectionHeader("Suggested Gear for Today")
             Spacer(modifier = Modifier.height(14.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Board card
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = Background,
-                    modifier = Modifier.weight(1f)
+            if (skill == "kook") {
+                Text(
+                    text = "Stay home, you Kook!",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp)
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        BoardIllustration(
-                            boardType = recommendation.boardType,
-                            modifier = Modifier.size(width = 28.dp, height = 64.dp)
-                        )
-                        Text(
-                            text = recommendation.boardName
-                                ?: recommendation.boardType.replaceFirstChar { it.uppercase() },
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1
-                        )
-                        recommendation.reason?.let { reason ->
-                            Text(
-                                text = reason,
-                                fontSize = 12.sp,
-                                color = SecondaryText,
-                                maxLines = 4,
-                                overflow = TextOverflow.Ellipsis,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-
-                // Wetsuit card
-                conditions.weather?.waterTemp?.let { wt ->
-                    val (name, desc) = wetsuitRecommendation(wt)
+                    // Board card
                     Surface(
                         shape = RoundedCornerShape(14.dp),
                         color = Background,
@@ -108,21 +82,59 @@ fun BoardCard(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            WetsuitIllustration(
-                                isShorts = wt >= 24,
-                                modifier = Modifier.size(width = 36.dp, height = 64.dp)
+                            BoardIllustration(
+                                boardType = recommendation.boardType,
+                                modifier = Modifier.size(width = 28.dp, height = 64.dp)
                             )
                             Text(
-                                text = name,
+                                text = recommendation.boardName
+                                    ?: recommendation.boardType.replaceFirstChar { it.uppercase() },
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1
                             )
-                            Text(
-                                text = "${wt.toInt()}\u00B0C water",
-                                fontSize = 12.sp,
-                                color = SecondaryText
-                            )
+                            recommendation.reason?.let { reason ->
+                                Text(
+                                    text = reason,
+                                    fontSize = 12.sp,
+                                    color = SecondaryText,
+                                    maxLines = 4,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+
+                    // Wetsuit card
+                    conditions.weather?.waterTemp?.let { wt ->
+                        val (name, desc) = wetsuitRecommendation(wt)
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = Background,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(14.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                WetsuitIllustration(
+                                    isShorts = wt >= 24,
+                                    modifier = Modifier.size(width = 36.dp, height = 64.dp)
+                                )
+                                Text(
+                                    text = name,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1
+                                )
+                                Text(
+                                    text = "${wt.toInt()}\u00B0C water",
+                                    fontSize = 12.sp,
+                                    color = SecondaryText
+                                )
+                            }
                         }
                     }
                 }

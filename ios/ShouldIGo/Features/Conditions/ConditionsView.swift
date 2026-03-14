@@ -597,49 +597,56 @@ struct BoardCard: View {
         VStack(alignment: .leading, spacing: 14) {
             SectionHeader("Gear")
 
-            HStack(alignment: .top, spacing: 12) {
-                // Board card
-                VStack(spacing: 8) {
-                    BoardIllustration(boardType: recommendation.boardType)
-                        .padding(.top, 4)
-                    Text(recommendation.boardName ?? recommendation.boardType.capitalized)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    if let reason = recommendation.reason {
-                        Text(reason)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(4)
-                            .truncationMode(.tail)
-                            .multilineTextAlignment(.center)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(14)
-                .background(Color("background"), in: RoundedRectangle(cornerRadius: 14))
-
-                // Wetsuit card
-                if let wt = conditions.weather?.waterTemp {
+            if userSkill == "kook" {
+                Text("Stay home, you Kook!")
+                    .font(.title3.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 32)
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    // Board card
                     VStack(spacing: 8) {
-                        WetsuitIllustration(isShorts: wt >= 24)
+                        BoardIllustration(boardType: recommendation.boardType)
                             .padding(.top, 4)
-                        Text(wetsuitLabel(for: wt))
+                        Text(recommendation.boardName ?? recommendation.boardType.capitalized)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
-                        Text(String(format: "%.0f°C water", wt))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        if let reason = recommendation.reason {
+                            Text(reason)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(4)
+                                .truncationMode(.tail)
+                                .multilineTextAlignment(.center)
+                        }
                         Spacer(minLength: 0)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(14)
                     .background(Color("background"), in: RoundedRectangle(cornerRadius: 14))
+
+                    // Wetsuit card
+                    if let wt = conditions.weather?.waterTemp {
+                        VStack(spacing: 8) {
+                            WetsuitIllustration(isShorts: wt >= 24)
+                                .padding(.top, 4)
+                            Text(wetsuitLabel(for: wt))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            Text(String(format: "%.0f°C water", wt))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer(minLength: 0)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(14)
+                        .background(Color("background"), in: RoundedRectangle(cornerRadius: 14))
+                    }
                 }
+                .fixedSize(horizontal: false, vertical: true)
             }
-            .fixedSize(horizontal: false, vertical: true)
 
             // Personalize section
             VStack(alignment: .leading, spacing: 8) {
@@ -682,6 +689,7 @@ struct BoardCard: View {
                             .foregroundStyle(.tertiary)
                         Picker("Skill", selection: $userSkill) {
                             Text("--").tag("")
+                            Text("Kook").tag("kook")
                             Text("Beginner").tag("beginner")
                             Text("Intermediate").tag("intermediate")
                             Text("Advanced").tag("advanced")
