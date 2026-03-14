@@ -243,7 +243,8 @@ router.get('/status', async (req, res) => {
     const status = await getCampaignStatus();
     res.json({ success: true, ...status });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to get campaign status' });
+    const detail = err.response?.data?.error?.message || err.message;
+    res.status(500).json({ error: 'Failed to get campaign status', detail });
   }
 });
 
