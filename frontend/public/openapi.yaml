@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Should I Go? Surf Conditions API
   description: |
-    Real-time surf conditions, scoring, and forecasts for 73+ beaches worldwide.
+    Real-time surf conditions, scoring, and forecasts for 1,000+ beaches worldwide.
     Returns a 0-100 score, a yes/no/maybe verdict, wave data, wind, trends, and board recommendations.
 
     **Rate Limits**: 60 requests per 15-minute window per IP. Standard `RateLimit-*` headers included.

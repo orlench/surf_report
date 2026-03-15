@@ -4,7 +4,7 @@ const router = express.Router();
 const logger = require('../utils/logger');
 const { isConfigured: isMetaConfigured } = require('../services/instagram/tokenManager');
 const { setup, createAd, activateCampaign, pauseCampaign, resumeCampaign, getCampaignStatus } = require('../services/instagram/campaignManager');
-const { uploadImage, createCreative } = require('../services/instagram/creativeUploader');
+const { uploadImage, createCreative, createLocalizedCreative } = require('../services/instagram/creativeUploader');
 const { refreshCreatives } = require('../services/instagram/scheduler');
 const analytics = require('../services/analyticsClient');
 
@@ -211,29 +211,11 @@ router.post('/setup', async (req, res) => {
     }
 
     const linkUrl = process.env.META_AD_URL || 'https://shouldigo.surf?utm_source=instagram&utm_medium=paid&utm_campaign=advantage_plus';
-    const primaryTexts = [
-      'Should you go surf today? Get real-time conditions for any beach.',
-      'Check surf scores instantly. Wave height, period, wind — all in one place.',
-      'Know before you go. Real-time surf conditions scored 0-100.',
-      'Free surf reports for 73+ beaches. Wave height, swell, wind & water temp — scored 0-100.',
-      'Stop guessing, start surfing. Real-time conditions for any beach in seconds.'
-    ];
-    const headlines = [
-      'Should I Go Surf?',
-      'Free Real-Time Surf Reports',
-      'Check Conditions Now'
-    ];
-    const descriptions = [
-      'Real-time surf conditions for 73+ beaches worldwide',
-      'Wave height, swell period, wind & water temp scored 0-100',
-      'Know before you go — instant surf reports'
-    ];
 
-    const creativeId = await createCreative({
+    // Use Segment Asset Customization — shows localized text per country
+    // (e.g., "How's the surf at Pipeline?" for US, "Nazaré Surf Report" for PT)
+    const creativeId = await createLocalizedCreative({
       imageHashes: [imageHash],
-      primaryTexts,
-      headlines,
-      descriptions,
       linkUrl
     });
 

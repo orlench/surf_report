@@ -138,7 +138,7 @@ function generateAdContent(conditionsData, spotName) {
     `${spotName} is scoring ${score}/100 right now. ${waveStr}${periodStr}${windStr}. Should you go? Check it out.`,
     `Real-time surf score: ${score}/100 (${rating}). ${waveStr}${periodStr}. Get conditions for any beach instantly.`,
     `Should you go surf today? ${spotName}: ${score}/100. Know before you go.`,
-    `${waveStr}${periodStr} at ${spotName}. Score: ${score}/100. Free real-time conditions for 73+ beaches.`,
+    `${waveStr}${periodStr} at ${spotName}. Score: ${score}/100. Free real-time conditions for 1,000+ beaches.`,
     `Stop guessing. ${spotName} is ${score}/100 right now. Check any beach in seconds.`
   ];
 
@@ -147,7 +147,7 @@ function generateAdContent(conditionsData, spotName) {
     : ['Check Surf Conditions', 'Should I Go Surf?', `${spotName}: ${score}/100`];
 
   const descriptions = [
-    'Free real-time surf conditions for 73+ beaches worldwide',
+    'Free real-time surf conditions for 1,000+ beaches worldwide',
     'Wave height, swell period, wind & water temp scored 0-100',
     'Know before you go — instant surf reports'
   ];
@@ -155,4 +155,113 @@ function generateAdContent(conditionsData, spotName) {
   return { primaryTexts, headlines, descriptions };
 }
 
-module.exports = { uploadImage, createCreative, generateAdContent };
+// Country → iconic surf spot for location-personalized ad text (Segment Asset Customization)
+const COUNTRY_SPOT_MAP = {
+  US: 'Pipeline',
+  AU: 'Gold Coast',
+  GB: 'Newquay',
+  PT: 'Nazaré',
+  ES: 'Mundaka',
+  FR: 'Hossegor',
+  ID: 'Bali',
+  ZA: 'Jeffreys Bay',
+  BR: 'Florianópolis',
+  MX: 'Puerto Escondido',
+  JP: 'Shonan',
+  NZ: 'Raglan',
+  CR: 'Tamarindo',
+  MA: 'Taghazout'
+};
+
+/**
+ * Create a localized ad creative using Meta's Segment Asset Customization (SAC).
+ * Shows country-specific text referencing local surf spots while keeping
+ * the budget pooled in a single ad. Requires is_dynamic_creative=false on the ad set.
+ *
+ * @param {Object} opts
+ * @param {string[]} opts.imageHashes - Uploaded image hashes
+ * @param {string} opts.linkUrl - Destination URL
+ * @returns {string|null} Creative ID
+ */
+async function createLocalizedCreative({ imageHashes, linkUrl }) {
+  const token = getToken();
+  if (!token) {
+    logger.error('[Marketing] Missing access token');
+    return null;
+  }
+
+  try {
+    const bodies = [];
+    const titles = [];
+    const rules = [];
+
+    for (const [country, spot] of Object.entries(COUNTRY_SPOT_MAP)) {
+      bodies.push({
+        text: `How's the surf at ${spot}? Get real-time conditions and scores for ${spot} and 1,000+ other beaches.`,
+        label: { name: `body_${country}` }
+      });
+      titles.push({
+        text: `${spot} Surf Report`,
+        label: { name: `title_${country}` }
+      });
+      rules.push({
+        customization_spec: { geo_locations: { countries: [country] } },
+        body_label: { name: `body_${country}` },
+        title_label: { name: `title_${country}` },
+        image_label: { name: 'img_default' },
+        description_label: { name: 'desc_default' },
+        link_url_label: { name: 'link_default' }
+      });
+    }
+
+    // Default fallback for users outside target countries
+    bodies.push({
+      text: 'Should you go surf today? Real-time conditions scored 0-100 for 1,000+ beaches worldwide.',
+      label: { name: 'body_default' }
+    });
+    titles.push({
+      text: 'Should I Go Surf?',
+      label: { name: 'title_default' }
+    });
+    rules.push({
+      customization_spec: {},
+      body_label: { name: 'body_default' },
+      title_label: { name: 'title_default' },
+      image_label: { name: 'img_default' },
+      description_label: { name: 'desc_default' },
+      link_url_label: { name: 'link_default' },
+      is_default: true
+    });
+
+    const assetFeedSpec = {
+      images: imageHashes.map(hash => ({ hash, label: { name: 'img_default' } })),
+      bodies,
+      titles,
+      descriptions: [
+        { text: 'Free real-time surf conditions for 1,000+ beaches worldwide', label: { name: 'desc_default' } }
+      ],
+      link_urls: [{ website_url: linkUrl, label: { name: 'link_default' } }],
+      call_to_action_types: ['LEARN_MORE'],
+      ad_formats: ['SINGLE_IMAGE'],
+      asset_customization_rules: rules
+    };
+
+    const { data } = await axios.post(
+      `${GRAPH_API_BASE}/act_${META_AD_ACCOUNT_ID}/adcreatives`,
+      {
+        name: `SIG Localized Creative ${new Date().toISOString().slice(0, 10)}`,
+        asset_feed_spec: JSON.stringify(assetFeedSpec),
+        object_story_spec: JSON.stringify({ page_id: META_PAGE_ID }),
+        access_token: token
+      }
+    );
+
+    logger.info(`[Marketing] Created localized creative — ID: ${data.id} (${Object.keys(COUNTRY_SPOT_MAP).length} country segments)`);
+    return data.id;
+  } catch (err) {
+    logger.error(`[Marketing] Localized creative creation failed: ${err.response?.data?.error?.message || err.message}`);
+    return null;
+  }
+}
+
+module.exports = { uploadImage, createCreative, createLocalizedCreative, generateAdContent, COUNTRY_SPOT_MAP };

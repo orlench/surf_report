@@ -1,6 +1,6 @@
 # Should I Go? — Full API Reference for AI Agents
 
-> Real-time surf conditions and scoring for 73+ beaches worldwide. Aggregates data from Open-Meteo, MET Norway, Windfinder, Surf-Forecast, and more.
+> Real-time surf conditions and scoring for 1,000+ beaches worldwide. Aggregates data from Open-Meteo, MET Norway, Windfinder, Surf-Forecast, and more.
 
 ## Base URL
 
