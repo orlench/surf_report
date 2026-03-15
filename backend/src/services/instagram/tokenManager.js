@@ -1,7 +1,7 @@
 const axios = require('axios');
 const logger = require('../../utils/logger');
 
-const GRAPH_API_BASE = 'https://graph.facebook.com/v22.0';
+const GRAPH_API_BASE = 'https://graph.facebook.com/v25.0';
 
 // In-memory token store (refreshed on startup + periodically)
 let currentToken = process.env.META_ACCESS_TOKEN || null;
@@ -53,7 +53,7 @@ function getToken() {
  * Check if token is configured
  */
 function isConfigured() {
-  return !!(process.env.META_APP_ID && process.env.META_APP_SECRET && currentToken);
+  return !!currentToken;
 }
 
 /**

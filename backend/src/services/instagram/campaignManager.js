@@ -63,6 +63,8 @@ async function createAdSet() {
     bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
     targeting: JSON.stringify(targeting),
     is_dynamic_creative: true,
+    dsa_beneficiary: 'Should I Go Surf',
+    dsa_payor: 'Should I Go Surf',
     status: 'PAUSED',
     access_token: token
   };
