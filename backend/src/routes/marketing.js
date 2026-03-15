@@ -4,7 +4,7 @@ const router = express.Router();
 const logger = require('../utils/logger');
 const { isConfigured: isMetaConfigured } = require('../services/instagram/tokenManager');
 const { setup, createAd, activateCampaign, pauseCampaign, resumeCampaign, getCampaignStatus } = require('../services/instagram/campaignManager');
-const { uploadImage, createCreative, createLocalizedCreative } = require('../services/instagram/creativeUploader');
+const { uploadImage, createCreative, generateLocationAdContent } = require('../services/instagram/creativeUploader');
 const { refreshCreatives } = require('../services/instagram/scheduler');
 const analytics = require('../services/analyticsClient');
 
@@ -211,11 +211,13 @@ router.post('/setup', async (req, res) => {
     }
 
     const linkUrl = process.env.META_AD_URL || 'https://shouldigo.surf?utm_source=instagram&utm_medium=paid&utm_campaign=advantage_plus';
+    const { primaryTexts, headlines, descriptions } = generateLocationAdContent();
 
-    // Use Segment Asset Customization — shows localized text per country
-    // (e.g., "How's the surf at Pipeline?" for US, "Nazaré Surf Report" for PT)
-    const creativeId = await createLocalizedCreative({
+    const creativeId = await createCreative({
       imageHashes: [imageHash],
+      primaryTexts,
+      headlines,
+      descriptions,
       linkUrl
     });
 

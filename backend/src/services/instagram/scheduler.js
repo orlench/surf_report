@@ -1,6 +1,6 @@
 const logger = require('../../utils/logger');
 const { isConfigured: isMetaConfigured } = require('./tokenManager');
-const { uploadImage, createLocalizedCreative } = require('./creativeUploader');
+const { uploadImage, createCreative, generateLocationAdContent } = require('./creativeUploader');
 const { createAd, activateCampaign, getCampaignId } = require('./campaignManager');
 
 const WEEKLY_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -31,8 +31,12 @@ async function refreshCreatives() {
     }
 
     const linkUrl = process.env.META_AD_URL || 'https://shouldigo.surf?utm_source=instagram&utm_medium=paid&utm_campaign=advantage_plus';
-    const creativeId = await createLocalizedCreative({
+    const { primaryTexts, headlines, descriptions } = generateLocationAdContent();
+    const creativeId = await createCreative({
       imageHashes: [imageHash],
+      primaryTexts,
+      headlines,
+      descriptions,
       linkUrl
     });
 

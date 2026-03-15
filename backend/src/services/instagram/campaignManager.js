@@ -58,7 +58,7 @@ async function createAdSet() {
     optimization_goal: 'LINK_CLICKS',
     bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
     targeting: JSON.stringify(targeting),
-    is_dynamic_creative: false, // SAC (Segment Asset Customization) requires this off
+    is_dynamic_creative: true,
     dsa_beneficiary: 'Should I Go Surf',
     dsa_payor: 'Should I Go Surf',
     status: 'PAUSED',
