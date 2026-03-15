@@ -28,7 +28,7 @@ function requireAdmin(req, res, next) {
 
 function requireMeta(req, res, next) {
   if (!isMetaConfigured()) {
-    return res.status(503).json({ error: 'Meta credentials not configured. Set META_APP_ID, META_APP_SECRET, META_ACCESS_TOKEN.' });
+    return res.status(503).json({ error: 'Meta credentials not configured. Set META_ACCESS_TOKEN.' });
   }
   next();
 }

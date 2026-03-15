@@ -1,22 +1,20 @@
 const axios = require('axios');
 const logger = require('../../utils/logger');
-const { getToken, GRAPH_API_BASE } = require('./tokenManager');
+const { getToken, GRAPH_API_BASE, META_AD_ACCOUNT_ID } = require('./tokenManager');
 
-// Persistent IDs — created once, reused across restarts
-// In production, these should be stored in a DB or env vars after first setup
-let campaignId = process.env.META_CAMPAIGN_ID || null;
-let adSetId = process.env.META_ADSET_ID || null;
+// Active campaign IDs — hardcoded after creation, overridable via env
+let campaignId = process.env.META_CAMPAIGN_ID || '120242229788240189';
+let adSetId = process.env.META_ADSET_ID || '120242229793340189';
 
 /**
  * Create an Advantage+ traffic campaign (one-time setup)
  */
 async function createCampaign() {
-  const adAccountId = process.env.META_AD_ACCOUNT_ID;
   const token = getToken();
-  if (!adAccountId || !token) throw new Error('Missing META_AD_ACCOUNT_ID or access token');
+  if (!token) throw new Error('Missing access token');
 
   const { data } = await axios.post(
-    `${GRAPH_API_BASE}/act_${adAccountId}/campaigns`,
+    `${GRAPH_API_BASE}/act_${META_AD_ACCOUNT_ID}/campaigns`,
     {
       name: 'Should I Go Surf — Instagram Traffic',
       objective: 'OUTCOME_TRAFFIC',
@@ -39,9 +37,7 @@ async function createCampaign() {
 async function createAdSet() {
   if (!campaignId) throw new Error('Campaign must be created first');
 
-  const adAccountId = process.env.META_AD_ACCOUNT_ID;
   const token = getToken();
-
   const dailyBudget = process.env.META_AD_DAILY_BUDGET || '500'; // cents ($5/day)
 
   // Broad targeting across surf countries — let Meta's Advantage+ optimize delivery
@@ -70,7 +66,7 @@ async function createAdSet() {
   };
 
   const { data } = await axios.post(
-    `${GRAPH_API_BASE}/act_${adAccountId}/adsets`,
+    `${GRAPH_API_BASE}/act_${META_AD_ACCOUNT_ID}/adsets`,
     params
   );
 
@@ -86,11 +82,10 @@ async function createAdSet() {
 async function createAd(creativeId) {
   if (!adSetId) throw new Error('Ad set must be created first');
 
-  const adAccountId = process.env.META_AD_ACCOUNT_ID;
   const token = getToken();
 
   const { data } = await axios.post(
-    `${GRAPH_API_BASE}/act_${adAccountId}/ads`,
+    `${GRAPH_API_BASE}/act_${META_AD_ACCOUNT_ID}/ads`,
     {
       name: `SIG Ad ${new Date().toISOString().slice(0, 10)}`,
       adset_id: adSetId,

@@ -1,7 +1,7 @@
 const axios = require('axios');
 const FormData = require('form-data');
 const logger = require('../../utils/logger');
-const { getToken, GRAPH_API_BASE } = require('./tokenManager');
+const { getToken, GRAPH_API_BASE, META_AD_ACCOUNT_ID, META_PAGE_ID } = require('./tokenManager');
 
 // Only allow image downloads from trusted domains
 const ALLOWED_IMAGE_HOSTS = ['shouldigo.surf', 'www.shouldigo.surf'];
@@ -13,9 +13,8 @@ const ALLOWED_IMAGE_HOSTS = ['shouldigo.surf', 'www.shouldigo.surf'];
  * @returns {string|null} Image hash for use in creatives
  */
 async function uploadImage(imageUrl) {
-  const adAccountId = process.env.META_AD_ACCOUNT_ID;
   const token = getToken();
-  if (!adAccountId || !token) return null;
+  if (!token) return null;
 
   try {
     // Validate URL against allowlist to prevent SSRF
@@ -35,7 +34,7 @@ async function uploadImage(imageUrl) {
     form.append('access_token', token);
 
     const { data } = await axios.post(
-      `${GRAPH_API_BASE}/act_${adAccountId}/adimages`,
+      `${GRAPH_API_BASE}/act_${META_AD_ACCOUNT_ID}/adimages`,
       form,
       { headers: form.getHeaders() }
     );
@@ -63,13 +62,10 @@ async function uploadImage(imageUrl) {
  * @returns {string|null} Creative ID
  */
 async function createCreative({ imageHashes, primaryTexts, headlines, descriptions, linkUrl }) {
-  const adAccountId = process.env.META_AD_ACCOUNT_ID;
-  const pageId = process.env.META_PAGE_ID;
-  const igAccountId = process.env.META_IG_ACCOUNT_ID;
   const token = getToken();
 
-  if (!adAccountId || !pageId || !token) {
-    logger.error('[Marketing] Missing META_AD_ACCOUNT_ID, META_PAGE_ID, or access token');
+  if (!token) {
+    logger.error('[Marketing] Missing access token');
     return null;
   }
 
@@ -99,12 +95,11 @@ async function createCreative({ imageHashes, primaryTexts, headlines, descriptio
     };
 
     const objectStorySpec = {
-      page_id: pageId,
-      ...(igAccountId && { instagram_actor_id: igAccountId })
+      page_id: META_PAGE_ID
     };
 
     const { data } = await axios.post(
-      `${GRAPH_API_BASE}/act_${adAccountId}/adcreatives`,
+      `${GRAPH_API_BASE}/act_${META_AD_ACCOUNT_ID}/adcreatives`,
       {
         name: `SIG Creative ${new Date().toISOString().slice(0, 10)}`,
         asset_feed_spec: JSON.stringify(assetFeedSpec),
