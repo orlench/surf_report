@@ -45,6 +45,10 @@ router.use(requireAdmin);
 router.get('/analytics', async (req, res) => {
   try {
     const range = req.query.range || 'last7days';
+    const validRanges = ['today', 'yesterday', 'last7days', 'last28days', 'last90days'];
+    if (!validRanges.includes(range)) {
+      return res.status(400).json({ error: `Invalid range. Must be one of: ${validRanges.join(', ')}` });
+    }
     const data = await analytics.getDashboard(range);
     res.json({ success: true, range, ...data });
   } catch (err) {
@@ -61,6 +65,10 @@ router.get('/analytics', async (req, res) => {
 router.get('/analytics/trend', async (req, res) => {
   try {
     const range = req.query.range || 'last28days';
+    const validRanges = ['today', 'yesterday', 'last7days', 'last28days', 'last90days'];
+    if (!validRanges.includes(range)) {
+      return res.status(400).json({ error: `Invalid range. Must be one of: ${validRanges.join(', ')}` });
+    }
     const data = await analytics.getDailyTrend(range);
     res.json({ success: true, range, ...data });
   } catch (err) {
@@ -76,6 +84,10 @@ router.get('/analytics/trend', async (req, res) => {
 router.get('/analytics/errors', async (req, res) => {
   try {
     const range = req.query.range || 'last7days';
+    const validRanges = ['today', 'yesterday', 'last7days', 'last28days', 'last90days'];
+    if (!validRanges.includes(range)) {
+      return res.status(400).json({ error: `Invalid range. Must be one of: ${validRanges.join(', ')}` });
+    }
     const data = await analytics.getErrors(range);
     res.json({ success: true, range, ...data });
   } catch (err) {
@@ -128,8 +140,8 @@ router.get('/search-console/indexing', async (req, res) => {
  */
 router.get('/search-console/queries', async (req, res) => {
   try {
-    const days = parseInt(req.query.days) || 7;
-    const limit = parseInt(req.query.limit) || 20;
+    const days = Math.min(Math.max(parseInt(req.query.days) || 7, 1), 90);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
     const data = await searchConsole.getSearchAnalytics({ dimension: 'query', days, limit });
     res.json({ success: true, ...data });
   } catch (err) {
@@ -145,8 +157,8 @@ router.get('/search-console/queries', async (req, res) => {
  */
 router.get('/search-console/pages', async (req, res) => {
   try {
-    const days = parseInt(req.query.days) || 7;
-    const limit = parseInt(req.query.limit) || 20;
+    const days = Math.min(Math.max(parseInt(req.query.days) || 7, 1), 90);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
     const data = await searchConsole.getSearchAnalytics({ dimension: 'page', days, limit });
     res.json({ success: true, ...data });
   } catch (err) {
@@ -163,6 +175,14 @@ router.get('/search-console/inspect', async (req, res) => {
   try {
     const url = req.query.url;
     if (!url) return res.status(400).json({ error: 'url query param required' });
+    try {
+      const parsed = new URL(url);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        return res.status(400).json({ error: 'URL must use http or https protocol' });
+      }
+    } catch {
+      return res.status(400).json({ error: 'Invalid URL format' });
+    }
     const data = await searchConsole.inspectUrl(url);
     res.json({ success: true, ...data });
   } catch (err) {

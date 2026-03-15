@@ -1,4 +1,15 @@
 {
+  "allowedTools": [
+    "Bash(npm test:*)",
+    "Bash(curl:*)",
+    "Bash(cd:*)",
+    "Bash(npx:*)",
+    "Edit",
+    "Write",
+    "Read",
+    "Glob",
+    "Grep"
+  ],
   "hooks": {
     "postEdit": {
       "command": "npx eslint --fix {{file}}",

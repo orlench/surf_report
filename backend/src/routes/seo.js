@@ -131,6 +131,31 @@ router.get('/og/:spotId', async (req, res) => {
   <meta name="twitter:title" content="${escapeHtml(title)}" />
   <meta name="twitter:description" content="${escapeHtml(description)}" />
   <meta name="twitter:image" content="${image}" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "${FRONTEND_URL}/" },
+      { "@type": "ListItem", "position": 2, "name": "${escapeHtml(spot.name)}", "item": "${escapeHtml(url)}" }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SportsActivityLocation",
+    "name": "${escapeHtml(spot.name)} Surf Spot",
+    "description": "${escapeHtml(description)}",
+    "url": "${escapeHtml(url)}",
+    "sport": "Surfing"${spot.location ? `,
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": ${spot.location.lat},
+      "longitude": ${spot.location.lon}
+    }` : ''}
+  }
+  </script>
   <link rel="canonical" href="${escapeHtml(url)}" />
 </head>
 <body>

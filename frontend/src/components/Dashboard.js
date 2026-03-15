@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchSpots, fetchConditions, fetchConditionsByCoords, createSpot } from '../api/surfApi';
 import useGeoDetect from '../hooks/useGeoDetect';
@@ -6,7 +6,7 @@ import useSSEProgress from '../hooks/useSSEProgress';
 import ScoreDisplay from './ScoreDisplay';
 import { getBoardSVG } from './BoardIllustrations';
 import SpotSelector from './SpotSelector';
-import SpotMap from './SpotMap';
+const SpotMap = lazy(() => import('./SpotMap'));
 import SpotFeedback from './SpotFeedback';
 import NotificationBell from './NotificationBell';
 import ProgressScreen from './ProgressScreen';
@@ -418,23 +418,25 @@ function Dashboard() {
         </div>
 
         {showErrorMap && (
-          <SpotMap
-            onSelect={(spot) => {
-              const id = slugify(spot.name);
-              const existing = getRecentCustomSpots();
-              const updated = [
-                { id, name: spot.name, lat: spot.lat, lon: spot.lon, country: spot.country, region: spot.region },
-                ...existing.filter(s => s.id !== id)
-              ].slice(0, 20);
-              localStorage.setItem('customSpots', JSON.stringify(updated));
-              localStorage.setItem('activeCustomSpot', JSON.stringify({
-                id, name: spot.name, lat: spot.lat, lon: spot.lon, country: spot.country
-              }));
-              setShowErrorMap(false);
-              handleSpotChange(id);
-            }}
-            onClose={() => setShowErrorMap(false)}
-          />
+          <Suspense fallback={null}>
+            <SpotMap
+              onSelect={(spot) => {
+                const id = slugify(spot.name);
+                const existing = getRecentCustomSpots();
+                const updated = [
+                  { id, name: spot.name, lat: spot.lat, lon: spot.lon, country: spot.country, region: spot.region },
+                  ...existing.filter(s => s.id !== id)
+                ].slice(0, 20);
+                localStorage.setItem('customSpots', JSON.stringify(updated));
+                localStorage.setItem('activeCustomSpot', JSON.stringify({
+                  id, name: spot.name, lat: spot.lat, lon: spot.lon, country: spot.country
+                }));
+                setShowErrorMap(false);
+                handleSpotChange(id);
+              }}
+              onClose={() => setShowErrorMap(false)}
+            />
+          </Suspense>
         )}
       </div>
     );

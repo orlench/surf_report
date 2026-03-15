@@ -99,7 +99,7 @@ app.use((req, res) => {
   res.status(404).json({
     success: false,
     error: 'Endpoint not found',
-    path: req.path
+    path: req.path.slice(0, 200)
   });
 });
 
@@ -126,7 +126,7 @@ app.use((err, req, res, next) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   logger.info(`🏄 Surf Report API running on port ${PORT}`);
   logger.info(`📡 API endpoint: http://localhost:${PORT}/api`);
   logger.info(`💚 Health check: http://localhost:${PORT}/api/health`);
@@ -150,12 +150,12 @@ app.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully');
-  process.exit(0);
+  server.close(() => process.exit(0));
 });
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully');
-  process.exit(0);
+  server.close(() => process.exit(0));
 });
 
 module.exports = app;
