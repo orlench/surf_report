@@ -83,6 +83,10 @@
   font-weight: 700;
   padding: 32px 16px;
   color: var(--text);
+  min-height: 104px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .gear-grid {
