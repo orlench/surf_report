@@ -62,7 +62,7 @@ async function uploadImage(imageUrl) {
  * @param {string} opts.linkUrl - Destination URL
  * @returns {string|null} Creative ID
  */
-async function createCreative({ imageHashes, primaryTexts, headline, linkUrl }) {
+async function createCreative({ imageHashes, primaryTexts, headlines, descriptions, linkUrl }) {
   const adAccountId = process.env.META_AD_ACCOUNT_ID;
   const pageId = process.env.META_PAGE_ID;
   const igAccountId = process.env.META_IG_ACCOUNT_ID;
@@ -74,28 +74,27 @@ async function createCreative({ imageHashes, primaryTexts, headline, linkUrl }) 
   }
 
   try {
-    // Build asset feed with multiple images and text variations
-    const bodies = primaryTexts.map(text => ({ text }));
-    const images = imageHashes.map(hash => ({ hash }));
-    const titles = [{ text: headline || 'Should I Go Surf?' }];
-    const descriptions = [{ text: 'Real-time surf conditions for any beach' }];
-    const linkUrls = [{ website_url: linkUrl }];
-    const callToActions = [{ type: 'LEARN_MORE' }];
-
+    // Build asset feed with multiple variations for Meta to A/B test
     const assetFeedSpec = {
-      bodies,
-      images,
-      titles,
-      descriptions,
-      link_urls: linkUrls,
-      call_to_action_types_field: callToActions,
+      images: imageHashes.map(hash => ({ hash })),
+      bodies: primaryTexts.map(text => ({ text })),
+      titles: (headlines || ['Should I Go Surf?']).map(text => ({ text })),
+      descriptions: (descriptions || ['Real-time surf conditions for any beach']).map(text => ({ text })),
+      link_urls: [{ website_url: linkUrl }],
+      call_to_action_types: ['LEARN_MORE', 'SIGN_UP'],
       ad_formats: ['SINGLE_IMAGE']
     };
 
     // Enable Advantage+ creative AI enhancements
     const degreesOfFreedomSpec = {
       creative_features_spec: {
-        standard_enhancements: { enroll_status: 'OPT_IN' }
+        image_touchups: { enroll_status: 'OPT_IN' },
+        image_brightness_and_contrast: { enroll_status: 'OPT_IN' },
+        text_optimizations: { enroll_status: 'OPT_IN' },
+        inline_comment: { enroll_status: 'OPT_IN' },
+        adapt_to_placement: { enroll_status: 'OPT_IN' },
+        image_templates: { enroll_status: 'OPT_IN' },
+        description_automation: { enroll_status: 'OPT_IN' }
       }
     };
 
@@ -143,14 +142,22 @@ function generateAdContent(conditionsData, spotName) {
   const primaryTexts = [
     `${spotName} is scoring ${score}/100 right now. ${waveStr}${periodStr}${windStr}. Should you go? Check it out.`,
     `Real-time surf score: ${score}/100 (${rating}). ${waveStr}${periodStr}. Get conditions for any beach instantly.`,
-    `Should you go surf today? ${spotName}: ${score}/100. Know before you go.`
+    `Should you go surf today? ${spotName}: ${score}/100. Know before you go.`,
+    `${waveStr}${periodStr} at ${spotName}. Score: ${score}/100. Free real-time conditions for 73+ beaches.`,
+    `Stop guessing. ${spotName} is ${score}/100 right now. Check any beach in seconds.`
   ];
 
-  const headline = score >= 70
-    ? `${spotName}: ${rating}! ${score}/100`
-    : `Check Surf Conditions Now`;
+  const headlines = score >= 70
+    ? [`${spotName}: ${rating}!`, `Score: ${score}/100`, 'The Surf Is On']
+    : ['Check Surf Conditions', 'Should I Go Surf?', `${spotName}: ${score}/100`];
 
-  return { primaryTexts, headline };
+  const descriptions = [
+    'Free real-time surf conditions for 73+ beaches worldwide',
+    'Wave height, swell period, wind & water temp scored 0-100',
+    'Know before you go — instant surf reports'
+  ];
+
+  return { primaryTexts, headlines, descriptions };
 }
 
 module.exports = { uploadImage, createCreative, generateAdContent };

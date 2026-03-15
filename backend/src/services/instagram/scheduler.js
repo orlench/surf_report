@@ -73,7 +73,7 @@ async function refreshCreatives() {
     logger.info(`[Marketing] Best spot: ${spotName} (score: ${best.score})`);
 
     const imageUrl = 'https://shouldigo.surf/logo512.png';
-    const { primaryTexts, headline } = generateAdContent(best.data, spotName);
+    const { primaryTexts, headlines, descriptions } = generateAdContent(best.data, spotName);
     const imageHash = await uploadImage(imageUrl);
     if (!imageHash) {
       logger.error('[Marketing] Failed to upload seed image — aborting');
@@ -84,7 +84,8 @@ async function refreshCreatives() {
     const creativeId = await createCreative({
       imageHashes: [imageHash],
       primaryTexts,
-      headline,
+      headlines,
+      descriptions,
       linkUrl
     });
 

@@ -11,3 +11,7 @@ Before installing or setting up unfamiliar tools, first confirm with the user: 1
 ## Deployment & Security
 
 For deployment and security tasks, verify each step explicitly — don't assume API keys are correctly configured. Print confirmation of env vars (redacted) before proceeding.
+
+## Bias to Action
+
+If something can be solved by editing code, do it — don't ask the user to manually configure env vars, infrastructure, or dashboards. Only defer to the user for secrets, credentials, or decisions that require their judgment. Default to doing the work yourself.

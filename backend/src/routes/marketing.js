@@ -214,13 +214,26 @@ router.post('/setup', async (req, res) => {
     const primaryTexts = [
       'Should you go surf today? Get real-time conditions for any beach.',
       'Check surf scores instantly. Wave height, period, wind — all in one place.',
-      'Know before you go. Real-time surf conditions scored 0-100.'
+      'Know before you go. Real-time surf conditions scored 0-100.',
+      'Free surf reports for 73+ beaches. Wave height, swell, wind & water temp — scored 0-100.',
+      'Stop guessing, start surfing. Real-time conditions for any beach in seconds.'
+    ];
+    const headlines = [
+      'Should I Go Surf?',
+      'Free Real-Time Surf Reports',
+      'Check Conditions Now'
+    ];
+    const descriptions = [
+      'Real-time surf conditions for 73+ beaches worldwide',
+      'Wave height, swell period, wind & water temp scored 0-100',
+      'Know before you go — instant surf reports'
     ];
 
     const creativeId = await createCreative({
       imageHashes: [imageHash],
       primaryTexts,
-      headline: 'Should I Go Surf?',
+      headlines,
+      descriptions,
       linkUrl
     });
 

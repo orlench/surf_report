@@ -62,6 +62,7 @@ async function createAdSet() {
     optimization_goal: 'LINK_CLICKS',
     bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
     targeting: JSON.stringify(targeting),
+    is_dynamic_creative: true,
     status: 'PAUSED',
     access_token: token
   };
