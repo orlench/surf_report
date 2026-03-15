@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { fetchSpots, fetchConditions, fetchConditionsByCoords, createSpot } from '../api/surfApi';
 import useGeoDetect from '../hooks/useGeoDetect';
 import useSSEProgress from '../hooks/useSSEProgress';
@@ -278,6 +278,7 @@ function Dashboard() {
       });
     },
     refetchInterval: 10 * 60 * 1000,
+    placeholderData: keepPreviousData,
     enabled: !!selectedSpot && !showProgressScreen,
   });
 
