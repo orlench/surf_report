@@ -6,13 +6,14 @@ import useSSEProgress from '../hooks/useSSEProgress';
 import ScoreDisplay from './ScoreDisplay';
 import { getBoardSVG } from './BoardIllustrations';
 import SpotSelector from './SpotSelector';
-const SpotMap = lazy(() => import('./SpotMap'));
 import SpotFeedback from './SpotFeedback';
 import NotificationBell from './NotificationBell';
 import ProgressScreen from './ProgressScreen';
 import SkeletonDashboard from './SkeletonDashboard';
 import BeachSketch from './BeachSketch';
 import './Dashboard.css';
+
+const SpotMap = lazy(() => import('./SpotMap'));
 
 function trackUtmCampaign() {
   const params = new URLSearchParams(window.location.search);

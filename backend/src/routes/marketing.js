@@ -239,7 +239,7 @@ router.post('/setup', async (req, res) => {
   } catch (err) {
     const metaError = err.response?.data?.error || {};
     logger.error(`[Marketing] Setup failed: ${metaError.message || err.message}`);
-    res.status(500).json({ error: 'Campaign setup failed' });
+    res.status(500).json({ error: 'Campaign setup failed', detail: metaError.message || err.message });
   }
 });
 
