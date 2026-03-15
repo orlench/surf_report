@@ -42,7 +42,7 @@ async function createAdSet() {
   const adAccountId = process.env.META_AD_ACCOUNT_ID;
   const token = getToken();
 
-  const dailyBudget = process.env.META_AD_DAILY_BUDGET || '1000'; // cents
+  const dailyBudget = process.env.META_AD_DAILY_BUDGET || '500'; // cents ($5/day)
 
   // Broad targeting across surf countries — let Meta's Advantage+ optimize delivery
   const targeting = {
