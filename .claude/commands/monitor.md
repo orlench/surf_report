@@ -12,6 +12,11 @@ curl -s -X POST https://api.shouldigo.surf/api/marketing/daily-report/generate -
 
 If ADMIN_SECRET is not set in the environment, check `railway variables` or ask the user.
 
+Also fetch Meta Ads country breakdown to check audience distribution:
+```
+curl -s "https://graph.facebook.com/v25.0/120242229788240189/insights?fields=spend,impressions,clicks,reach&breakdowns=country&date_preset=last_7d&access_token=$META_ACCESS_TOKEN"
+```
+
 Then present the results in this format:
 
 **Alerts** (if any — show these first, prominently)
@@ -23,6 +28,21 @@ Then present the results in this format:
 
 **Meta Ads** — campaign status, spend, impressions, clicks, CPC, CTR, reach
 
-**Errors** — any JS errors detected
+**Meta Ads Country Distribution** — show which countries are getting impressions/clicks. Flag if spend is concentrated in <3 countries (Meta may be optimizing for cheap clicks instead of distributing).
 
-Keep it concise. Highlight anything unusual.
+**Spot Distribution** — if page data is available, check which spots users are viewing. Flag if >80% of traffic goes to the homepage without loading a spot (suggests high bounce rate or geo-detection issues). Flag if only 1-2 spots are being viewed (suggests narrow audience or ad targeting issue).
+
+**Errors** — any JS errors detected. Investigate each:
+  - If the error is from our code, fix it immediately
+  - If it's external (cross-origin "Script error.", browser extensions, WebView bridges), note it as external and skip
+  - Flag any error with count > 3 as needing attention regardless of source
+
+**Checklist — things to verify every time:**
+- [ ] Is the Meta campaign ACTIVE with effective_status ACTIVE?
+- [ ] Is spend distributed across multiple countries, not just cheapest markets?
+- [ ] Are sessions trending up, down, or flat vs 7-day average?
+- [ ] Are there any new JS errors that weren't in the previous report?
+- [ ] Is traffic from paid sources (instagram/paid) actually converting to spot views?
+- [ ] Are page titles showing diverse spots, or is traffic stuck on 1-2 spots?
+
+Keep it concise. Highlight anything unusual. If you find issues, fix them proactively — don't wait for the user to ask.

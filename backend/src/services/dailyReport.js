@@ -1,11 +1,31 @@
+const axios = require('axios');
 const NodeCache = require('node-cache');
 const logger = require('../utils/logger');
 const analytics = require('./analyticsClient');
 const { getCampaignStatus } = require('./instagram/campaignManager');
-const { getTokenExpiry, isConfigured: isMetaConfigured } = require('./instagram/tokenManager');
+const { getToken, getTokenExpiry, isConfigured: isMetaConfigured, GRAPH_API_BASE } = require('./instagram/tokenManager');
 
 const cache = new NodeCache({ stdTTL: 48 * 60 * 60 }); // 48h TTL
 let intervalHandle = null;
+
+/**
+ * Get Meta Ads spend/impressions breakdown by country (last 7 days)
+ */
+async function getAdCountryBreakdown() {
+  const token = getToken();
+  const campaignId = '120242229788240189';
+  if (!token) return null;
+
+  const { data } = await axios.get(`${GRAPH_API_BASE}/${campaignId}/insights`, {
+    params: {
+      fields: 'spend,impressions,clicks,reach',
+      breakdowns: 'country',
+      date_preset: 'last_7d',
+      access_token: token
+    }
+  });
+  return data.data || [];
+}
 
 async function generateReport() {
   logger.info('[DailyReport] Generating report...');
@@ -18,12 +38,16 @@ async function generateReport() {
     analytics.getTrafficSources('yesterday').catch(err => { logger.error(`[DailyReport] GA4 sources failed: ${err.message}`); return null; }),
     analytics.getErrors('yesterday').catch(err => { logger.error(`[DailyReport] GA4 errors failed: ${err.message}`); return null; }),
     analytics.getDailyTrend('last7days').catch(err => { logger.error(`[DailyReport] GA4 trend failed: ${err.message}`); return null; }),
+    analytics.getTopPages('yesterday').catch(err => { logger.error(`[DailyReport] GA4 pages failed: ${err.message}`); return null; }),
     isMetaConfigured()
       ? getCampaignStatus().catch(err => { logger.error(`[DailyReport] Meta status failed: ${err.message}`); return null; })
       : Promise.resolve(null),
+    isMetaConfigured()
+      ? getAdCountryBreakdown().catch(err => { logger.error(`[DailyReport] Meta countries failed: ${err.message}`); return null; })
+      : Promise.resolve(null),
   ];
 
-  const [yesterday, last7days, sources, errors, trend, metaStatus] = await Promise.all(promises);
+  const [yesterday, last7days, sources, errors, trend, pages, metaStatus, adCountries] = await Promise.all(promises);
 
   // Build alerts
   const alerts = [];
@@ -74,6 +98,35 @@ async function generateReport() {
     }
   }
 
+  // Spot distribution alerts
+  if (pages?.rows) {
+    const spotPages = pages.rows.filter(r => r.pagePath && r.pagePath !== '/' && r.pagePath.startsWith('/spot/'));
+    const totalViews = pages.rows.reduce((sum, r) => sum + parseInt(r.screenPageViews || 0), 0);
+    const homepageViews = pages.rows.find(r => r.pagePath === '/')?.screenPageViews || 0;
+    const homepagePercent = totalViews > 0 ? Math.round((parseInt(homepageViews) / totalViews) * 100) : 0;
+
+    if (homepagePercent > 80) {
+      alerts.push({ level: 'warning', message: `${homepagePercent}% of views are homepage only — users may not be loading spots` });
+    }
+    if (spotPages.length > 0 && spotPages.length <= 2) {
+      const spotNames = spotPages.map(r => r.pagePath.replace('/spot/', '')).join(', ');
+      alerts.push({ level: 'info', message: `Only ${spotPages.length} spot(s) viewed: ${spotNames} — narrow audience or targeting issue?` });
+    }
+  }
+
+  // Ad country concentration alert
+  if (adCountries && adCountries.length > 0) {
+    const totalSpend = adCountries.reduce((sum, r) => sum + parseFloat(r.spend || 0), 0);
+    if (totalSpend > 0) {
+      const sorted = [...adCountries].sort((a, b) => parseFloat(b.spend) - parseFloat(a.spend));
+      const topCountrySpend = parseFloat(sorted[0]?.spend || 0);
+      const topCountryPct = Math.round((topCountrySpend / totalSpend) * 100);
+      if (topCountryPct > 60) {
+        alerts.push({ level: 'warning', message: `Ad spend concentrated: ${sorted[0].country} has ${topCountryPct}% of spend — Meta may be chasing cheap clicks` });
+      }
+    }
+  }
+
   const report = {
     timestamp,
     date: new Date().toISOString().slice(0, 10),
@@ -82,11 +135,13 @@ async function generateReport() {
       yesterday: yesterday?.totals || null,
       last7days: last7days?.totals || null,
       sources: sources?.rows || [],
+      pages: pages?.rows || [],
       errors: errors?.rows || [],
       errorCount: errors?.rows?.length || 0,
       trend: trend?.rows || [],
     },
     meta: metaStatus,
+    metaCountries: adCountries,
   };
 
   cache.set('latest', report);
