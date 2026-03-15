@@ -108,6 +108,8 @@ function Dashboard() {
   const [userSkill, setUserSkill] = useState(
     () => localStorage.getItem('userSkill') || ''
   );
+  // "kook" is a frontend-only joke — don't send to API or use in query keys
+  const apiSkill = userSkill && userSkill !== 'kook' ? userSkill : '';
 
   // Progress screen flow
   const isFirstVisitRef = useRef(selectedSpot === null);
@@ -166,7 +168,7 @@ function Dashboard() {
   useEffect(() => {
     if (!finalData) return;
     queryClient.setQueryData(
-      ['conditions', finalData.spotId, userWeight, userSkill],
+      ['conditions', finalData.spotId, userWeight, apiSkill],
       finalData
     );
     cancelSkeletonTimer();
@@ -178,7 +180,7 @@ function Dashboard() {
       cleanup();
     }, delay);
     return () => clearTimeout(timer);
-  }, [finalData, queryClient, userWeight, userSkill, cleanup, cancelSkeletonTimer]);
+  }, [finalData, queryClient, userWeight, apiSkill, cleanup, cancelSkeletonTimer]);
 
   // SSE error fallback: dismiss progress screen so skeleton auto-shows
   // while React Query fetches the fallback REST endpoint
@@ -261,18 +263,18 @@ function Dashboard() {
     error,
     isPending: conditionsLoading,
   } = useQuery({
-    queryKey: ['conditions', selectedSpot, userWeight, userSkill],
+    queryKey: ['conditions', selectedSpot, userWeight, apiSkill],
     queryFn: () => {
       const customMeta = getCustomSpotMeta(selectedSpot);
       if (customMeta) {
         return fetchConditionsByCoords(customMeta.lat, customMeta.lon, customMeta.name, customMeta.country, {
           weight: userWeight || undefined,
-          skill: userSkill || undefined
+          skill: apiSkill || undefined
         });
       }
       return fetchConditions(selectedSpot, {
         weight: userWeight || undefined,
-        skill: userSkill || undefined
+        skill: apiSkill || undefined
       });
     },
     refetchInterval: 10 * 60 * 1000,
