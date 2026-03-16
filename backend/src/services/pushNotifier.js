@@ -68,7 +68,7 @@ let intervalHandle = null;
 function configureVapid() {
   const publicKey = process.env.VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT || 'mailto:orlench@gmail.com';
+  const subject = process.env.VAPID_SUBJECT || 'mailto:noreply@shouldigo.surf';
 
   if (!publicKey || !privateKey) {
     logger.warn('[Push] VAPID keys not configured — push notifications disabled');
