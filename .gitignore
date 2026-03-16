@@ -45,6 +45,12 @@ backend/data/discoveredUrls.json
 
 .vercel
 
+# Signing keys
+*.jks
+*.keystore
+*.p8
+*.pem
+
 # Xcode / iOS
 ios/*.xcodeproj/xcuserdata/
 ios/*.xcodeproj/project.xcworkspace/xcuserdata/

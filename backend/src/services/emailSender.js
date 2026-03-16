@@ -204,7 +204,7 @@ function buildHtml(report) {
 function buildRawEmail(to, subject, html) {
   const boundary = 'boundary_' + Date.now();
   const raw = [
-    `From: "SIG Monitor" <orlench@gmail.com>`,
+    `From: "SIG Monitor" <${process.env.REPORT_EMAIL || 'noreply@shouldigo.surf'}>`,
     `To: ${to}`,
     `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
     `MIME-Version: 1.0`,
@@ -238,7 +238,7 @@ async function sendDailyReport(report) {
 
   try {
     const token = await getAccessToken();
-    const raw = buildRawEmail('orlench@gmail.com', subject, buildHtml(report));
+    const raw = buildRawEmail(process.env.REPORT_EMAIL || 'noreply@shouldigo.surf', subject, buildHtml(report));
 
     await axios.post(
       'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
@@ -249,7 +249,7 @@ async function sendDailyReport(report) {
       }
     );
 
-    logger.info(`[Email] Daily report sent to orlench@gmail.com`);
+    logger.info(`[Email] Daily report sent successfully`);
   } catch (err) {
     const msg = err.response?.data?.error?.message || err.message;
     logger.error(`[Email] Failed to send: ${msg}`);
