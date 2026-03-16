@@ -4,6 +4,9 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm install
 COPY frontend/ .
+# Frontend build script (generate-sitemap.js) references backend data files
+COPY backend/data/defaultSpots.json /app/backend/data/defaultSpots.json
+COPY backend/data/surfSpots.json /app/backend/data/surfSpots.json
 ENV REACT_APP_API_URL=/api
 RUN npm run build
 
