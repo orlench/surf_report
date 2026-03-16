@@ -1,5 +1,7 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -74,25 +76,45 @@ app.use('/api/nearest-spot', require('./routes/geo'));
 app.use('/api/agent', require('./routes/agent'));
 app.use('/api/marketing', require('./routes/marketing'));
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({
-    name: 'Surf Report API',
-    version: '1.0.0',
-    description: 'Surf conditions aggregator for any beach in the world',
-    endpoints: {
-      spots: '/api/spots',
-      conditions: '/api/conditions/:spotId',
-      agent: '/api/agent/:spotId',
-      allConditions: '/api/conditions',
-      health: '/api/health',
-      pushSubscribe: '/api/push/subscribe',
-      pushUnsubscribe: '/api/push/unsubscribe',
-      pushVapidKey: '/api/push/vapid-public-key'
-    },
-    documentation: 'https://shouldigo.surf'
+// Serve co-located frontend build (GCP Cloud Run deployment)
+const frontendBuildPath = path.join(__dirname, '../frontend-build');
+if (fs.existsSync(frontendBuildPath)) {
+  logger.info(`[Server] Serving frontend from ${frontendBuildPath}`);
+  app.use(express.static(frontendBuildPath, {
+    maxAge: '1h',
+    setHeaders: (res, filePath) => {
+      // Don't cache index.html (SPA entry point)
+      if (filePath.endsWith('index.html')) {
+        res.set('Cache-Control', 'no-cache');
+      }
+    }
+  }));
+
+  // SPA fallback — serve index.html for all non-API, non-file routes
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendBuildPath, 'index.html'));
   });
-});
+} else {
+  // No frontend build — serve API info at root (development / separate deployment)
+  app.get('/', (req, res) => {
+    res.json({
+      name: 'Surf Report API',
+      version: '1.0.0',
+      description: 'Surf conditions aggregator for any beach in the world',
+      endpoints: {
+        spots: '/api/spots',
+        conditions: '/api/conditions/:spotId',
+        agent: '/api/agent/:spotId',
+        allConditions: '/api/conditions',
+        health: '/api/health',
+        pushSubscribe: '/api/push/subscribe',
+        pushUnsubscribe: '/api/push/unsubscribe',
+        pushVapidKey: '/api/push/vapid-public-key'
+      },
+      documentation: 'https://shouldigo.surf'
+    });
+  });
+}
 
 // 404 handler
 app.use((req, res) => {
