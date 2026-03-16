@@ -2,7 +2,7 @@
 FROM node:20-slim AS frontend
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm install
 COPY frontend/ .
 ENV REACT_APP_API_URL=/api
 RUN npm run build
