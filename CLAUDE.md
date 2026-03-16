@@ -24,6 +24,10 @@ Safe approach for DNS migrations:
 
 Never combine "add" and "replace" instructions in the same block — make it crystal clear which records are safe to add and which would affect production.
 
+## Security Checks
+
+After any work involving secrets, credentials, API keys, env vars, deployment config, or .gitignore changes — proactively run a security audit. Check for: hardcoded secrets in source, sensitive files not in .gitignore, secrets in URL params, and npm vulnerabilities. Don't wait for the user to ask.
+
 ## Bias to Action
 
 If something can be solved by editing code, do it — don't ask the user to manually configure env vars, infrastructure, or dashboards. Only defer to the user for secrets, credentials, or decisions that require their judgment. Default to doing the work yourself.
