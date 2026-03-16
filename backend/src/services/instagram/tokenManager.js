@@ -3,9 +3,8 @@ const logger = require('../../utils/logger');
 
 const GRAPH_API_BASE = 'https://graph.facebook.com/v25.0';
 
-// Meta account IDs — these are public identifiers, not secrets
-const META_AD_ACCOUNT_ID = '2061368671319472';
-const META_PAGE_ID = '1102614262925139';
+const META_AD_ACCOUNT_ID = process.env.META_AD_ACCOUNT_ID || '';
+const META_PAGE_ID = process.env.META_PAGE_ID || '';
 
 // In-memory token store (refreshed on startup + periodically)
 let currentToken = process.env.META_ACCESS_TOKEN || null;

@@ -1,7 +1,7 @@
 const { BetaAnalyticsDataClient } = require('@google-analytics/data');
 const logger = require('../utils/logger');
 
-const GA_PROPERTY_ID = process.env.GA_PROPERTY_ID || '526407486';
+const GA_PROPERTY_ID = process.env.GA_PROPERTY_ID || '';
 
 let client = null;
 
