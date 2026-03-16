@@ -31,3 +31,7 @@ After any work involving secrets, credentials, API keys, env vars, deployment co
 ## Bias to Action
 
 If something can be solved by editing code, do it — don't ask the user to manually configure env vars, infrastructure, or dashboards. Only defer to the user for secrets, credentials, or decisions that require their judgment. Default to doing the work yourself.
+
+## Git Workflow
+
+After completing a code fix or feature, commit and push immediately — don't ask for permission. Use descriptive commit messages.
