@@ -73,26 +73,26 @@ async function callRemoteMcp(toolName, toolArgs, timeoutMs = 25000) {
   const apiKey = process.env.BRIGHT_DATA_API_KEY;
   if (!apiKey) throw new Error('BRIGHT_DATA_API_KEY not set');
 
-  const url = `${MCP_ENDPOINT}?token=${apiKey}`;
+  const authHeaders = { 'Authorization': `Bearer ${apiKey}` };
 
   // Step 1: Initialize (required by MCP protocol before tools/call)
-  const initResp = await post(url, {
+  const initResp = await post(MCP_ENDPOINT, {
     jsonrpc: '2.0', id: 1, method: 'initialize',
     params: {
       protocolVersion: '2024-11-05',
       capabilities: {},
       clientInfo: { name: 'surf-report', version: '1.0.0' }
     }
-  }, {}, 10000);
+  }, authHeaders, 10000);
 
   const sessionId = initResp.headers['mcp-session-id'];
-  const sessionHeaders = sessionId ? { 'Mcp-Session-Id': sessionId } : {};
+  const sessionHeaders = { ...authHeaders, ...(sessionId ? { 'Mcp-Session-Id': sessionId } : {}) };
 
   // Step 2: Notify initialized
-  await post(url, { jsonrpc: '2.0', method: 'notifications/initialized', params: {} }, sessionHeaders, 5000).catch(() => {});
+  await post(MCP_ENDPOINT, { jsonrpc: '2.0', method: 'notifications/initialized', params: {} }, sessionHeaders, 5000).catch(() => {});
 
   // Step 3: Call the tool
-  const toolResp = await post(url, {
+  const toolResp = await post(MCP_ENDPOINT, {
     jsonrpc: '2.0', id: 2, method: 'tools/call',
     params: { name: toolName, arguments: toolArgs }
   }, sessionHeaders, timeoutMs);
