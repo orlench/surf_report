@@ -1,8 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+jest.mock('./components/Dashboard', () => function MockDashboard() {
+  return <div>dashboard</div>;
+});
+
+test('renders dashboard', () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(screen.getByText(/dashboard/i)).toBeInTheDocument();
 });

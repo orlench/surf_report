@@ -18,13 +18,13 @@ function SpotSelector({ spots, value, onChange, nearbySpots = [] }) {
   const [mapInitialSearch, setMapInitialSearch] = useState('');
   const [search, setSearch] = useState('');
   const [highlighted, setHighlighted] = useState(-1);
+  const [customSpots, setCustomSpots] = useState(() => getRecentCustomSpots());
   const containerRef = useRef(null);
   const inputRef = useRef(null);
   const listRef = useRef(null);
 
   // Find selected spot name (check hardcoded spots + custom spots)
   const selectedSpot = spots?.find(s => s.id === value);
-  const customSpots = useMemo(() => getRecentCustomSpots(), []);
   const customMatch = customSpots.find(s => s.id === value);
   const selectedLabel = selectedSpot ? selectedSpot.name : (customMatch ? customMatch.name : value);
 
@@ -86,6 +86,11 @@ function SpotSelector({ spots, value, onChange, nearbySpots = [] }) {
     if (isOpen && inputRef.current) {
       inputRef.current.focus();
     }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setCustomSpots(getRecentCustomSpots());
   }, [isOpen]);
 
   // Scroll highlighted item into view
@@ -265,6 +270,7 @@ function SpotSelector({ spots, value, onChange, nearbySpots = [] }) {
             const updated = [spotMeta, ...existing.filter(s => s.id !== id)].slice(0, 20);
             localStorage.setItem('customSpots', JSON.stringify(updated));
             localStorage.setItem('activeCustomSpot', JSON.stringify(spotMeta));
+            setCustomSpots(updated);
             setShowMap(false);
             onChange(id, spotMeta);
           }}

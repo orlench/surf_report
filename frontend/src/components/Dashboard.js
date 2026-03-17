@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
-import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchSpots, fetchConditions, fetchConditionsByCoords, createSpot } from '../api/surfApi';
 import useGeoDetect from '../hooks/useGeoDetect';
 import useSSEProgress from '../hooks/useSSEProgress';
@@ -203,6 +203,8 @@ function Dashboard() {
   } : null;
 
   const handleSpotChange = useCallback((spotId, providedMeta) => {
+    cleanup();
+    cancelSkeletonTimer();
     setSelectedSpot(spotId);
     setAdjustedScore(null);
     setAdjustedRating(null);
@@ -231,7 +233,7 @@ function Dashboard() {
     } else if (spotCheckCount.current === 2) {
       trackConversion('second_spot_check');
     }
-  }, [startStream, startSkeletonTimer]);
+  }, [cleanup, cancelSkeletonTimer, startStream, startSkeletonTimer]);
 
   // Keep URL in sync with selected spot
   useEffect(() => {
@@ -295,10 +297,28 @@ function Dashboard() {
     const now = Date.now();
     if (now - lastRefresh.current < 5000) return;
     lastRefresh.current = now;
+    cleanup();
+    cancelSkeletonTimer();
+
+    const customMeta = getCustomSpotMeta(selectedSpot);
+    if (customMeta) {
+      createSpot(customMeta).catch(() => {});
+      setShowProgressScreen(false);
+      queryClient.removeQueries({
+        queryKey: ['conditions', selectedSpot, userWeight, apiSkill],
+        exact: true
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['conditions', selectedSpot, userWeight, apiSkill],
+        exact: true
+      });
+      return;
+    }
+
     setShowProgressScreen(true);
     startStream(selectedSpot);
     startSkeletonTimer();
-  }, [startStream, selectedSpot, startSkeletonTimer]);
+  }, [cleanup, cancelSkeletonTimer, queryClient, selectedSpot, userWeight, apiSkill, startStream, startSkeletonTimer]);
 
   const currentSpotName = conditions?.spotName
     || spots?.find(s => s.id === selectedSpot)?.name
