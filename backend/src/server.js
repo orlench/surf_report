@@ -31,7 +31,30 @@ function createApp() {
   const app = express();
 
   // Middleware
-  app.use(helmet()); // Security headers
+  const apiOrigin = process.env.API_ORIGIN || 'https://api.shouldigo.surf';
+  const appOrigins = [
+    "'self'",
+    'https://shouldigo.surf',
+    'https://www.shouldigo.surf',
+    apiOrigin
+  ];
+  const mapOrigins = [
+    'https://tiles.openfreemap.org'
+  ];
+  app.use(helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: [...appOrigins, ...mapOrigins, 'https://www.googletagmanager.com', 'https://www.google-analytics.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', ...mapOrigins, 'https://www.google-analytics.com'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https:'],
+        fontSrc: ["'self'", 'https:', 'data:', ...mapOrigins],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com'],
+        workerSrc: ["'self'", 'blob:'],
+      }
+    }
+  })); // Security headers + CSP needed for web API and map assets
 
   // Rate limiting
   const apiLimiter = rateLimit({

@@ -321,6 +321,15 @@ describe('Surf Report API', () => {
   });
 
   describe('Core API', () => {
+    test('GET / serves a CSP that allows the web API and map assets', async () => {
+      const { status, headers } = await api('/');
+      const csp = headers.get('content-security-policy') || '';
+      expect(status).toBe(200);
+      expect(csp).toContain("connect-src");
+      expect(csp).toContain('https://api.shouldigo.surf');
+      expect(csp).toContain('https://tiles.openfreemap.org');
+    });
+
     test('GET /api returns API info', async () => {
       const { status, body } = await api('/api');
       expect(status).toBe(200);
