@@ -164,17 +164,15 @@ function Dashboard() {
     isFirstVisitRef.current = false;
   }, [nearestSpot, isDetecting, startStream, startSkeletonTimer]);
 
-  // Store SSE result directly so queryFn can return it without a cache lookup
-  const sseFreshDataRef = useRef(null);
   // Track previous spot to avoid showing stale scores from a different spot
   const prevSpotRef = useRef(selectedSpot);
 
   // When SSE completes, seed React Query cache and dismiss progress screen
   useEffect(() => {
     if (!finalData) return;
-    sseFreshDataRef.current = finalData;
+    // Use selectedSpot (not finalData.spotId) to match the useQuery key exactly
     queryClient.setQueryData(
-      ['conditions', finalData.spotId, userWeight, apiSkill],
+      ['conditions', selectedSpot, userWeight, apiSkill],
       finalData
     );
     cancelSkeletonTimer();
@@ -186,7 +184,7 @@ function Dashboard() {
       cleanup();
     }, delay);
     return () => clearTimeout(timer);
-  }, [finalData, queryClient, userWeight, apiSkill, cleanup, cancelSkeletonTimer]);
+  }, [finalData, queryClient, selectedSpot, userWeight, apiSkill, cleanup, cancelSkeletonTimer]);
 
   // SSE error fallback: dismiss progress screen so skeleton auto-shows
   // while React Query fetches the fallback REST endpoint
@@ -273,12 +271,6 @@ function Dashboard() {
   } = useQuery({
     queryKey: ['conditions', selectedSpot, userWeight, apiSkill],
     queryFn: () => {
-      // SSE just seeded this data — return it directly instead of firing a redundant REST call
-      if (sseFreshDataRef.current) {
-        const data = sseFreshDataRef.current;
-        sseFreshDataRef.current = null;
-        return data;
-      }
       const customMeta = getCustomSpotMeta(selectedSpot);
       if (customMeta) {
         return fetchConditionsByCoords(customMeta.lat, customMeta.lon, customMeta.name, customMeta.country, {
