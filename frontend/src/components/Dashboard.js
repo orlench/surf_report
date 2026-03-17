@@ -278,6 +278,7 @@ function Dashboard() {
         skill: apiSkill || undefined
       });
     },
+    staleTime: 5 * 60 * 1000,
     refetchInterval: 10 * 60 * 1000,
     placeholderData: (prev, prevQuery) => {
       // Keep previous data only when the spot is the same (weight/skill change).
