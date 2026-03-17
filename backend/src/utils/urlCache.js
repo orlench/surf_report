@@ -1,7 +1,7 @@
 const fs = require('fs');
-const path = require('path');
+const { resolve } = require('./dataPath');
 
-const CACHE_FILE = path.join(__dirname, '../../data/discoveredUrls.json');
+const CACHE_FILE = resolve('discoveredUrls.json');
 
 let cache = {};
 

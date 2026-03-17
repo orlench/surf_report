@@ -170,6 +170,114 @@ router.get('/og/:spotId', async (req, res) => {
   res.send(html);
 });
 
+/**
+ * GET /spot/:spotId
+ * Serve the SPA index.html with injected OG meta tags for social media crawlers.
+ * Replaces the Vercel serverless function (frontend/api/spot/[id].js).
+ * Only active when the frontend build is co-located (GCP Cloud Run deployment).
+ */
+let cachedIndexHtml = null;
+
+function getFrontendBuildPath() {
+  // Check for co-located frontend build (Docker multi-stage build)
+  const buildPath = path.join(__dirname, '../../frontend-build/index.html');
+  if (fs.existsSync(buildPath)) return buildPath;
+  return null;
+}
+
+function prettifyName(id) {
+  return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+router.get('/spot/:spotId', (req, res, next) => {
+  const indexPath = getFrontendBuildPath();
+  if (!indexPath) {
+    // Frontend not co-located (dev mode or separate deployment) — skip to SPA fallback
+    return next();
+  }
+
+  const { spotId } = req.params;
+  const spots = getAllSpots();
+  const spot = spots.find(s => s.id === spotId);
+  const name = spot ? spot.name : prettifyName(spotId);
+  const country = spot ? (spot.country || '') : '';
+  const location = country ? ` in ${country}` : '';
+
+  const title = escapeHtml(`${name} Surf Report — Real-Time Conditions & Score`);
+  const description = escapeHtml(`Should you surf ${name}${location} today? Check real-time wave height, wind, swell period, water temp, and get a surf score from 0-100.`);
+  const url = `${FRONTEND_URL}/spot/${encodeURIComponent(spotId)}`;
+
+  const structuredData = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Beach",
+    "name": name,
+    "description": `Should you surf ${name}${location} today? Check real-time wave height, wind, swell period, water temp, and get a surf score from 0-100.`,
+    "url": url,
+    "isPartOf": {
+      "@type": "WebApplication",
+      "name": "Should I Go?",
+      "url": FRONTEND_URL
+    }
+  });
+
+  // Read and cache index.html
+  if (!cachedIndexHtml) {
+    try {
+      cachedIndexHtml = fs.readFileSync(indexPath, 'utf8');
+    } catch (e) {
+      logger.error(`[SEO] Failed to read index.html: ${e.message}`);
+      return next();
+    }
+  }
+
+  let html = cachedIndexHtml;
+
+  // Replace title
+  html = html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`);
+
+  // Replace meta description
+  html = html.replace(
+    /<meta name="description" content="[^"]*"/,
+    `<meta name="description" content="${description}"`
+  );
+
+  // Replace OG tags
+  html = html.replace(
+    /<meta property="og:title" content="[^"]*"/,
+    `<meta property="og:title" content="${title}"`
+  );
+  html = html.replace(
+    /<meta property="og:description" content="[^"]*"/,
+    `<meta property="og:description" content="${description}"`
+  );
+
+  // Add og:url and canonical
+  html = html.replace(
+    /<!-- canonical and og:url are set dynamically per spot -->/,
+    `<meta property="og:url" content="${url}" />\n    <link rel="canonical" href="${url}" />`
+  );
+
+  // Replace Twitter tags
+  html = html.replace(
+    /<meta name="twitter:title" content="[^"]*"/,
+    `<meta name="twitter:title" content="${title}"`
+  );
+  html = html.replace(
+    /<meta name="twitter:description" content="[^"]*"/,
+    `<meta name="twitter:description" content="${description}"`
+  );
+
+  // Add spot-specific structured data before closing </head>
+  html = html.replace(
+    '</head>',
+    `<script type="application/ld+json">${structuredData}</script>\n</head>`
+  );
+
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.set('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
+  res.status(200).send(html);
+});
+
 function escapeHtml(str) {
   return str
     .replace(/&/g, '&amp;')

@@ -6,9 +6,11 @@ const { getAllSpots, getSpotById, getOrCreateSpot, loadPersistedSpots } = requir
 const { interpretFeedback } = require('../services/llm');
 const logger = require('../utils/logger');
 
-const USER_SPOTS_PATH = path.join(__dirname, '../../data/userSpots.json');
+const { resolve } = require('../utils/dataPath');
+
+const USER_SPOTS_PATH = resolve('userSpots.json');
 const DEFAULT_SPOTS_PATH = path.join(__dirname, '../../data/defaultSpots.json');
-const FEEDBACK_PATH = path.join(__dirname, '../../data/spotFeedback.json');
+const FEEDBACK_PATH = resolve('spotFeedback.json');
 
 // Load default spots first (global database)
 try {

@@ -2,8 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
+const { resolve } = require('../utils/dataPath');
 
-const DATA_FILE = path.join(__dirname, '../../data/pushSubscriptions.json');
+const DATA_FILE = resolve('pushSubscriptions.json');
 
 function readAll() {
   try {
