@@ -279,7 +279,12 @@ function Dashboard() {
       });
     },
     refetchInterval: 10 * 60 * 1000,
-    placeholderData: keepPreviousData,
+    placeholderData: (prev, prevQuery) => {
+      // Keep previous data only when the spot is the same (weight/skill change).
+      // When switching spots, show loading instead of flashing the old spot's score.
+      const prevSpot = prevQuery?.queryKey?.[1];
+      return prevSpot === selectedSpot ? prev : undefined;
+    },
     enabled: !!selectedSpot && !showProgressScreen,
   });
 
