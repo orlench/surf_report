@@ -164,9 +164,13 @@ function Dashboard() {
     isFirstVisitRef.current = false;
   }, [nearestSpot, isDetecting, startStream, startSkeletonTimer]);
 
+  // Track whether SSE just provided fresh data (skip redundant REST fetch)
+  const sseFreshRef = useRef(false);
+
   // When SSE completes, seed React Query cache and dismiss progress screen
   useEffect(() => {
     if (!finalData) return;
+    sseFreshRef.current = true;
     queryClient.setQueryData(
       ['conditions', finalData.spotId, userWeight, apiSkill],
       finalData
@@ -265,6 +269,11 @@ function Dashboard() {
   } = useQuery({
     queryKey: ['conditions', selectedSpot, userWeight, apiSkill],
     queryFn: () => {
+      // SSE just seeded this data — return it instead of firing a redundant REST call
+      if (sseFreshRef.current) {
+        sseFreshRef.current = false;
+        return queryClient.getQueryData(['conditions', selectedSpot, userWeight, apiSkill]);
+      }
       const customMeta = getCustomSpotMeta(selectedSpot);
       if (customMeta) {
         return fetchConditionsByCoords(customMeta.lat, customMeta.lon, customMeta.name, customMeta.country, {
