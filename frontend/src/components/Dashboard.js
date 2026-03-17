@@ -164,9 +164,6 @@ function Dashboard() {
     isFirstVisitRef.current = false;
   }, [nearestSpot, isDetecting, startStream, startSkeletonTimer]);
 
-  // Track previous spot to avoid showing stale scores from a different spot
-  const prevSpotRef = useRef(selectedSpot);
-
   // When SSE completes, seed React Query cache and dismiss progress screen
   useEffect(() => {
     if (!finalData) return;
@@ -209,8 +206,6 @@ function Dashboard() {
     setSelectedSpot(spotId);
     setAdjustedScore(null);
     setAdjustedRating(null);
-    // Cancel any in-flight conditions fetch for the previous spot
-    queryClient.cancelQueries({ queryKey: ['conditions'] });
 
     const customMeta = providedMeta || getCustomSpotMeta(spotId);
     if (customMeta) {
@@ -284,15 +279,7 @@ function Dashboard() {
       });
     },
     refetchInterval: 10 * 60 * 1000,
-    placeholderData: (previousData) => {
-      // Only keep previous data when weight/skill changed (same spot).
-      // When spot changed, return undefined so we show loading instead of stale score.
-      if (prevSpotRef.current !== selectedSpot) {
-        prevSpotRef.current = selectedSpot;
-        return undefined;
-      }
-      return previousData;
-    },
+    placeholderData: keepPreviousData,
     enabled: !!selectedSpot && !showProgressScreen,
   });
 
