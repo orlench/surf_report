@@ -44,6 +44,31 @@ router.get('/custom', async (req, res, next) => {
     const spotCountry = country ? String(country).slice(0, 100).trim() : '';
     const spotId = spotName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 
+    let weight = null;
+    let skill = null;
+
+    if (req.query.weight) {
+      weight = parseFloat(req.query.weight);
+      if (isNaN(weight) || weight < 20 || weight > 250) {
+        return res.status(400).json({ success: false, error: 'Invalid weight: must be 20-250 kg' });
+      }
+    }
+
+    if (req.query.skill) {
+      const validSkills = ['beginner', 'intermediate', 'advanced', 'expert'];
+      skill = req.query.skill;
+      if (!validSkills.includes(skill)) {
+        return res.status(400).json({ success: false, error: 'Invalid skill: must be beginner, intermediate, advanced, or expert' });
+      }
+    }
+
+    const getBoardRec = (conditions) => {
+      if (weight && skill) {
+        return recommendBoardPersonalized(conditions, { weight, skillLevel: skill });
+      }
+      return recommendBoard(conditions);
+    };
+
     logger.info(`[API] GET /api/conditions/custom ${spotName} (${latNum}, ${lonNum})`);
 
     // Check cache
@@ -79,7 +104,7 @@ router.get('/custom', async (req, res, next) => {
       weights: WEIGHTS,
       conditions: aggregated,
       trend,
-      boardRecommendation: recommendBoard(aggregated),
+      boardRecommendation: getBoardRec(aggregated),
       sources: rawData.map(d => ({
         name: d.source,
         status: 'success',
