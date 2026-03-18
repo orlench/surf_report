@@ -16,6 +16,7 @@ class PushRepository @Inject constructor(
     private val subscriptionStore: SubscriptionStore
 ) {
     suspend fun subscribe(spotId: String, spotName: String, threshold: Int): Boolean {
+        syncPendingTokenIfNeeded()
         val token = secureStorage.getToken() ?: return false
         val response = api.subscribePush(
             PushSubscribeRequest(
@@ -32,6 +33,7 @@ class PushRepository @Inject constructor(
     }
 
     suspend fun unsubscribe(spotId: String): Boolean {
+        syncPendingTokenIfNeeded()
         val token = secureStorage.getToken() ?: return false
         val response = api.unsubscribePush(
             PushUnsubscribeRequest(
@@ -44,6 +46,56 @@ class PushRepository @Inject constructor(
             subscriptionStore.remove(spotId)
         }
         return response.success
+    }
+
+    suspend fun syncPendingTokenIfNeeded(): Boolean {
+        val (oldToken, newToken) = secureStorage.getPendingTokenSync() ?: return true
+        val subscriptions = subscriptionStore.all()
+
+        if (subscriptions.isEmpty()) {
+            secureStorage.clearPendingTokenSync()
+            return true
+        }
+
+        var allSucceeded = true
+
+        for (subscription in subscriptions) {
+            try {
+                val subscribeResponse = api.subscribePush(
+                    PushSubscribeRequest(
+                        type = "fcm",
+                        token = newToken,
+                        spotId = subscription.spotId,
+                        threshold = subscription.threshold
+                    )
+                )
+
+                if (!subscribeResponse.success) {
+                    allSucceeded = false
+                    continue
+                }
+
+                if (oldToken != newToken) {
+                    runCatching {
+                        api.unsubscribePush(
+                            PushUnsubscribeRequest(
+                                token = oldToken,
+                                spotId = subscription.spotId,
+                                type = "fcm"
+                            )
+                        )
+                    }
+                }
+            } catch (_: Exception) {
+                allSucceeded = false
+            }
+        }
+
+        if (allSucceeded) {
+            secureStorage.clearPendingTokenSync()
+        }
+
+        return allSucceeded
     }
 
     fun isSubscribed(spotId: String): Boolean = subscriptionStore.isSubscribed(spotId)

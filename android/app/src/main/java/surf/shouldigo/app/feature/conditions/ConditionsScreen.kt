@@ -24,6 +24,7 @@ fun ConditionsScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val isPersonalizing by viewModel.isPersonalizing.collectAsState()
 
     LaunchedEffect(spot.id) {
         viewModel.load(spot)
@@ -52,6 +53,7 @@ fun ConditionsScreen(
                     response = s.response,
                     isRefreshing = isRefreshing,
                     onRefresh = { viewModel.refresh(spot) },
+                    isPersonalizing = isPersonalizing,
                     savedWeight = viewModel.savedWeight,
                     savedSkill = viewModel.savedSkill,
                     onPersonalize = { w, s -> viewModel.personalize(w, s) }
@@ -73,6 +75,7 @@ private fun LoadedContent(
     response: ConditionsResponse,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit,
+    isPersonalizing: Boolean = false,
     savedWeight: String = "",
     savedSkill: String = "",
     onPersonalize: (weight: String?, skill: String?) -> Unit = { _, _ -> }
@@ -109,6 +112,7 @@ private fun LoadedContent(
                 BoardCard(
                     recommendation = board,
                     conditions = response.conditions,
+                    isPersonalizing = isPersonalizing,
                     savedWeight = savedWeight,
                     savedSkill = savedSkill,
                     onPersonalize = onPersonalize

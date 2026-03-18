@@ -3,7 +3,9 @@ package surf.shouldigo.app.feature.conditions
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -32,12 +34,17 @@ class ConditionsViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
+    private val _isPersonalizing = MutableStateFlow(false)
+    val isPersonalizing: StateFlow<Boolean> = _isPersonalizing
+
     val savedWeight: String get() = prefs.userWeight ?: ""
     val savedSkill: String get() = prefs.userSkill ?: ""
 
     private var currentSpotId: String? = null
     private var currentSpot: Spot? = null
     private var loadJob: Job? = null
+    private var personalizationJob: Job? = null
+    private var personalizationRevision = 0
 
     fun load(spot: Spot) {
         if (currentSpotId == spot.id && _state.value is FetchState.Loaded) return
@@ -45,6 +52,8 @@ class ConditionsViewModel @Inject constructor(
         currentSpotId = spot.id
         currentSpot = spot
         loadJob?.cancel()
+        personalizationJob?.cancel()
+        _isPersonalizing.value = false
 
         // Check if custom spot
         val customMeta = customSpotStore.find(spot.id)
@@ -64,6 +73,21 @@ class ConditionsViewModel @Inject constructor(
                     val response = conditionsRepo.fetchCustomConditions(
                         loc.lat, loc.lon, spot.name, spot.country.ifEmpty { null }
                     )
+                    _state.value = FetchState.Loaded(response)
+                } catch (e: Exception) {
+                    _state.value = FetchState.Error(e.message ?: "Failed to fetch conditions")
+                }
+            }
+            return
+        }
+
+        if (conditionsRepo.hasPersonalization()) {
+            loadJob = viewModelScope.launch {
+                _state.value = FetchState.Streaming(
+                    listOf(ProgressStep("fetch", "Applying your gear profile...", "loading"))
+                )
+                try {
+                    val response = conditionsRepo.fetchViaREST(spot.id)
                     _state.value = FetchState.Loaded(response)
                 } catch (e: Exception) {
                     _state.value = FetchState.Error(e.message ?: "Failed to fetch conditions")
@@ -96,6 +120,8 @@ class ConditionsViewModel @Inject constructor(
 
     fun refresh(spot: Spot) {
         val customMeta = customSpotStore.find(spot.id)
+        personalizationJob?.cancel()
+        _isPersonalizing.value = false
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
@@ -124,7 +150,58 @@ class ConditionsViewModel @Inject constructor(
         prefs.userWeight = weight
         prefs.userSkill = skill
         val spot = currentSpot ?: return
-        refresh(spot)
+
+        personalizationRevision += 1
+        val revision = personalizationRevision
+        personalizationJob?.cancel()
+
+        // "Kook" is a local-only mode on mobile; update the card immediately without refetching.
+        if (skill == "kook") {
+            _isPersonalizing.value = false
+            return
+        }
+
+        personalizationJob = viewModelScope.launch(Dispatchers.Main) {
+            _isPersonalizing.value = true
+
+            try {
+                // Let the UI settle after dropdown/text interactions before refetching.
+                delay(250)
+
+                val response = when {
+                    customSpotStore.find(spot.id) != null -> {
+                        val customMeta = customSpotStore.find(spot.id)!!
+                        conditionsRepo.fetchCustomConditions(
+                            customMeta.lat,
+                            customMeta.lon,
+                            customMeta.name,
+                            customMeta.country
+                        )
+                    }
+                    spot.location != null -> {
+                        conditionsRepo.fetchCustomConditions(
+                            spot.location.lat,
+                            spot.location.lon,
+                            spot.name,
+                            spot.country.ifEmpty { null }
+                        )
+                    }
+                    else -> {
+                        conditionsRepo.fetchViaREST(spot.id)
+                    }
+                }
+
+                if (revision == personalizationRevision && currentSpotId == spot.id) {
+                    _state.value = FetchState.Loaded(response)
+                }
+            } catch (_: Exception) {
+                // Keep the current loaded content visible if personalization refresh fails.
+            } finally {
+                if (revision == personalizationRevision) {
+                    _isPersonalizing.value = false
+                }
+            }
+        }
     }
 
     private fun loadCustomSpot(meta: surf.shouldigo.app.data.model.CustomSpotMeta) {

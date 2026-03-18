@@ -1,8 +1,7 @@
 import Foundation
-import CoreLocation
 
 @MainActor
-class SpotPickerViewModel: NSObject, ObservableObject {
+class SpotPickerViewModel: ObservableObject {
     @Published var spots: [Spot] = []
     @Published var nearbySpots: [Spot] = []
     @Published var searchText = ""
@@ -10,7 +9,7 @@ class SpotPickerViewModel: NSObject, ObservableObject {
     @Published var error: String?
     @Published var isDetectingLocation = false
 
-    private let locationManager = CLLocationManager()
+    private let locationHelper = LocationHelper()
 
     var filteredSpots: [Spot] {
         if searchText.isEmpty { return spots }
@@ -29,17 +28,16 @@ class SpotPickerViewModel: NSObject, ObservableObject {
             .map { (country: $0.key, spots: $0.value.sorted { $0.name < $1.name }) }
     }
 
-    override init() {
-        super.init()
-        locationManager.delegate = self
-    }
-
     func load() async {
         isLoading = true
         error = nil
         do {
             async let spotsTask = APIClient.shared.fetchSpots()
-            async let nearbyTask = APIClient.shared.fetchNearestSpot()
+            let coordinate = await locationHelper.requestCurrentLocation()
+            async let nearbyTask = APIClient.shared.fetchNearestSpot(
+                lat: coordinate?.latitude,
+                lon: coordinate?.longitude
+            )
 
             spots = try await spotsTask
 
@@ -60,7 +58,11 @@ class SpotPickerViewModel: NSObject, ObservableObject {
         isDetectingLocation = true
         defer { isDetectingLocation = false }
         do {
-            let response = try await APIClient.shared.fetchNearestSpot()
+            let coordinate = await locationHelper.requestCurrentLocation()
+            let response = try await APIClient.shared.fetchNearestSpot(
+                lat: coordinate?.latitude,
+                lon: coordinate?.longitude
+            )
             if let id = response.nearestSpot, let name = response.nearestSpotName {
                 return Spot(id: id, name: name,
                             country: response.location?.country ?? "",
@@ -69,8 +71,4 @@ class SpotPickerViewModel: NSObject, ObservableObject {
         } catch {}
         return nil
     }
-}
-
-extension SpotPickerViewModel: CLLocationManagerDelegate {
-    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {}
 }

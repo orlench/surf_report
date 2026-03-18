@@ -30,6 +30,7 @@ import surf.shouldigo.app.ui.theme.*
 fun BoardCard(
     recommendation: BoardRecommendation,
     conditions: SurfConditions,
+    isPersonalizing: Boolean = false,
     savedWeight: String = "",
     savedSkill: String = "",
     onPersonalize: (weight: String?, skill: String?) -> Unit = { _, _ -> }
@@ -38,6 +39,7 @@ fun BoardCard(
     var skill by remember(savedSkill) { mutableStateOf(savedSkill) }
     var expanded by remember { mutableStateOf(false) }
     var showSaved by remember { mutableStateOf(false) }
+    var personalizationVersion by remember { mutableIntStateOf(0) }
     val focusManager = LocalFocusManager.current
     val skillOptions = listOf("", "kook", "beginner", "intermediate", "advanced", "expert")
 
@@ -46,6 +48,12 @@ fun BoardCard(
             delay(2000)
             showSaved = false
         }
+    }
+
+    LaunchedEffect(personalizationVersion) {
+        if (personalizationVersion == 0) return@LaunchedEffect
+        delay(300)
+        onPersonalize(weight.ifEmpty { null }, skill.ifEmpty { null })
     }
 
     Surface(
@@ -152,8 +160,15 @@ fun BoardCard(
                     fontWeight = FontWeight.SemiBold,
                     color = SecondaryText
                 )
+                if (isPersonalizing) {
+                    Text(
+                        text = "Updating recommendation...",
+                        fontSize = 11.sp,
+                        color = Accent
+                    )
+                }
                 AnimatedVisibility(
-                    visible = showSaved,
+                    visible = showSaved && !isPersonalizing,
                     enter = fadeIn() + slideInHorizontally(),
                     exit = fadeOut()
                 ) {
@@ -200,8 +215,8 @@ fun BoardCard(
                             onDone = {
                                 focusManager.clearFocus()
                                 if (weight.isNotEmpty()) {
-                                    onPersonalize(weight, skill.ifEmpty { null })
                                     showSaved = true
+                                    personalizationVersion += 1
                                 }
                             }
                         ),
@@ -239,8 +254,8 @@ fun BoardCard(
                                     onClick = {
                                         skill = option
                                         expanded = false
-                                        onPersonalize(weight.ifEmpty { null }, option.ifEmpty { null })
                                         showSaved = true
+                                        personalizationVersion += 1
                                     }
                                 )
                             }

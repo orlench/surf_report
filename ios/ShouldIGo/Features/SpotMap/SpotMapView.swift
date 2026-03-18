@@ -88,11 +88,12 @@ struct SpotMapView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        locationManager.requestLocation()
-                        if let loc = locationManager.location {
-                            cameraPosition = .region(MKCoordinateRegion(
-                                center: loc, latitudinalMeters: 50_000, longitudinalMeters: 50_000
-                            ))
+                        Task {
+                            if let loc = await locationManager.requestCurrentLocation() {
+                                cameraPosition = .region(MKCoordinateRegion(
+                                    center: loc, latitudinalMeters: 50_000, longitudinalMeters: 50_000
+                                ))
+                            }
                         }
                     } label: {
                         Image(systemName: "location.fill")
@@ -101,11 +102,12 @@ struct SpotMapView: View {
             }
             .onAppear {
                 vm.load()
-                locationManager.requestLocation()
-                if let loc = locationManager.location {
-                    cameraPosition = .region(MKCoordinateRegion(
-                        center: loc, latitudinalMeters: 50_000, longitudinalMeters: 50_000
-                    ))
+                Task {
+                    if let loc = await locationManager.requestCurrentLocation() {
+                        cameraPosition = .region(MKCoordinateRegion(
+                            center: loc, latitudinalMeters: 50_000, longitudinalMeters: 50_000
+                        ))
+                    }
                 }
             }
         }
@@ -270,6 +272,8 @@ struct SpotPin: View {
 class LocationHelper: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var location: CLLocationCoordinate2D?
     private let manager = CLLocationManager()
+    private var authorizationContinuation: CheckedContinuation<Void, Never>?
+    private var locationContinuation: CheckedContinuation<CLLocationCoordinate2D?, Never>?
 
     override init() {
         super.init()
@@ -278,13 +282,64 @@ class LocationHelper: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 
     func requestLocation() {
-        manager.requestWhenInUseAuthorization()
-        manager.requestLocation()
+        Task {
+            _ = await requestCurrentLocation()
+        }
+    }
+
+    func requestCurrentLocation() async -> CLLocationCoordinate2D? {
+        if let location {
+            return location
+        }
+
+        if manager.authorizationStatus == .notDetermined {
+            manager.requestWhenInUseAuthorization()
+            await withCheckedContinuation { continuation in
+                authorizationContinuation = continuation
+            }
+        }
+
+        switch manager.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse:
+            break
+        case .restricted, .denied:
+            return nil
+        default:
+            return nil
+        }
+
+        if let location {
+            return location
+        }
+
+        return await withCheckedContinuation { continuation in
+            locationContinuation?.resume(returning: location)
+            locationContinuation = continuation
+            manager.requestLocation()
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        if manager.authorizationStatus != .notDetermined {
+            authorizationContinuation?.resume()
+            authorizationContinuation = nil
+        }
+
+        if manager.authorizationStatus == .restricted || manager.authorizationStatus == .denied {
+            locationContinuation?.resume(returning: nil)
+            locationContinuation = nil
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        location = locations.first?.coordinate
+        let coordinate = locations.first?.coordinate
+        location = coordinate
+        locationContinuation?.resume(returning: coordinate)
+        locationContinuation = nil
     }
 
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {}
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        locationContinuation?.resume(returning: nil)
+        locationContinuation = nil
+    }
 }

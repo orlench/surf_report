@@ -29,6 +29,8 @@ class ConditionsRepository @Inject constructor(
     private val sseClient: SSEClient,
     private val prefs: PreferencesManager
 ) {
+    private val validSkills = setOf("beginner", "intermediate", "advanced", "expert")
+
     fun streamConditions(spotId: String): Flow<FetchState> = flow {
         emit(FetchState.Idle)
 
@@ -82,9 +84,11 @@ class ConditionsRepository @Inject constructor(
         }
     }
 
+    fun hasPersonalization(): Boolean = sanitizedWeight() != null || sanitizedSkill() != null
+
     suspend fun fetchViaREST(spotId: String): ConditionsResponse {
-        val weight = prefs.userWeight
-        val skill = prefs.userSkill
+        val weight = sanitizedWeight()
+        val skill = sanitizedSkill()
         return api.fetchConditions(spotId, weight, skill)
     }
 
@@ -94,6 +98,23 @@ class ConditionsRepository @Inject constructor(
         name: String,
         country: String?
     ): ConditionsResponse {
-        return api.fetchCustomConditions(lat, lon, name, country)
+        return api.fetchCustomConditions(
+            lat = lat,
+            lon = lon,
+            name = name,
+            country = country,
+            weight = sanitizedWeight(),
+            skill = sanitizedSkill()
+        )
+    }
+
+    private fun sanitizedWeight(): String? {
+        val weight = prefs.userWeight?.toIntOrNull() ?: return null
+        return weight.takeIf { it in 20..250 }?.toString()
+    }
+
+    private fun sanitizedSkill(): String? {
+        val skill = prefs.userSkill ?: return null
+        return skill.takeIf { validSkills.contains(it) }
     }
 }

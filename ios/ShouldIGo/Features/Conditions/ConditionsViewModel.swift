@@ -29,9 +29,24 @@ struct CustomSpotMeta: Codable {
 @MainActor
 class ConditionsViewModel: ObservableObject {
     @Published var state: FetchState = .idle
+    @Published var isPersonalizing = false
 
     private let sseClient = SSEClient()
     private var currentSpotId: String?
+    private let validSkills = Set(["beginner", "intermediate", "advanced", "expert"])
+    private var personalizationRevision = 0
+
+    private var personalizedWeight: String? {
+        sanitizeWeight(UserDefaults.standard.string(forKey: "userWeight"))
+    }
+
+    private var personalizedSkill: String? {
+        sanitizeSkill(UserDefaults.standard.string(forKey: "userSkill"))
+    }
+
+    private var hasActivePersonalization: Bool {
+        personalizedWeight != nil || personalizedSkill != nil
+    }
 
     func load(spot: Spot) async {
         // Check if this is a custom/map spot
@@ -40,7 +55,26 @@ class ConditionsViewModel: ObservableObject {
             return
         }
 
+        // Spot picked from the map with coordinates — use the custom endpoint
+        if let location = spot.location {
+            await loadSpotByCoords(
+                id: spot.id,
+                name: spot.name,
+                lat: location.lat,
+                lon: location.lon,
+                country: spot.country.isEmpty ? nil : spot.country
+            )
+            return
+        }
+
         currentSpotId = spot.id
+
+        if hasActivePersonalization {
+            state = .streaming([ProgressStep(name: "Applying your gear profile…", status: .loading)])
+            await loadViaREST(spotId: spot.id)
+            return
+        }
+
         state = .streaming([])
 
         let url = await APIClient.shared.streamURL(for: spot.id)
@@ -76,7 +110,72 @@ class ConditionsViewModel: ObservableObject {
 
     func refresh(spot: Spot) async {
         await sseClient.stop()
-        await load(spot: spot)
+        if let meta = CustomSpotStore.shared.find(id: spot.id) {
+            await loadCustomSpot(meta)
+            return
+        }
+
+        if let location = spot.location {
+            await loadSpotByCoords(
+                id: spot.id,
+                name: spot.name,
+                lat: location.lat,
+                lon: location.lon,
+                country: spot.country.isEmpty ? nil : spot.country
+            )
+            return
+        }
+
+        currentSpotId = spot.id
+        state = .streaming([ProgressStep(name: "Fetching conditions…", status: .loading)])
+        await loadViaREST(spotId: spot.id)
+    }
+
+    func personalize(spot: Spot) async {
+        currentSpotId = spot.id
+        personalizationRevision += 1
+        let revision = personalizationRevision
+        isPersonalizing = true
+        defer {
+            if revision == personalizationRevision {
+                isPersonalizing = false
+            }
+        }
+
+        do {
+            let response: ConditionsResponse
+
+            if let meta = CustomSpotStore.shared.find(id: spot.id) {
+                response = try await APIClient.shared.fetchConditionsByCoords(
+                    lat: meta.lat,
+                    lon: meta.lon,
+                    name: meta.name,
+                    country: meta.country,
+                    weight: personalizedWeight,
+                    skill: personalizedSkill
+                )
+            } else if let location = spot.location {
+                response = try await APIClient.shared.fetchConditionsByCoords(
+                    lat: location.lat,
+                    lon: location.lon,
+                    name: spot.name,
+                    country: spot.country.isEmpty ? nil : spot.country,
+                    weight: personalizedWeight,
+                    skill: personalizedSkill
+                )
+            } else {
+                response = try await APIClient.shared.fetchConditions(
+                    spotId: spot.id,
+                    weight: personalizedWeight,
+                    skill: personalizedSkill
+                )
+            }
+
+            guard revision == personalizationRevision, currentSpotId == spot.id else { return }
+            state = .loaded(response)
+        } catch {
+            // Keep the current loaded content in place if personalization refresh fails.
+        }
     }
 
     private func loadCustomSpot(_ meta: CustomSpotMeta) async {
@@ -88,7 +187,12 @@ class ConditionsViewModel: ObservableObject {
                 try? await APIClient.shared.createSpot(name: meta.name, lat: meta.lat, lon: meta.lon, country: meta.country)
             }
             let response = try await APIClient.shared.fetchConditionsByCoords(
-                lat: meta.lat, lon: meta.lon, name: meta.name, country: meta.country
+                lat: meta.lat,
+                lon: meta.lon,
+                name: meta.name,
+                country: meta.country,
+                weight: personalizedWeight,
+                skill: personalizedSkill
             )
             state = .loaded(response)
         } catch {
@@ -98,11 +202,52 @@ class ConditionsViewModel: ObservableObject {
 
     private func loadViaREST(spotId: String) async {
         do {
-            let response = try await APIClient.shared.fetchConditions(spotId: spotId)
+            let response = try await APIClient.shared.fetchConditions(
+                spotId: spotId,
+                weight: personalizedWeight,
+                skill: personalizedSkill
+            )
             state = .loaded(response)
         } catch {
             state = .error(error.localizedDescription)
         }
+    }
+
+    private func loadSpotByCoords(
+        id: String,
+        name: String,
+        lat: Double,
+        lon: Double,
+        country: String?
+    ) async {
+        currentSpotId = id
+        state = .streaming([ProgressStep(name: "Fetching conditions…", status: .loading)])
+
+        do {
+            let response = try await APIClient.shared.fetchConditionsByCoords(
+                lat: lat,
+                lon: lon,
+                name: name,
+                country: country,
+                weight: personalizedWeight,
+                skill: personalizedSkill
+            )
+            state = .loaded(response)
+        } catch {
+            state = .error(error.localizedDescription)
+        }
+    }
+
+    private func sanitizeWeight(_ value: String?) -> String? {
+        guard let value,
+              let weight = Int(value),
+              (20...250).contains(weight) else { return nil }
+        return String(weight)
+    }
+
+    private func sanitizeSkill(_ value: String?) -> String? {
+        guard let value, validSkills.contains(value) else { return nil }
+        return value
     }
 }
 

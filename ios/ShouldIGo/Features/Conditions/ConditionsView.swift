@@ -100,7 +100,12 @@ struct ConditionsView: View {
                     ForecastCard(blocks: blocks, trend: trend)
                 }
                 if let board = r.boardRecommendation {
-                    BoardCard(recommendation: board, conditions: r.conditions)
+                    BoardCard(
+                        recommendation: board,
+                        conditions: r.conditions,
+                        isPersonalizing: vm.isPersonalizing,
+                        onPersonalize: { Task { await vm.personalize(spot: spot) } }
+                    )
                 }
                 BeachSketchView(waveDirection: r.conditions.waves?.direction,
                                 windDirection: r.conditions.wind?.direction)
@@ -351,6 +356,7 @@ struct FlowLayout: Layout {
 
 struct ScoreArc: View {
     let score: Int
+    private let lineWidth: CGFloat = 14
 
     private var fraction: Double { Double(score) / 100.0 }
     private var color: Color {
@@ -367,21 +373,24 @@ struct ScoreArc: View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
+            let radius = max(min((w - lineWidth) / 2, h - lineWidth), 0)
+            let center = CGPoint(x: w / 2, y: h - (lineWidth / 2))
+            let scoreFontSize = min(max(radius * 0.42, 42), 56)
             ZStack {
                 // Track
-                Arc(startAngle: .degrees(180), endAngle: .degrees(360))
-                    .stroke(Color.white.opacity(0.25), style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                Arc(center: center, radius: radius, startAngle: .degrees(180), endAngle: .degrees(360))
+                    .stroke(Color.white.opacity(0.25), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
 
                 // Fill
-                Arc(startAngle: .degrees(180), endAngle: .degrees(180 + fraction * 180))
-                    .stroke(Color.white.opacity(0.9), style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                Arc(center: center, radius: radius, startAngle: .degrees(180), endAngle: .degrees(180 + fraction * 180))
+                    .stroke(Color.white.opacity(0.9), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                     .animation(.spring(duration: 0.8), value: score)
 
                 // Score number
                 Text("\(score)")
-                    .font(.system(size: 52, weight: .bold, design: .rounded))
+                    .font(.system(size: scoreFontSize, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
-                    .offset(y: 12)
+                    .offset(y: radius * 0.12)
             }
             .frame(width: w, height: h)
         }
@@ -389,14 +398,16 @@ struct ScoreArc: View {
 }
 
 struct Arc: Shape {
+    let center: CGPoint
+    let radius: CGFloat
     let startAngle: Angle
     let endAngle: Angle
 
     func path(in rect: CGRect) -> Path {
         var p = Path()
         p.addArc(
-            center: CGPoint(x: rect.midX, y: rect.maxY),
-            radius: rect.width / 2,
+            center: center,
+            radius: radius,
             startAngle: startAngle,
             endAngle: endAngle,
             clockwise: false
@@ -581,10 +592,13 @@ struct ForecastTile: View {
 struct BoardCard: View {
     let recommendation: BoardRecommendation
     let conditions: SurfConditions
+    var isPersonalizing: Bool = false
+    var onPersonalize: () -> Void = {}
 
     @AppStorage("userWeight") private var userWeight = ""
     @AppStorage("userSkill") private var userSkill = ""
     @State private var showSaved = false
+    @State private var pendingPersonalizationTask: Task<Void, Never>?
 
     private func wetsuitLabel(for temp: Double) -> String {
         if temp >= 24 { return "Boardshorts" }
@@ -655,6 +669,16 @@ struct BoardCard: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
 
+                    if isPersonalizing {
+                        HStack(spacing: 4) {
+                            ProgressView()
+                                .controlSize(.mini)
+                            Text("Updating gear")
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(.secondary)
+                    }
+
                     if showSaved {
                         HStack(spacing: 3) {
                             Image(systemName: "checkmark")
@@ -680,7 +704,16 @@ struct BoardCard: View {
                             .font(.subheadline)
                             .padding(8)
                             .background(Color("background"), in: RoundedRectangle(cornerRadius: 8))
-                            .onChange(of: userWeight) { triggerSaved() }
+                            .disabled(isPersonalizing)
+                            .onChange(of: userWeight) { _, newValue in
+                                let filtered = String(newValue.filter(\.isNumber).prefix(3))
+                                if filtered != newValue {
+                                    userWeight = filtered
+                                    return
+                                }
+                                triggerSaved()
+                                schedulePersonalizationUpdate()
+                            }
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -701,7 +734,11 @@ struct BoardCard: View {
                         .padding(.vertical, 4)
                         .padding(.horizontal, 8)
                         .background(Color("background"), in: RoundedRectangle(cornerRadius: 8))
-                        .onChange(of: userSkill) { triggerSaved() }
+                        .disabled(isPersonalizing)
+                        .onChange(of: userSkill) { _, _ in
+                            triggerSaved()
+                            schedulePersonalizationUpdate()
+                        }
                     }
                 }
             }
@@ -709,12 +746,26 @@ struct BoardCard: View {
         }
         .padding(16)
         .background(Color("cardBackground"), in: RoundedRectangle(cornerRadius: 20))
+        .onDisappear {
+            pendingPersonalizationTask?.cancel()
+        }
     }
 
     private func triggerSaved() {
         withAnimation(.easeInOut(duration: 0.25)) { showSaved = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             withAnimation(.easeOut(duration: 0.3)) { showSaved = false }
+        }
+    }
+
+    private func schedulePersonalizationUpdate() {
+        pendingPersonalizationTask?.cancel()
+        pendingPersonalizationTask = Task {
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                onPersonalize()
+            }
         }
     }
 }

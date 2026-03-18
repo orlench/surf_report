@@ -26,7 +26,9 @@ interface ApiService {
         @Query("lat") lat: Double,
         @Query("lon") lon: Double,
         @Query("name") name: String,
-        @Query("country") country: String? = null
+        @Query("country") country: String? = null,
+        @Query("weight") weight: String? = null,
+        @Query("skill") skill: String? = null
     ): ConditionsResponse
 
     @POST("push/subscribe")

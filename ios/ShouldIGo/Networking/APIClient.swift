@@ -86,8 +86,15 @@ actor APIClient {
         return response.spots
     }
 
-    func fetchNearestSpot() async throws -> NearestSpotResponse {
-        return try await fetch("/nearest-spot")
+    func fetchNearestSpot(lat: Double? = nil, lon: Double? = nil) async throws -> NearestSpotResponse {
+        var items: [URLQueryItem] = []
+        if let lat {
+            items.append(URLQueryItem(name: "lat", value: String(lat)))
+        }
+        if let lon {
+            items.append(URLQueryItem(name: "lon", value: String(lon)))
+        }
+        return try await fetch("/nearest-spot", queryItems: items)
     }
 
     // MARK: - Conditions
@@ -99,7 +106,14 @@ actor APIClient {
         return try await fetch("/conditions/\(spotId)", queryItems: items)
     }
 
-    func fetchConditionsByCoords(lat: Double, lon: Double, name: String, country: String? = nil) async throws -> ConditionsResponse {
+    func fetchConditionsByCoords(
+        lat: Double,
+        lon: Double,
+        name: String,
+        country: String? = nil,
+        weight: String? = nil,
+        skill: String? = nil
+    ) async throws -> ConditionsResponse {
         var items: [URLQueryItem] = [
             URLQueryItem(name: "lat", value: String(lat)),
             URLQueryItem(name: "lon", value: String(lon)),
@@ -107,6 +121,12 @@ actor APIClient {
         ]
         if let country, !country.isEmpty {
             items.append(URLQueryItem(name: "country", value: country))
+        }
+        if let weight, !weight.isEmpty {
+            items.append(URLQueryItem(name: "weight", value: weight))
+        }
+        if let skill, !skill.isEmpty {
+            items.append(URLQueryItem(name: "skill", value: skill))
         }
         return try await fetch("/conditions/custom", queryItems: items)
     }

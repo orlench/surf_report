@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var pushManager = PushManager.shared
+    @StateObject private var locationHelper = LocationHelper()
     @State private var selectedSpot: Spot?
     @State private var showSpotPicker = false
     @State private var showMap = false
@@ -148,7 +149,11 @@ struct ContentView: View {
 
     private func autoDetect() async {
         do {
-            let response = try await APIClient.shared.fetchNearestSpot()
+            let coordinate = await locationHelper.requestCurrentLocation()
+            let response = try await APIClient.shared.fetchNearestSpot(
+                lat: coordinate?.latitude,
+                lon: coordinate?.longitude
+            )
             if let id = response.nearestSpot, let name = response.nearestSpotName {
                 let spot = Spot(id: id, name: name,
                                 country: response.location?.country ?? "",
