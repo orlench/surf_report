@@ -54,6 +54,7 @@ async function createAdSet() {
     name: 'SIG Surfers — All Placements',
     campaign_id: campaignId,
     daily_budget: dailyBudget,
+    destination_type: 'WEBSITE',
     billing_event: 'IMPRESSIONS',
     optimization_goal: 'LINK_CLICKS',
     bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
@@ -142,7 +143,19 @@ async function resumeCampaign() {
 async function getCampaignStatus() {
   const token = await ensureFreshToken();
 
-  const result = { campaign: null, adSet: null, insights: null };
+  const result = { account: null, campaign: null, adSet: null, insights: null, deliveryEstimate: null };
+
+  try {
+    const { data } = await axios.get(`${GRAPH_API_BASE}/act_${META_AD_ACCOUNT_ID}`, {
+      params: {
+        fields: 'currency,amount_spent,account_status,disable_reason,balance,spend_cap',
+        access_token: token
+      }
+    });
+    result.account = data;
+  } catch (e) {
+    result.account = null;
+  }
 
   if (campaignId) {
     const { data } = await axios.get(`${GRAPH_API_BASE}/${campaignId}`, {
@@ -153,7 +166,7 @@ async function getCampaignStatus() {
 
   if (adSetId) {
     const { data } = await axios.get(`${GRAPH_API_BASE}/${adSetId}`, {
-      params: { fields: 'name,status,daily_budget', access_token: token }
+      params: { fields: 'name,status,daily_budget,destination_type', access_token: token }
     });
     result.adSet = data;
   }
@@ -172,6 +185,20 @@ async function getCampaignStatus() {
     } catch (e) {
       // Insights may not be available yet
       result.insights = null;
+    }
+  }
+
+  if (adSetId) {
+    try {
+      const { data } = await axios.get(`${GRAPH_API_BASE}/${adSetId}/delivery_estimate`, {
+        params: {
+          optimization_goal: 'LINK_CLICKS',
+          access_token: token
+        }
+      });
+      result.deliveryEstimate = data.data?.[0] || null;
+    } catch (e) {
+      result.deliveryEstimate = null;
     }
   }
 
