@@ -328,6 +328,7 @@ describe('Surf Report API', () => {
       expect(csp).toContain("connect-src");
       expect(csp).toContain('https://api.shouldigo.surf');
       expect(csp).toContain('https://tiles.openfreemap.org');
+      expect(csp).toContain('https://overpass-api.de');
     });
 
     test('GET /api returns API info', async () => {

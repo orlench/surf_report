@@ -41,12 +41,15 @@ function createApp() {
   const mapOrigins = [
     'https://tiles.openfreemap.org'
   ];
+  const sketchOrigins = [
+    'https://overpass-api.de'
+  ];
   app.use(helmet({
     contentSecurityPolicy: {
       useDefaults: true,
       directives: {
         defaultSrc: ["'self'"],
-        connectSrc: [...appOrigins, ...mapOrigins, 'https://www.googletagmanager.com', 'https://www.google-analytics.com'],
+        connectSrc: [...appOrigins, ...mapOrigins, ...sketchOrigins, 'https://www.googletagmanager.com', 'https://www.google-analytics.com'],
         imgSrc: ["'self'", 'data:', 'blob:', ...mapOrigins, 'https://www.google-analytics.com'],
         styleSrc: ["'self'", "'unsafe-inline'", 'https:'],
         fontSrc: ["'self'", 'https:', 'data:', ...mapOrigins],

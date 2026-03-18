@@ -167,9 +167,10 @@ function Dashboard() {
   // When SSE completes, seed React Query cache and dismiss progress screen
   useEffect(() => {
     if (!finalData) return;
-    // Use selectedSpot (not finalData.spotId) to match the useQuery key exactly
+    if (finalData.spotId !== selectedSpot) return;
+
     queryClient.setQueryData(
-      ['conditions', selectedSpot, userWeight, apiSkill],
+      ['conditions', finalData.spotId, userWeight, apiSkill],
       finalData
     );
     cancelSkeletonTimer();
