@@ -31,18 +31,6 @@ describe('dailyReport', () => {
       getSearchAnalytics: jest.fn(async () => ({ rows: [] }))
     }));
 
-    jest.doMock('../src/services/instagram/campaignManager', () => ({
-      getCampaignStatus: jest.fn(async () => null),
-      getCampaignId: jest.fn(() => null)
-    }));
-
-    jest.doMock('../src/services/instagram/tokenManager', () => ({
-      ensureFreshToken: jest.fn(async () => null),
-      getTokenExpiry: jest.fn(() => null),
-      isConfigured: jest.fn(() => false),
-      GRAPH_API_BASE: 'https://graph.example.com'
-    }));
-
     jest.doMock('../src/services/emailSender', () => ({
       sendDailyReport: sendDailyReportMock
     }));

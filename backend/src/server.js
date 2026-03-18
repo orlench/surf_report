@@ -189,14 +189,10 @@ function startBackgroundServices() {
 
   if (process.env.ENABLE_IN_PROCESS_MARKETING_SCHEDULERS === 'true') {
     // Optional development fallback only. In Cloud Run, prefer Cloud Scheduler.
-    const { startTokenRefresh } = require('./services/instagram/tokenManager');
-    const { startMarketingScheduler } = require('./services/instagram/scheduler');
     const { startDailyReportScheduler } = require('./services/dailyReport');
-    startTokenRefresh();
-    startMarketingScheduler();
     startDailyReportScheduler();
   } else {
-    logger.info('[Marketing] In-process marketing schedulers disabled — use Cloud Scheduler to call POST /api/marketing/daily-report/generate and POST /api/marketing/refresh-creatives');
+    logger.info('[Marketing] In-process daily report scheduler disabled — use Cloud Scheduler to call POST /api/marketing/daily-report/generate');
   }
 }
 

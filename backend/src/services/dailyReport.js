@@ -1,12 +1,9 @@
-const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const NodeCache = require('node-cache');
 const logger = require('../utils/logger');
 const analytics = require('./analyticsClient');
 const searchConsole = require('./searchConsole');
-const { getCampaignStatus, getCampaignId } = require('./instagram/campaignManager');
-const { ensureFreshToken, getTokenExpiry, isConfigured: isMetaConfigured, GRAPH_API_BASE } = require('./instagram/tokenManager');
 const dataPath = require('../utils/dataPath');
 
 const cache = new NodeCache({ stdTTL: 48 * 60 * 60 }); // 48h TTL
@@ -121,30 +118,10 @@ async function waitForRunCompletion(date, options = {}) {
   throw new Error('Timed out waiting for the current daily report run to finish');
 }
 
-/**
- * Get Meta Ads spend/impressions breakdown by country (last 7 days)
- */
-async function getAdCountryBreakdown() {
-  const token = await ensureFreshToken();
-  const campaignId = getCampaignId();
-  if (!token || !campaignId) return null;
-
-  const { data } = await axios.get(`${GRAPH_API_BASE}/${campaignId}/insights`, {
-    params: {
-      fields: 'spend,impressions,clicks,reach',
-      breakdowns: 'country',
-      date_preset: 'last_7d',
-      access_token: token
-    }
-  });
-  return data.data || [];
-}
-
 async function generateReport() {
   logger.info('[DailyReport] Generating report...');
   const timestamp = new Date().toISOString();
 
-  // Fetch all data in parallel — GA4 always, Meta only if configured
   const promises = [
     analytics.getOverview('yesterday').catch(err => { logger.error(`[DailyReport] GA4 overview (yesterday) failed: ${err.message}`); return null; }),
     analytics.getOverview('last7days').catch(err => { logger.error(`[DailyReport] GA4 overview (7d) failed: ${err.message}`); return null; }),
@@ -156,39 +133,12 @@ async function generateReport() {
     searchConsole.getIndexingStatus().catch(err => { logger.error(`[DailyReport] Search Console indexing failed: ${err.message}`); return null; }),
     searchConsole.getSearchAnalytics({ dimension: 'query', days: 7, limit: 10 }).catch(err => { logger.error(`[DailyReport] Search Console queries failed: ${err.message}`); return null; }),
     searchConsole.getSearchAnalytics({ dimension: 'page', days: 7, limit: 10 }).catch(err => { logger.error(`[DailyReport] Search Console pages failed: ${err.message}`); return null; }),
-    isMetaConfigured()
-      ? getCampaignStatus().catch(err => { logger.error(`[DailyReport] Meta status failed: ${err.message}`); return null; })
-      : Promise.resolve(null),
-    isMetaConfigured()
-      ? getAdCountryBreakdown().catch(err => { logger.error(`[DailyReport] Meta countries failed: ${err.message}`); return null; })
-      : Promise.resolve(null),
   ];
 
-  const [yesterday, last7days, sources, errors, trend, pages, campaigns, indexing, searchQueries, searchPages, metaStatus, adCountries] = await Promise.all(promises);
+  const [yesterday, last7days, sources, errors, trend, pages, campaigns, indexing, searchQueries, searchPages] = await Promise.all(promises);
 
   // Build alerts
   const alerts = [];
-
-  // Meta alerts
-  if (isMetaConfigured()) {
-    if (metaStatus?.campaign && metaStatus.campaign.status !== 'ACTIVE') {
-      alerts.push({ level: 'warning', message: `Campaign is ${metaStatus.campaign.status}` });
-    }
-    if (metaStatus && !metaStatus.insights) {
-      alerts.push({ level: 'warning', message: 'No Meta ad insights available (new campaign or no spend)' });
-    }
-    if (metaStatus?.insights?.cpc && parseFloat(metaStatus.insights.cpc) > 0.50) {
-      alerts.push({ level: 'warning', message: `High CPC: $${parseFloat(metaStatus.insights.cpc).toFixed(2)}` });
-    }
-
-    const tokenExpiry = getTokenExpiry();
-    if (tokenExpiry) {
-      const daysLeft = Math.round((tokenExpiry - Date.now()) / (1000 * 60 * 60 * 24));
-      if (daysLeft < 14) {
-        alerts.push({ level: 'critical', message: `Meta token expires in ${daysLeft} days — refresh needed` });
-      }
-    }
-  }
 
   // GA4 alerts
   if (errors && errors.rows && errors.rows.length > 0) {
@@ -205,16 +155,6 @@ async function generateReport() {
     }
   }
 
-  // Check for paid traffic
-  if (sources?.rows) {
-    const paidSessions = sources.rows
-      .filter(r => r.sessionMedium === 'paid' || r.sessionMedium === 'cpc' || r.sessionSource === 'instagram')
-      .reduce((sum, r) => sum + parseInt(r.sessions || 0), 0);
-    if (isMetaConfigured() && paidSessions === 0) {
-      alerts.push({ level: 'info', message: 'No paid/Instagram traffic yesterday' });
-    }
-  }
-
   // Spot distribution alerts
   if (pages?.rows) {
     const spotPages = pages.rows.filter(r => r.pagePath && r.pagePath !== '/' && r.pagePath.startsWith('/spot/'));
@@ -228,19 +168,6 @@ async function generateReport() {
     if (spotPages.length > 0 && spotPages.length <= 2) {
       const spotNames = spotPages.map(r => r.pagePath.replace('/spot/', '')).join(', ');
       alerts.push({ level: 'info', message: `Only ${spotPages.length} spot(s) viewed: ${spotNames} — narrow audience or targeting issue?` });
-    }
-  }
-
-  // Ad country concentration alert
-  if (adCountries && adCountries.length > 0) {
-    const totalSpend = adCountries.reduce((sum, r) => sum + parseFloat(r.spend || 0), 0);
-    if (totalSpend > 0) {
-      const sorted = [...adCountries].sort((a, b) => parseFloat(b.spend) - parseFloat(a.spend));
-      const topCountrySpend = parseFloat(sorted[0]?.spend || 0);
-      const topCountryPct = Math.round((topCountrySpend / totalSpend) * 100);
-      if (topCountryPct > 60) {
-        alerts.push({ level: 'warning', message: `Ad spend concentrated: ${sorted[0].country} has ${topCountryPct}% of spend — Meta may be chasing cheap clicks` });
-      }
     }
   }
 
@@ -263,8 +190,6 @@ async function generateReport() {
       queries: searchQueries?.rows || [],
       pages: searchPages?.rows || [],
     },
-    meta: metaStatus,
-    metaCountries: adCountries,
     emailDelivery: null,
   };
 

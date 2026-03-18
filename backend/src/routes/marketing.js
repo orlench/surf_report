@@ -2,18 +2,7 @@ const express = require('express');
 const router = express.Router();
 const logger = require('../utils/logger');
 const { requireAdmin } = require('../services/adminAuth');
-const { isConfigured: isMetaConfigured } = require('../services/instagram/tokenManager');
-const { setup, createAd, activateCampaign, pauseCampaign, resumeCampaign, getCampaignStatus } = require('../services/instagram/campaignManager');
-const { uploadImage, createCreative, generateLocationAdContent } = require('../services/instagram/creativeUploader');
-const { refreshCreatives } = require('../services/instagram/scheduler');
 const analytics = require('../services/analyticsClient');
-
-function requireMeta(req, res, next) {
-  if (!isMetaConfigured()) {
-    return res.status(503).json({ error: 'Meta credentials not configured. Set META_ACCESS_TOKEN.' });
-  }
-  next();
-}
 
 router.use(requireAdmin);
 
@@ -77,7 +66,7 @@ router.get('/analytics/errors', async (req, res) => {
   }
 });
 
-// --- Daily report routes (no Meta required — degrades gracefully) ---
+// --- Daily report routes ---
 
 const { generateReport, getLatestReport, runAndEmail } = require('../services/dailyReport');
 
@@ -171,104 +160,6 @@ router.get('/search-console/inspect', async (req, res) => {
   } catch (err) {
     logger.error(`[SearchConsole] URL inspection failed: ${err.message}`);
     res.status(500).json({ error: 'Failed to inspect URL' });
-  }
-});
-
-// --- Meta routes (require Meta credentials) ---
-router.use(requireMeta);
-
-/**
- * POST /api/marketing/setup
- * One-time: create campaign + ad set + initial ad
- */
-router.post('/setup', async (req, res) => {
-  try {
-    logger.info('[Marketing] Running one-time setup...');
-
-    const { campaignId, adSetId } = await setup();
-
-    const logoUrl = 'https://shouldigo.surf/logo512.png';
-    const imageHash = await uploadImage(logoUrl);
-    if (!imageHash) {
-      return res.status(500).json({ error: 'Failed to upload seed image' });
-    }
-
-    const linkUrl = process.env.META_AD_URL || 'https://shouldigo.surf?utm_source=instagram&utm_medium=paid&utm_campaign=advantage_plus';
-    const { primaryTexts, headlines, descriptions } = generateLocationAdContent();
-
-    const creativeId = await createCreative({
-      imageHashes: [imageHash],
-      primaryTexts,
-      headlines,
-      descriptions,
-      linkUrl
-    });
-
-    if (!creativeId) {
-      return res.status(500).json({ error: 'Failed to create ad creative', campaignId, adSetId });
-    }
-
-    const adId = await createAd(creativeId);
-    await activateCampaign();
-
-    res.json({
-      success: true,
-      campaignId, adSetId, creativeId, adId,
-      message: 'Campaign is live! Ad goes through Meta review (~15-30 min).'
-    });
-  } catch (err) {
-    const metaError = err.response?.data?.error || {};
-    logger.error(`[Marketing] Setup failed: ${metaError.message || err.message}`);
-    res.status(500).json({ error: 'Campaign setup failed', detail: metaError.message || err.message });
-  }
-});
-
-/**
- * POST /api/marketing/refresh-creatives
- */
-router.post('/refresh-creatives', async (req, res) => {
-  try {
-    await refreshCreatives();
-    res.json({ success: true, message: 'Creatives refreshed with latest surf data' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to refresh creatives' });
-  }
-});
-
-/**
- * GET /api/marketing/status
- */
-router.get('/status', async (req, res) => {
-  try {
-    const status = await getCampaignStatus();
-    res.json({ success: true, ...status });
-  } catch (err) {
-    const detail = err.response?.data?.error?.message || err.message;
-    res.status(500).json({ error: 'Failed to get campaign status', detail });
-  }
-});
-
-/**
- * POST /api/marketing/pause
- */
-router.post('/pause', async (req, res) => {
-  try {
-    await pauseCampaign();
-    res.json({ success: true, message: 'Campaign paused' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to pause campaign' });
-  }
-});
-
-/**
- * POST /api/marketing/resume
- */
-router.post('/resume', async (req, res) => {
-  try {
-    await resumeCampaign();
-    res.json({ success: true, message: 'Campaign resumed' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to resume campaign' });
   }
 });
 

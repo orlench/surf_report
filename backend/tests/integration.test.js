@@ -222,41 +222,6 @@ jest.mock('geoip-lite', () => ({
   }))
 }));
 
-jest.mock('../src/services/instagram/tokenManager', () => ({
-  isConfigured: jest.fn(() => false),
-  startTokenRefresh: jest.fn(),
-  getToken: jest.fn(() => null),
-  getTokenExpiry: jest.fn(() => null),
-  GRAPH_API_BASE: 'https://graph.example.com'
-}));
-
-jest.mock('../src/services/instagram/campaignManager', () => ({
-  setup: jest.fn(),
-  createAd: jest.fn(),
-  activateCampaign: jest.fn(),
-  pauseCampaign: jest.fn(),
-  resumeCampaign: jest.fn(),
-  getCampaignStatus: jest.fn(async () => ({
-    campaign: { status: 'ACTIVE' },
-    insights: { cpc: '0.25' }
-  }))
-}));
-
-jest.mock('../src/services/instagram/creativeUploader', () => ({
-  uploadImage: jest.fn(),
-  createCreative: jest.fn(),
-  generateLocationAdContent: jest.fn(() => ({
-    primaryTexts: [],
-    headlines: [],
-    descriptions: []
-  }))
-}));
-
-jest.mock('../src/services/instagram/scheduler', () => ({
-  refreshCreatives: jest.fn(),
-  startMarketingScheduler: jest.fn()
-}));
-
 jest.mock('../src/services/pushNotifier', () => ({
   startNotificationScheduler: jest.fn()
 }));

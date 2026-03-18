@@ -45,7 +45,7 @@ function formatNumber(n) {
 }
 
 function buildHtml(report) {
-  const { alerts, ga4, meta, metaCountries, searchConsole } = report;
+  const { alerts, ga4, searchConsole } = report;
   const y = ga4.yesterday || {};
   const w = ga4.last7days || {};
 
@@ -131,69 +131,6 @@ function buildHtml(report) {
           <th style="padding:10px 12px;text-align:right;border-bottom:2px solid #e2e8f0;font-size:13px;color:#64748b">Sessions</th>
         </tr>
         ${campaignRows}
-      </table>`;
-  }
-
-  // Meta ads section
-  let metaHtml = '';
-  if (meta) {
-    const campaign = meta.campaign;
-    const insights = meta.insights;
-    const statusColor = campaign?.status === 'ACTIVE' ? '#16a34a' : '#dc2626';
-    metaHtml = `
-      <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
-        <tr style="background:#f8fafc">
-          <th colspan="2" style="padding:10px 12px;text-align:left;border-bottom:2px solid #e2e8f0;font-size:13px;color:#64748b">Meta Ads (Last 7 Days)</th>
-        </tr>
-        <tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">Status</td>
-          <td style="padding:8px 12px;text-align:right;border-bottom:1px solid #f0f0f0;font-weight:600;color:${statusColor}">${campaign?.status || 'Unknown'}</td>
-        </tr>
-        ${insights ? `
-        <tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">Spend</td>
-          <td style="padding:8px 12px;text-align:right;border-bottom:1px solid #f0f0f0;font-weight:600">$${parseFloat(insights.spend || 0).toFixed(2)}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">Impressions</td>
-          <td style="padding:8px 12px;text-align:right;border-bottom:1px solid #f0f0f0">${formatNumber(insights.impressions)}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">Clicks</td>
-          <td style="padding:8px 12px;text-align:right;border-bottom:1px solid #f0f0f0">${formatNumber(insights.clicks)}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">CPC</td>
-          <td style="padding:8px 12px;text-align:right;border-bottom:1px solid #f0f0f0">$${parseFloat(insights.cpc || 0).toFixed(2)}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">CTR</td>
-          <td style="padding:8px 12px;text-align:right;border-bottom:1px solid #f0f0f0">${parseFloat(insights.ctr || 0).toFixed(2)}%</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">Reach</td>
-          <td style="padding:8px 12px;text-align:right;border-bottom:1px solid #f0f0f0">${formatNumber(insights.reach)}</td>
-        </tr>` : '<tr><td colspan="2" style="padding:8px 12px;color:#94a3b8">No insights data yet</td></tr>'}
-      </table>`;
-  }
-
-  let metaCountriesHtml = '';
-  if ((metaCountries || []).length > 0) {
-    const countryRows = metaCountries.slice(0, 6).map((country) =>
-      `<tr>
-        <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">${country.country || 'Unknown'}</td>
-        <td style="padding:8px 12px;text-align:right;border-bottom:1px solid #f0f0f0">$${parseFloat(country.spend || 0).toFixed(2)}</td>
-        <td style="padding:8px 12px;text-align:right;border-bottom:1px solid #f0f0f0">${formatNumber(country.clicks)}</td>
-      </tr>`
-    ).join('');
-    metaCountriesHtml = `
-      <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
-        <tr style="background:#f8fafc">
-          <th style="padding:10px 12px;text-align:left;border-bottom:2px solid #e2e8f0;font-size:13px;color:#64748b">Top Ad Countries</th>
-          <th style="padding:10px 12px;text-align:right;border-bottom:2px solid #e2e8f0;font-size:13px;color:#64748b">Spend</th>
-          <th style="padding:10px 12px;text-align:right;border-bottom:2px solid #e2e8f0;font-size:13px;color:#64748b">Clicks</th>
-        </tr>
-        ${countryRows}
       </table>`;
   }
 
@@ -284,8 +221,6 @@ function buildHtml(report) {
       ${metricsHtml}
       ${sourcesHtml}
       ${campaignsHtml}
-      ${metaHtml}
-      ${metaCountriesHtml}
       ${searchConsoleHtml}
       ${errorsHtml}
     </div>
