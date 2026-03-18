@@ -143,36 +143,42 @@ function scoreWavePeriod(period, optimal) {
 function scoreSwellQuality(swell, wavePeriod, optimal) {
   // No swell data at all - conservative score
   if (!swell && !wavePeriod) {
-    return 35;
+    return 15;
   }
 
-  let score = 50; // Base score
+  let score = 15; // Low base — must earn quality points
 
   if (swell && swell.height) {
     const swellHeight = swell.height;
     const swellPeriod = swell.period || wavePeriod || 0;
 
-    // Swell height contribution (0.3m-2.5m range for Israel)
-    if (swellHeight >= 0.5 && swellHeight <= 2.0) {
-      score += 20; // Good swell present
+    // Swell height contribution
+    if (swellHeight >= 1.0 && swellHeight <= 2.0) {
+      score += 20; // Solid swell
+    } else if (swellHeight >= 0.5 && swellHeight < 1.0) {
+      score += 10; // Small swell
     } else if (swellHeight > 0 && swellHeight < 0.5) {
-      score += 5; // Barely any swell
+      score += 0;  // Barely anything
     } else if (swellHeight > 2.0) {
-      score += 10; // Big swell, could be too much
+      score += 15; // Big swell, could be too much for some
     }
 
     // Swell period is the key quality indicator
     // Long period = groundswell = clean, powerful waves
-    if (swellPeriod >= 12) {
-      score += 30; // Excellent groundswell
+    if (swellPeriod >= 14) {
+      score += 50; // Premium groundswell
+    } else if (swellPeriod >= 12) {
+      score += 45; // Excellent groundswell
     } else if (swellPeriod >= 10) {
-      score += 20; // Good groundswell
+      score += 35; // Good groundswell
     } else if (swellPeriod >= 8) {
-      score += 10; // Moderate, mixed swell
-    } else if (swellPeriod >= 5) {
-      score += 0;  // Wind swell, choppy
+      score += 20; // Mixed swell, some push
+    } else if (swellPeriod >= 6) {
+      score += 5;  // Wind swell, minimal quality
+    } else if (swellPeriod >= 4) {
+      score -= 5;  // Choppy wind chop
     } else {
-      score -= 10; // Very short period, messy
+      score -= 10; // Messy, unrideable chop
     }
 
     // Swell direction bonus
@@ -185,13 +191,13 @@ function scoreSwellQuality(swell, wavePeriod, optimal) {
     // No swell-specific data, use wave period as proxy
     const period = wavePeriod || 0;
     if (period >= 12) {
-      score += 25; // Likely groundswell
+      score += 40; // Likely groundswell
     } else if (period >= 9) {
-      score += 10; // Decent
+      score += 20; // Decent
     } else if (period >= 6) {
-      score -= 5;  // Likely wind swell
+      score += 0;  // Wind swell
     } else {
-      score -= 15; // Very choppy
+      score -= 10; // Very choppy
     }
   }
 
