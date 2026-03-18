@@ -54,12 +54,23 @@
     }
     </script>
     <!-- Google Analytics (GA4) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-LF7H8BFWM5"></script>
     <script>
+      var gaMeasurementId = '%REACT_APP_GA_MEASUREMENT_ID%';
+      if (!gaMeasurementId || gaMeasurementId === '%REACT_APP_GA_MEASUREMENT_ID%') {
+        gaMeasurementId = 'G-LF7H8BFWM5';
+      }
+
+      (function loadGtag(measurementId) {
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(measurementId);
+        document.head.appendChild(script);
+      })(gaMeasurementId);
+
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-LF7H8BFWM5');
+      gtag('config', gaMeasurementId);
 
       // Track uncaught JS errors
       window.addEventListener('error', function(e) {

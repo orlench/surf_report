@@ -1,5 +1,5 @@
 const { BetaAnalyticsDataClient } = require('@google-analytics/data');
-const logger = require('../utils/logger');
+const { loadServiceAccount } = require('../utils/googleServiceAccount');
 
 const GA_PROPERTY_ID = process.env.GA_PROPERTY_ID || '';
 
@@ -8,12 +8,13 @@ let client = null;
 function getClient() {
   if (client) return client;
 
-  const serviceAccountB64 = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!serviceAccountB64) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT not set');
+  if (!GA_PROPERTY_ID) {
+    throw new Error('GA_PROPERTY_ID not set');
   }
 
-  const credentials = JSON.parse(Buffer.from(serviceAccountB64, 'base64').toString('utf8'));
+  const credentials = loadServiceAccount('GA_SERVICE_ACCOUNT', {
+    fallbackEnv: 'FIREBASE_SERVICE_ACCOUNT',
+  });
   client = new BetaAnalyticsDataClient({
     credentials: {
       client_email: credentials.client_email,

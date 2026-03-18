@@ -26,14 +26,24 @@ function initApn() {
 function initFcm() {
   if (fcmInitialised) return !!firebaseAdmin;
   fcmInitialised = true;
-  const serviceAccountB64 = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!serviceAccountB64) {
-    logger.warn('[Push] FIREBASE_SERVICE_ACCOUNT not set — FCM notifications disabled');
+  const { loadServiceAccount } = require('../utils/googleServiceAccount');
+  let serviceAccount;
+  try {
+    serviceAccount = loadServiceAccount('FCM_SERVICE_ACCOUNT', {
+      fallbackEnv: 'FIREBASE_SERVICE_ACCOUNT',
+      required: false,
+    });
+  } catch (e) {
+    logger.warn(`[Push] Firebase Admin credentials invalid: ${e.message}`);
+    return false;
+  }
+
+  if (!serviceAccount) {
+    logger.warn('[Push] FCM_SERVICE_ACCOUNT not set — FCM notifications disabled');
     return false;
   }
   try {
     firebaseAdmin = require('firebase-admin');
-    const serviceAccount = JSON.parse(Buffer.from(serviceAccountB64, 'base64').toString('utf8'));
     firebaseAdmin.initializeApp({
       credential: firebaseAdmin.credential.cert(serviceAccount)
     });

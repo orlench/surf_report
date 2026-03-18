@@ -2,6 +2,7 @@ const axios = require('axios');
 const logger = require('../../utils/logger');
 
 const GRAPH_API_BASE = 'https://graph.facebook.com/v25.0';
+const TOKEN_REFRESH_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
 const META_AD_ACCOUNT_ID = process.env.META_AD_ACCOUNT_ID || '';
 const META_PAGE_ID = process.env.META_PAGE_ID || '';
@@ -9,6 +10,7 @@ const META_PAGE_ID = process.env.META_PAGE_ID || '';
 // In-memory token store (refreshed on startup + periodically)
 let currentToken = process.env.META_ACCESS_TOKEN || null;
 let tokenExpiresAt = null;
+let refreshPromise = null;
 
 /**
  * Exchange a short-lived or long-lived token for a new long-lived token.
@@ -43,6 +45,25 @@ async function refreshToken() {
   } catch (err) {
     logger.error(`[Marketing] Token refresh failed: ${err.response?.data?.error?.message || err.message}`);
   }
+}
+
+async function ensureFreshToken() {
+  if (!currentToken) return null;
+
+  const hasRefreshCredentials = Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET);
+  if (!hasRefreshCredentials) return currentToken;
+
+  const shouldRefresh = !tokenExpiresAt || tokenExpiresAt - Date.now() < TOKEN_REFRESH_WINDOW_MS;
+  if (!shouldRefresh) return currentToken;
+
+  if (!refreshPromise) {
+    refreshPromise = refreshToken().finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  await refreshPromise;
+  return currentToken;
 }
 
 /**
@@ -80,4 +101,4 @@ function getTokenExpiry() {
   return tokenExpiresAt;
 }
 
-module.exports = { getToken, getTokenExpiry, isConfigured, refreshToken, startTokenRefresh, GRAPH_API_BASE, META_AD_ACCOUNT_ID, META_PAGE_ID };
+module.exports = { getToken, getTokenExpiry, isConfigured, refreshToken, ensureFreshToken, startTokenRefresh, GRAPH_API_BASE, META_AD_ACCOUNT_ID, META_PAGE_ID };

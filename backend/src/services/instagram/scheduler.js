@@ -1,9 +1,10 @@
 const logger = require('../../utils/logger');
 const { isConfigured: isMetaConfigured } = require('./tokenManager');
 const { uploadImage, createCreative, generateLocationAdContent } = require('./creativeUploader');
-const { createAd, activateCampaign, getCampaignId } = require('./campaignManager');
+const { createAd, activateCampaign, getCampaignId, pauseOtherAds } = require('./campaignManager');
 
 const WEEKLY_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+let intervalHandle = null;
 
 /**
  * Refresh Meta Advantage+ creatives with fresh surf data
@@ -47,6 +48,7 @@ async function refreshCreatives() {
 
     const adId = await createAd(creativeId);
     if (adId) {
+      await pauseOtherAds(adId);
       await activateCampaign();
       logger.info(`[Marketing] Creative refresh complete — new ad ${adId} is live`);
     }
@@ -71,9 +73,16 @@ function startMarketingScheduler() {
     refreshCreatives().catch(err => logger.error(`[Marketing] Refresh failed: ${err.message}`));
   }, 10 * 60 * 1000);
 
-  setInterval(() => {
+  intervalHandle = setInterval(() => {
     refreshCreatives().catch(err => logger.error(`[Marketing] Refresh failed: ${err.message}`));
   }, WEEKLY_INTERVAL_MS);
 }
 
-module.exports = { startMarketingScheduler, refreshCreatives };
+function stopMarketingScheduler() {
+  if (intervalHandle) {
+    clearInterval(intervalHandle);
+    intervalHandle = null;
+  }
+}
+
+module.exports = { startMarketingScheduler, stopMarketingScheduler, refreshCreatives };

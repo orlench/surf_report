@@ -1,20 +1,45 @@
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const NodeCache = require('node-cache');
 const logger = require('../utils/logger');
 const analytics = require('./analyticsClient');
-const { getCampaignStatus } = require('./instagram/campaignManager');
-const { getToken, getTokenExpiry, isConfigured: isMetaConfigured, GRAPH_API_BASE } = require('./instagram/tokenManager');
+const searchConsole = require('./searchConsole');
+const { getCampaignStatus, getCampaignId } = require('./instagram/campaignManager');
+const { ensureFreshToken, getTokenExpiry, isConfigured: isMetaConfigured, GRAPH_API_BASE } = require('./instagram/tokenManager');
+const dataPath = require('../utils/dataPath');
 
 const cache = new NodeCache({ stdTTL: 48 * 60 * 60 }); // 48h TTL
 let intervalHandle = null;
+let timeoutHandle = null;
+
+const LATEST_REPORT_FILE = dataPath.resolve('daily-report-latest.json');
+
+function persistReport(report) {
+  cache.set('latest', report);
+  cache.set(`report_${report.date}`, report);
+
+  fs.mkdirSync(path.dirname(LATEST_REPORT_FILE), { recursive: true });
+  fs.writeFileSync(LATEST_REPORT_FILE, JSON.stringify(report, null, 2));
+}
+
+function loadPersistedReport() {
+  try {
+    if (!fs.existsSync(LATEST_REPORT_FILE)) return null;
+    return JSON.parse(fs.readFileSync(LATEST_REPORT_FILE, 'utf8'));
+  } catch (err) {
+    logger.warn(`[DailyReport] Failed to read persisted report: ${err.message}`);
+    return null;
+  }
+}
 
 /**
  * Get Meta Ads spend/impressions breakdown by country (last 7 days)
  */
 async function getAdCountryBreakdown() {
-  const token = getToken();
-  const campaignId = '120242229788240189';
-  if (!token) return null;
+  const token = await ensureFreshToken();
+  const campaignId = getCampaignId();
+  if (!token || !campaignId) return null;
 
   const { data } = await axios.get(`${GRAPH_API_BASE}/${campaignId}/insights`, {
     params: {
@@ -39,6 +64,10 @@ async function generateReport() {
     analytics.getErrors('yesterday').catch(err => { logger.error(`[DailyReport] GA4 errors failed: ${err.message}`); return null; }),
     analytics.getDailyTrend('last7days').catch(err => { logger.error(`[DailyReport] GA4 trend failed: ${err.message}`); return null; }),
     analytics.getTopPages('yesterday').catch(err => { logger.error(`[DailyReport] GA4 pages failed: ${err.message}`); return null; }),
+    analytics.getCampaignPerformance('last7days').catch(err => { logger.error(`[DailyReport] GA4 campaigns failed: ${err.message}`); return null; }),
+    searchConsole.getIndexingStatus().catch(err => { logger.error(`[DailyReport] Search Console indexing failed: ${err.message}`); return null; }),
+    searchConsole.getSearchAnalytics({ dimension: 'query', days: 7, limit: 10 }).catch(err => { logger.error(`[DailyReport] Search Console queries failed: ${err.message}`); return null; }),
+    searchConsole.getSearchAnalytics({ dimension: 'page', days: 7, limit: 10 }).catch(err => { logger.error(`[DailyReport] Search Console pages failed: ${err.message}`); return null; }),
     isMetaConfigured()
       ? getCampaignStatus().catch(err => { logger.error(`[DailyReport] Meta status failed: ${err.message}`); return null; })
       : Promise.resolve(null),
@@ -47,7 +76,7 @@ async function generateReport() {
       : Promise.resolve(null),
   ];
 
-  const [yesterday, last7days, sources, errors, trend, pages, metaStatus, adCountries] = await Promise.all(promises);
+  const [yesterday, last7days, sources, errors, trend, pages, campaigns, indexing, searchQueries, searchPages, metaStatus, adCountries] = await Promise.all(promises);
 
   // Build alerts
   const alerts = [];
@@ -139,28 +168,55 @@ async function generateReport() {
       errors: errors?.rows || [],
       errorCount: errors?.rows?.length || 0,
       trend: trend?.rows || [],
+      campaigns: campaigns?.rows || [],
+    },
+    searchConsole: {
+      indexing: indexing?.sitemaps || [],
+      queries: searchQueries?.rows || [],
+      pages: searchPages?.rows || [],
     },
     meta: metaStatus,
     metaCountries: adCountries,
+    emailDelivery: null,
   };
 
-  cache.set('latest', report);
-  cache.set(`report_${report.date}`, report);
+  persistReport(report);
 
   logger.info(`[DailyReport] Report generated — ${alerts.length} alert(s)`);
   return report;
 }
 
 function getLatestReport() {
-  return cache.get('latest') || null;
+  return cache.get('latest') || loadPersistedReport() || null;
 }
 
-async function runAndEmail() {
+async function runAndEmail(options = {}) {
+  const { force = false } = options;
+  const today = new Date().toISOString().slice(0, 10);
+  const existing = getLatestReport();
+  if (!force && existing?.date === today && existing.emailDelivery?.status === 'sent') {
+    logger.info('[DailyReport] Returning already-sent report for today');
+    return existing;
+  }
+
   const report = await generateReport();
-  // Send email in background (don't block response)
   const { sendDailyReport } = require('./emailSender');
-  sendDailyReport(report).catch(err => logger.error(`[DailyReport] Email failed: ${err.message}`));
-  return report;
+  try {
+    report.emailDelivery = await sendDailyReport(report);
+    persistReport(report);
+    return report;
+  } catch (err) {
+    report.emailDelivery = {
+      status: 'failed',
+      provider: 'gmail',
+      recipient: process.env.REPORT_EMAIL || null,
+      attemptedAt: new Date().toISOString(),
+      error: err.message,
+    };
+    persistReport(report);
+    err.statusCode = err.statusCode || 502;
+    throw err;
+  }
 }
 
 function startDailyReportScheduler() {
@@ -177,13 +233,17 @@ function startDailyReportScheduler() {
   logger.info(`[DailyReport] Scheduler started — first run in ${hoursUntil}h (04:00 UTC / 07:00 IST)`);
 
   const safeRun = () => runAndEmail().catch(err => logger.error(`[DailyReport] Scheduled run failed: ${err.message}`));
-  setTimeout(() => {
+  timeoutHandle = setTimeout(() => {
     safeRun();
     intervalHandle = setInterval(safeRun, TWENTY_FOUR_HOURS);
   }, msUntilNext);
 }
 
 function stopDailyReportScheduler() {
+  if (timeoutHandle) {
+    clearTimeout(timeoutHandle);
+    timeoutHandle = null;
+  }
   if (intervalHandle) {
     clearInterval(intervalHandle);
     intervalHandle = null;

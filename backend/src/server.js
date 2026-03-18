@@ -187,15 +187,17 @@ function startBackgroundServices() {
   const { startNotificationScheduler } = require('./services/pushNotifier');
   startNotificationScheduler();
 
-  // Start Instagram marketing scheduler (token refresh + weekly creative rotation)
-  const { startTokenRefresh } = require('./services/instagram/tokenManager');
-  const { startMarketingScheduler } = require('./services/instagram/scheduler');
-  startTokenRefresh();
-  startMarketingScheduler();
-
-  // Start daily monitoring report scheduler
-  const { startDailyReportScheduler } = require('./services/dailyReport');
-  startDailyReportScheduler();
+  if (process.env.ENABLE_IN_PROCESS_MARKETING_SCHEDULERS === 'true') {
+    // Optional development fallback only. In Cloud Run, prefer Cloud Scheduler.
+    const { startTokenRefresh } = require('./services/instagram/tokenManager');
+    const { startMarketingScheduler } = require('./services/instagram/scheduler');
+    const { startDailyReportScheduler } = require('./services/dailyReport');
+    startTokenRefresh();
+    startMarketingScheduler();
+    startDailyReportScheduler();
+  } else {
+    logger.info('[Marketing] In-process marketing schedulers disabled — use Cloud Scheduler to call POST /api/marketing/daily-report/generate and POST /api/marketing/refresh-creatives');
+  }
 }
 
 function startServer(port = process.env.PORT || 5000) {

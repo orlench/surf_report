@@ -1,6 +1,6 @@
 const axios = require('axios');
 const logger = require('../../utils/logger');
-const { getToken, GRAPH_API_BASE, META_AD_ACCOUNT_ID } = require('./tokenManager');
+const { ensureFreshToken, GRAPH_API_BASE, META_AD_ACCOUNT_ID } = require('./tokenManager');
 
 // Active campaign IDs — hardcoded after creation, overridable via env
 let campaignId = process.env.META_CAMPAIGN_ID || '120242229788240189';
@@ -10,7 +10,7 @@ let adSetId = process.env.META_ADSET_ID || '120242229793340189';
  * Create an Advantage+ traffic campaign (one-time setup)
  */
 async function createCampaign() {
-  const token = getToken();
+  const token = await ensureFreshToken();
   if (!token) throw new Error('Missing access token');
 
   const { data } = await axios.post(
@@ -37,7 +37,7 @@ async function createCampaign() {
 async function createAdSet() {
   if (!campaignId) throw new Error('Campaign must be created first');
 
-  const token = getToken();
+  const token = await ensureFreshToken();
   const dailyBudget = process.env.META_AD_DAILY_BUDGET || '500'; // cents ($5/day)
 
   // Broad targeting across surf countries — let Meta's Advantage+ optimize delivery
@@ -82,7 +82,7 @@ async function createAdSet() {
 async function createAd(creativeId) {
   if (!adSetId) throw new Error('Ad set must be created first');
 
-  const token = getToken();
+  const token = await ensureFreshToken();
 
   const { data } = await axios.post(
     `${GRAPH_API_BASE}/act_${META_AD_ACCOUNT_ID}/ads`,
@@ -103,7 +103,7 @@ async function createAd(creativeId) {
  * Activate campaign and ad set (called after first ad is created)
  */
 async function activateCampaign() {
-  const token = getToken();
+  const token = await ensureFreshToken();
   if (!campaignId || !adSetId) return;
 
   await Promise.all([
@@ -118,7 +118,7 @@ async function activateCampaign() {
  * Pause the campaign
  */
 async function pauseCampaign() {
-  const token = getToken();
+  const token = await ensureFreshToken();
   if (!campaignId) throw new Error('No campaign to pause');
 
   await axios.post(`${GRAPH_API_BASE}/${campaignId}`, { status: 'PAUSED', access_token: token });
@@ -129,7 +129,7 @@ async function pauseCampaign() {
  * Resume the campaign
  */
 async function resumeCampaign() {
-  const token = getToken();
+  const token = await ensureFreshToken();
   if (!campaignId) throw new Error('No campaign to resume');
 
   await axios.post(`${GRAPH_API_BASE}/${campaignId}`, { status: 'ACTIVE', access_token: token });
@@ -140,7 +140,7 @@ async function resumeCampaign() {
  * Get campaign status and insights
  */
 async function getCampaignStatus() {
-  const token = getToken();
+  const token = await ensureFreshToken();
 
   const result = { campaign: null, adSet: null, insights: null };
 
@@ -178,6 +178,44 @@ async function getCampaignStatus() {
   return result;
 }
 
+async function pauseOtherAds(keepAdId) {
+  if (!adSetId) return [];
+
+  const token = await ensureFreshToken();
+  const { data } = await axios.get(`${GRAPH_API_BASE}/${adSetId}/ads`, {
+    params: {
+      fields: 'id,name,status,effective_status',
+      limit: 200,
+      access_token: token,
+    },
+  });
+
+  const ads = data.data || [];
+  const pausedIds = [];
+
+  for (const ad of ads) {
+    if (!ad?.id || ad.id === keepAdId) continue;
+
+    const effectiveStatus = Array.isArray(ad.effective_status)
+      ? ad.effective_status[0]
+      : ad.effective_status;
+
+    if (ad.status === 'PAUSED' || effectiveStatus === 'PAUSED') continue;
+
+    await axios.post(`${GRAPH_API_BASE}/${ad.id}`, {
+      status: 'PAUSED',
+      access_token: token,
+    });
+    pausedIds.push(ad.id);
+  }
+
+  if (pausedIds.length > 0) {
+    logger.info(`[Marketing] Paused ${pausedIds.length} older ad(s) after creative refresh`);
+  }
+
+  return pausedIds;
+}
+
 /**
  * Full setup: create campaign → ad set (one-time)
  */
@@ -201,6 +239,7 @@ module.exports = {
   setup,
   createAd,
   activateCampaign,
+  pauseOtherAds,
   pauseCampaign,
   resumeCampaign,
   getCampaignStatus,

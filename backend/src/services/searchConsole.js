@@ -1,5 +1,6 @@
 const { google } = require('googleapis');
 const logger = require('../utils/logger');
+const { loadServiceAccount } = require('../utils/googleServiceAccount');
 
 const SITE_URL = 'sc-domain:shouldigo.surf';
 
@@ -8,10 +9,9 @@ let auth = null;
 async function getAuth() {
   if (auth) return auth;
 
-  const serviceAccountB64 = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!serviceAccountB64) throw new Error('FIREBASE_SERVICE_ACCOUNT not set');
-
-  const credentials = JSON.parse(Buffer.from(serviceAccountB64, 'base64').toString('utf8'));
+  const credentials = loadServiceAccount('SEARCH_CONSOLE_SERVICE_ACCOUNT', {
+    fallbackEnv: 'FIREBASE_SERVICE_ACCOUNT',
+  });
   const googleAuth = new google.auth.GoogleAuth({
     credentials: {
       client_email: credentials.client_email,

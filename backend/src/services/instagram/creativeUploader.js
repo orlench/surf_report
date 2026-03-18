@@ -1,7 +1,7 @@
 const axios = require('axios');
 const FormData = require('form-data');
 const logger = require('../../utils/logger');
-const { getToken, GRAPH_API_BASE, META_AD_ACCOUNT_ID, META_PAGE_ID } = require('./tokenManager');
+const { ensureFreshToken, GRAPH_API_BASE, META_AD_ACCOUNT_ID, META_PAGE_ID } = require('./tokenManager');
 
 // Only allow image downloads from trusted domains
 const ALLOWED_IMAGE_HOSTS = ['shouldigo.surf', 'www.shouldigo.surf'];
@@ -13,7 +13,7 @@ const ALLOWED_IMAGE_HOSTS = ['shouldigo.surf', 'www.shouldigo.surf'];
  * @returns {string|null} Image hash for use in creatives
  */
 async function uploadImage(imageUrl) {
-  const token = getToken();
+  const token = await ensureFreshToken();
   if (!token) return null;
 
   try {
@@ -62,7 +62,7 @@ async function uploadImage(imageUrl) {
  * @returns {string|null} Creative ID
  */
 async function createCreative({ imageHashes, primaryTexts, headlines, descriptions, linkUrl }) {
-  const token = getToken();
+  const token = await ensureFreshToken();
 
   if (!token) {
     logger.error('[Marketing] Missing access token');

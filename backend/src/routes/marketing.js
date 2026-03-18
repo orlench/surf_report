@@ -1,30 +1,12 @@
 const express = require('express');
-const crypto = require('crypto');
 const router = express.Router();
 const logger = require('../utils/logger');
+const { requireAdmin } = require('../services/adminAuth');
 const { isConfigured: isMetaConfigured } = require('../services/instagram/tokenManager');
 const { setup, createAd, activateCampaign, pauseCampaign, resumeCampaign, getCampaignStatus } = require('../services/instagram/campaignManager');
 const { uploadImage, createCreative, generateLocationAdContent } = require('../services/instagram/creativeUploader');
 const { refreshCreatives } = require('../services/instagram/scheduler');
 const analytics = require('../services/analyticsClient');
-
-// Admin auth middleware with timing-safe comparison
-function requireAdmin(req, res, next) {
-  const secret = process.env.ADMIN_SECRET;
-  if (!secret) {
-    return res.status(503).json({ error: 'ADMIN_SECRET not configured' });
-  }
-  const provided = req.headers['x-admin-secret'];
-  if (!provided || typeof provided !== 'string') {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  const a = Buffer.from(provided);
-  const b = Buffer.from(secret);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  next();
-}
 
 function requireMeta(req, res, next) {
   if (!isMetaConfigured()) {
@@ -107,11 +89,12 @@ router.get('/daily-report', (req, res) => {
 
 router.post('/daily-report/generate', async (req, res) => {
   try {
-    const report = await runAndEmail();
+    const force = req.query.force === 'true' || req.body?.force === true;
+    const report = await runAndEmail({ force });
     res.json({ success: true, ...(report || { message: 'Report generated and emailed' }) });
   } catch (err) {
     logger.error(`[DailyReport] Manual generation failed: ${err.message}`);
-    res.status(500).json({ error: 'Failed to generate report' });
+    res.status(err.statusCode || 500).json({ error: 'Failed to generate report', detail: err.message });
   }
 });
 
