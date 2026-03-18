@@ -30,6 +30,7 @@
 
 /* Begin PBXFileReference section */
 		03ECACA00F98AF94F40EDEAF /* ShouldIGoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShouldIGoApp.swift; sourceTree = "<group>"; };
+		0D20A9F0D1F24B4BA1234567 /* ShouldIGo.Release.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShouldIGo.Release.entitlements; sourceTree = "<group>"; };
 		1716E687BA8C095EE3E0DAC0 /* SSEClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEClient.swift; sourceTree = "<group>"; };
 		172D0B68F56ABE2DFBCA51DC /* ConditionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConditionsView.swift; sourceTree = "<group>"; };
 		174120ED390CE1D94D6BF527 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -40,16 +41,15 @@
 		616838FF4B5281C13E322D01 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		6CECAF51A31D4F09CB87BEE3 /* GearIllustrations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearIllustrations.swift; sourceTree = "<group>"; };
 		80444867F68D9B0CF1F39E4E /* FetchProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchProgressView.swift; sourceTree = "<group>"; };
-		0D20A9F0D1F24B4BA1234567 /* ShouldIGo.Release.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShouldIGo.Release.entitlements; sourceTree = "<group>"; };
 		8D49991613C8DA2B3FFD2EE7 /* surfSpots.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = surfSpots.json; sourceTree = "<group>"; };
 		9972929FB5B470E585876846 /* ShouldIGo.Debug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShouldIGo.Debug.entitlements; sourceTree = "<group>"; };
 		9E33C3F2AB6C450DC0BBEB99 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		AABF4E800CBE5F6A3371135F /* SpotMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotMapView.swift; sourceTree = "<group>"; };
-		AFC238A0736EEF1346AB8567 /* ShouldIGo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ShouldIGo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AFC238A0736EEF1346AB8567 /* ShouldIGo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShouldIGo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B433A6E2C2C0EF7FA2EDFF64 /* BeachSketchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeachSketchView.swift; sourceTree = "<group>"; };
 		BE002ABA13F9514C4FCFA026 /* ConditionsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConditionsViewModel.swift; sourceTree = "<group>"; };
 		C320223AA1B64D31B409C737 /* NotificationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSheet.swift; sourceTree = "<group>"; };
-		D2019738599DB7127426ED7A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		D2019738599DB7127426ED7A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED87CD6DB86BDDDB3375A13C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		FA8EC065FD52D14C68B01327 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -193,11 +193,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1500;
-				TargetAttributes = {
-					7547307DD2DA6BC25C7746B3 = {
-						DevelopmentTeam = "";
-					};
-				};
 			};
 			buildConfigurationList = 3919775BB87BFB0551317C22 /* Build configuration list for PBXProject "ShouldIGo" */;
 			developmentRegion = en;
@@ -263,13 +258,16 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ShouldIGo/ShouldIGo.Debug.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = WFK8B57XAS;
 				INFOPLIST_FILE = ShouldIGo/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Should I Go Surf?";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = surf.shouldigo.app;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
@@ -311,7 +309,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -349,13 +347,16 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ShouldIGo/ShouldIGo.Release.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = WFK8B57XAS;
 				INFOPLIST_FILE = ShouldIGo/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Should I Go Surf?";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = surf.shouldigo.app;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
@@ -397,7 +398,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
