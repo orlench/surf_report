@@ -71,4 +71,25 @@ describe('dailyReport', () => {
     expect(firstReport.emailDelivery.status).toBe('sent');
     expect(fs.existsSync(path.join(tempDir, 'daily-report-run.lock'))).toBe(false);
   });
+
+  test('strips legacy meta fields from persisted reports', () => {
+    const legacyReport = {
+      date: '2026-03-18',
+      timestamp: '2026-03-18T13:35:57.718Z',
+      ga4: { yesterday: { sessions: '10' } },
+      searchConsole: { indexing: [] },
+      emailDelivery: { status: 'sent' },
+      meta: { campaign: { status: 'PAUSED' } },
+      metaCountries: [{ country: 'IL', spend: '0' }],
+    };
+
+    fs.writeFileSync(path.join(tempDir, 'daily-report-latest.json'), JSON.stringify(legacyReport, null, 2));
+
+    const { getLatestReport } = require('../src/services/dailyReport');
+    const report = getLatestReport();
+
+    expect(report.meta).toBeUndefined();
+    expect(report.metaCountries).toBeUndefined();
+    expect(report.ga4.yesterday.sessions).toBe('10');
+  });
 });

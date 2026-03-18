@@ -15,22 +15,32 @@ const LATEST_REPORT_FILE = dataPath.resolve('daily-report-latest.json');
 const RUN_LOCK_FILE = dataPath.resolve('daily-report-run.lock');
 const RUN_LOCK_STALE_MS = 10 * 60 * 1000;
 
+function sanitizeLegacyReport(report) {
+  if (!report || typeof report !== 'object') return null;
+
+  const sanitized = { ...report };
+  delete sanitized.meta;
+  delete sanitized.metaCountries;
+  return sanitized;
+}
+
 function ensureDataDir() {
   fs.mkdirSync(path.dirname(LATEST_REPORT_FILE), { recursive: true });
 }
 
 function persistReport(report) {
-  cache.set('latest', report);
-  cache.set(`report_${report.date}`, report);
+  const sanitized = sanitizeLegacyReport(report);
+  cache.set('latest', sanitized);
+  cache.set(`report_${sanitized.date}`, sanitized);
 
   ensureDataDir();
-  fs.writeFileSync(LATEST_REPORT_FILE, JSON.stringify(report, null, 2));
+  fs.writeFileSync(LATEST_REPORT_FILE, JSON.stringify(sanitized, null, 2));
 }
 
 function loadPersistedReport() {
   try {
     if (!fs.existsSync(LATEST_REPORT_FILE)) return null;
-    return JSON.parse(fs.readFileSync(LATEST_REPORT_FILE, 'utf8'));
+    return sanitizeLegacyReport(JSON.parse(fs.readFileSync(LATEST_REPORT_FILE, 'utf8')));
   } catch (err) {
     logger.warn(`[DailyReport] Failed to read persisted report: ${err.message}`);
     return null;
@@ -200,7 +210,12 @@ async function generateReport() {
 }
 
 function getLatestReport() {
-  return cache.get('latest') || loadPersistedReport() || null;
+  const cached = cache.get('latest');
+  if (cached) {
+    return sanitizeLegacyReport(cached);
+  }
+
+  return loadPersistedReport() || null;
 }
 
 async function runAndEmail(options = {}) {
