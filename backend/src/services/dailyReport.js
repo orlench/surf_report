@@ -12,14 +12,21 @@ const dataPath = require('../utils/dataPath');
 const cache = new NodeCache({ stdTTL: 48 * 60 * 60 }); // 48h TTL
 let intervalHandle = null;
 let timeoutHandle = null;
+let currentRunPromise = null;
 
 const LATEST_REPORT_FILE = dataPath.resolve('daily-report-latest.json');
+const RUN_LOCK_FILE = dataPath.resolve('daily-report-run.lock');
+const RUN_LOCK_STALE_MS = 10 * 60 * 1000;
+
+function ensureDataDir() {
+  fs.mkdirSync(path.dirname(LATEST_REPORT_FILE), { recursive: true });
+}
 
 function persistReport(report) {
   cache.set('latest', report);
   cache.set(`report_${report.date}`, report);
 
-  fs.mkdirSync(path.dirname(LATEST_REPORT_FILE), { recursive: true });
+  ensureDataDir();
   fs.writeFileSync(LATEST_REPORT_FILE, JSON.stringify(report, null, 2));
 }
 
@@ -31,6 +38,87 @@ function loadPersistedReport() {
     logger.warn(`[DailyReport] Failed to read persisted report: ${err.message}`);
     return null;
   }
+}
+
+function readRunLock() {
+  try {
+    if (!fs.existsSync(RUN_LOCK_FILE)) return null;
+    return JSON.parse(fs.readFileSync(RUN_LOCK_FILE, 'utf8'));
+  } catch (err) {
+    logger.warn(`[DailyReport] Failed to read run lock: ${err.message}`);
+    return null;
+  }
+}
+
+function clearStaleRunLock() {
+  try {
+    if (!fs.existsSync(RUN_LOCK_FILE)) return;
+    const stats = fs.statSync(RUN_LOCK_FILE);
+    if ((Date.now() - stats.mtimeMs) < RUN_LOCK_STALE_MS) return;
+    fs.unlinkSync(RUN_LOCK_FILE);
+    logger.warn('[DailyReport] Cleared stale run lock');
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      logger.warn(`[DailyReport] Failed to clear stale run lock: ${err.message}`);
+    }
+  }
+}
+
+function tryAcquireRunLock(lockId) {
+  ensureDataDir();
+  const payload = JSON.stringify({
+    lockId,
+    pid: process.pid,
+    startedAt: new Date().toISOString(),
+  });
+
+  try {
+    fs.writeFileSync(RUN_LOCK_FILE, payload, { flag: 'wx' });
+    return true;
+  } catch (err) {
+    if (err.code === 'EEXIST') return false;
+    throw err;
+  }
+}
+
+function releaseRunLock(lockId) {
+  try {
+    const lock = readRunLock();
+    if (lock && lock.lockId && lock.lockId !== lockId) return;
+    if (fs.existsSync(RUN_LOCK_FILE)) {
+      fs.unlinkSync(RUN_LOCK_FILE);
+    }
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      logger.warn(`[DailyReport] Failed to release run lock: ${err.message}`);
+    }
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForRunCompletion(date, options = {}) {
+  const timeoutMs = options.timeoutMs || 2 * 60 * 1000;
+  const pollMs = options.pollMs || 500;
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const latest = getLatestReport();
+    if (latest?.date === date && latest.emailDelivery?.status === 'sent') {
+      return latest;
+    }
+
+    clearStaleRunLock();
+    if (!fs.existsSync(RUN_LOCK_FILE)) {
+      return getLatestReport();
+    }
+
+    await sleep(pollMs);
+  }
+
+  throw new Error('Timed out waiting for the current daily report run to finish');
 }
 
 /**
@@ -191,31 +279,68 @@ function getLatestReport() {
 }
 
 async function runAndEmail(options = {}) {
-  const { force = false } = options;
-  const today = new Date().toISOString().slice(0, 10);
-  const existing = getLatestReport();
-  if (!force && existing?.date === today && existing.emailDelivery?.status === 'sent') {
-    logger.info('[DailyReport] Returning already-sent report for today');
-    return existing;
+  if (currentRunPromise) {
+    logger.info('[DailyReport] Joining in-flight report run');
+    return currentRunPromise;
   }
 
-  const report = await generateReport();
-  const { sendDailyReport } = require('./emailSender');
+  currentRunPromise = (async () => {
+    const { force = false } = options;
+    const today = new Date().toISOString().slice(0, 10);
+    const existing = getLatestReport();
+    if (!force && existing?.date === today && existing.emailDelivery?.status === 'sent') {
+      logger.info('[DailyReport] Returning already-sent report for today');
+      return existing;
+    }
+
+    const lockId = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    while (true) {
+      clearStaleRunLock();
+      if (tryAcquireRunLock(lockId)) {
+        break;
+      }
+
+      logger.info('[DailyReport] Another report run is already in progress — waiting for completion');
+      const completed = await waitForRunCompletion(today);
+      if (completed?.date === today && completed.emailDelivery?.status === 'sent') {
+        return completed;
+      }
+    }
+
+    try {
+      const afterLock = getLatestReport();
+      if (!force && afterLock?.date === today && afterLock.emailDelivery?.status === 'sent') {
+        logger.info('[DailyReport] Returning already-sent report for today after lock acquisition');
+        return afterLock;
+      }
+
+      const report = await generateReport();
+      const { sendDailyReport } = require('./emailSender');
+      try {
+        report.emailDelivery = await sendDailyReport(report);
+        persistReport(report);
+        return report;
+      } catch (err) {
+        report.emailDelivery = {
+          status: 'failed',
+          provider: 'gmail',
+          recipient: process.env.REPORT_EMAIL || null,
+          attemptedAt: new Date().toISOString(),
+          error: err.message,
+        };
+        persistReport(report);
+        err.statusCode = err.statusCode || 502;
+        throw err;
+      }
+    } finally {
+      releaseRunLock(lockId);
+    }
+  })();
+
   try {
-    report.emailDelivery = await sendDailyReport(report);
-    persistReport(report);
-    return report;
-  } catch (err) {
-    report.emailDelivery = {
-      status: 'failed',
-      provider: 'gmail',
-      recipient: process.env.REPORT_EMAIL || null,
-      attemptedAt: new Date().toISOString(),
-      error: err.message,
-    };
-    persistReport(report);
-    err.statusCode = err.statusCode || 502;
-    throw err;
+    return await currentRunPromise;
+  } finally {
+    currentRunPromise = null;
   }
 }
 
