@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest --testTimeout=30000"
+    "test": "jest --testTimeout=30000",
+    "pilot:spot-metadata": "node scripts/runSpotMetadataPilot.js --dataset pilot",
+    "collect:spot-metadata": "node scripts/runSpotMetadataPilot.js --dataset full",
+    "phase2:spot-metadata": "node scripts/runSpotMetadataPhase2.js",
+    "rebuild:spot-metadata-bundles": "node scripts/rebuildSpotMetadataBundles.js"
   },
   "keywords": [
     "surf",
