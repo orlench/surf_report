@@ -130,7 +130,7 @@ function loadPersistedSpots(spotsArray) {
         name: s.name,
         country: s.country || '',
         location: { lat: s.lat, lon: s.lon },
-        description: 'User-discovered spot',
+        description: s.description || 'User-discovered spot',
         optimal: {
           waveHeight: { min: 0.8, ideal: 1.5, max: 2.5 },
           wavePeriod: { min: 8, ideal: 12, max: 16 },
